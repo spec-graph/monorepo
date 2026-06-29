@@ -1,0 +1,56 @@
+# performance.pack — 变更意图包:性能优化
+#
+# 灵魂:数字门。没有 baseline + 显式数值目标就不准进场(呼应 clarify 的可测性)。
+# 复用 diagnose(定位热点)—— 进一步证明 diagnose 不是 bugfix 专属,是 reactive 流共用动词。
+
+name: performance
+version: "1.0.0"
+kind: change-intent
+priority: 10
+description: "Performance intent — baseline-gated, metric-target-driven, correctness-preserving."
+
+applies_when_change:
+  type: perf
+
+provides:
+  artifacts:
+    - id: verification/baseline
+      kind: verification
+      schema_ref: templates/perf-baseline.md # 当前测量 + 数值目标(p95/吞吐/内存…)
+    - id: verification/perf-report
+      kind: verification
+      schema_ref: templates/perf-report.md # 优化后测量 vs 目标
+
+  actions: [propose, diagnose, implement, test, accept, integrate] # diagnose=定位热点
+
+  checks:
+    - id: benchmark
+      kind: test
+      command: "<bench-cmd>"
+      layer: system
+      threshold: { meets_target: true } # 达成 baseline 里声明的目标
+    - id: correctness-green
+      kind: test
+      command: "npm test" # 功能不退化
+      layer: unit
+
+  pipeline_skeleton:
+    stages: [diagnose, implement, test, accept]
+    max_retries: 5
+    on_exhausted: escalate
+
+  gates:
+    - id: perf-entry
+      on_transition: [propose, diagnose]
+      require_artifacts: [verification/baseline] # 无 baseline + 目标不准进场
+      fail_mode: block
+      enabled: true
+    - id: perf-exit
+      on_transition: [accept, integrate]
+      require_checks: [benchmark, correctness-green] # 达标 且 不退化
+      require_artifacts: [verification/perf-report]
+      forbid: [contract_version_bump] # 优化不改契约
+      fail_mode: block
+      enabled: true
+
+context_ref: context.md

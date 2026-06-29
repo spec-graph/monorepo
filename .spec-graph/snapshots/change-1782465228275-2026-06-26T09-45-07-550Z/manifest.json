@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782465228275",
+  "change_title": "Add LLM Sense classifier (CLAUDE.md §Sense: LLM只参与第一段)",
+  "archived_at": "2026-06-26T09:45:07.561Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

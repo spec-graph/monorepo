@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782484741327",
+  "change_title": "Unify gate evaluation: machine transition must enforce require_contracts_current",
+  "archived_at": "2026-06-26T14:58:26.921Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

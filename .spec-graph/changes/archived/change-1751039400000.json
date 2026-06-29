@@ -1,0 +1,29 @@
+{
+  "id": "change-1751039400000",
+  "title": "Meeting Mode: multi-agent collaborative discussion for requirements phase",
+  "description": "Add Meeting orchestration mode to spec-graph. In the requirements phase (propose/specify), multiple agents (PM, Architect, QA, domain experts) participate in a structured roundtable discussion instead of working sequentially. Agents see each other's contributions, can challenge/question each other, and domain experts can be invited. Facilitator (coordinator) manages rounds and synthesizes output artifacts. Inspired by BMAD persona collaboration, but with broadcast-style interaction instead of sequential handoff.",
+  "created_at": "2026-06-27T09:10:00.000Z",
+  "type": "feature",
+  "priority": "high",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "completed_at": "2026-06-27T09:50:00.000Z",
+  "applied_at": "2026-06-27T09:10:00.000Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T09:10:00.000Z",
+      "action": "apply",
+      "message": "meeting mode designed, implementing types + protocol + pack declarations"
+    },
+    {
+      "timestamp": "2026-06-27T09:50:00.000Z",
+      "action": "complete",
+      "message": "meeting types + protocol doc + foundation requirements-meeting + ddd domain-modeling-meeting + expert invite protocol + 6 meeting tests. 351/351 tests pass"
+    }
+  ]
+}

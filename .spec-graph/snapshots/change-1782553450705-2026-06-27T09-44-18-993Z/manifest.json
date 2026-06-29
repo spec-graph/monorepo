@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782553450705",
+  "change_title": "Surface missing_contracts + forbidden_violations in NextPlan (contract drift detection)",
+  "archived_at": "2026-06-27T09:44:19.000Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

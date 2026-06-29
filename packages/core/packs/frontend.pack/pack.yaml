@@ -1,0 +1,66 @@
+# frontend.pack — 前端开发领域层
+#
+# 叠加在 foundation.pack 之上。提供 UX 产物 + FE 实现 + system/deployment 验收。
+# 贡献一条 fe track(consumes contract/openapi → 可绑定后端契约版本独立 mock 开发)。
+
+name: frontend
+version: "1.0.0"
+priority: 10
+description: "Frontend domain — UX artifacts, FE implementation, UI + browser acceptance."
+
+applies_when:
+  has_ui: [web, native, gui] # 有用户界面就命中
+
+provides:
+  artifacts:
+    - id: design/user-flows
+      kind: design
+      schema_ref: templates/user-flows.md
+    - id: design/wireframe
+      kind: design
+      schema_ref: templates/wireframe.md
+    - id: design/design-tokens
+      kind: design
+      schema_ref: templates/design-tokens.md
+      optional: true
+    - id: implementation/frontend
+      kind: implementation
+      schema_ref: null
+
+  actions: [design, implement, review, test, accept]
+
+  checks:
+    # L3 system(wdf UI acceptance)
+    - id: lighthouse
+      kind: lighthouse
+      command: "npx lighthouse-ci assert"
+      layer: system
+      threshold: { performance: 90, accessibility: 90 }
+    - id: a11y
+      kind: a11y
+      command: "npx axe-ci"
+      layer: system
+    # L4 deployment(wdf E2E BROWSER acceptance)
+    - id: e2e-browser
+      kind: test
+      command: "npx playwright test"
+      layer: deployment
+
+  # 往 foundation 的验收层追加 check(merge,不覆盖)
+  acceptance_layers:
+    system: { required: true, checks: [lighthouse, a11y] }
+    deployment: { required: true, checks: [e2e-browser] }
+
+  # 往 foundation 的出口门追加 check
+  gate_patches:
+    exit-merged:
+      add_checks: [lighthouse, a11y, e2e-browser]
+
+# 本包贡献的并行 track(Compose 收集所有 active pack 的 track 拼成 phase-4)
+contributes_track:
+  id: fe
+  scope: frontend # 落到 work-unit.scope_write 分区
+  actions: [implement, review, test, accept]
+  consumes: [contract/openapi] # 绑定后端契约版本;后端未就绪时按版本 mock
+
+context_ref: context.md

@@ -1,0 +1,175 @@
+current_stage: review
+stage_history:
+  - from_stage: plan
+    to_stage: implement
+    timestamp: "2026-06-25T14:43:58.142Z"
+    triggered_by: manual
+    gate_evaluation:
+      gate_id: stories-decomposed, entry-phase4
+      passed: true
+      missing_artifacts: []
+      failed_checks: []
+      missing_traces: []
+      forbidden_violations: []
+      warnings: []
+  - from_stage: implement
+    to_stage: review
+    timestamp: "2026-06-26T01:39:06.182Z"
+    triggered_by: manual
+    gate_evaluation:
+      gate_id: no_gate
+      passed: true
+      missing_artifacts: []
+      failed_checks: []
+      missing_traces: []
+      forbidden_violations: []
+      warnings: []
+artifacts:
+  design/c4:
+    id: design/c4
+    status: completed
+    produced_by: agent
+  design/adr:
+    id: design/adr
+    status: pending
+  design/readiness:
+    id: design/readiness
+    status: completed
+    produced_by: agent
+  contract/db-schema:
+    id: contract/db-schema
+    status: completed
+    produced_by: agent
+  plan/migration-plan:
+    id: plan/migration-plan
+    status: pending
+  design/data-model:
+    id: design/data-model
+    status: pending
+  requirement/impact-map:
+    id: requirement/impact-map
+    status: pending
+  requirement/product-brief:
+    id: requirement/product-brief
+    status: pending
+  requirement/story-map:
+    id: requirement/story-map
+    status: pending
+  requirement/prd:
+    id: requirement/prd
+    status: completed
+    produced_by: agent
+  plan/epics:
+    id: plan/epics
+    status: completed
+    produced_by: agent
+  plan/story:
+    id: plan/story
+    status: completed
+    produced_by: agent
+  verification/review-report:
+    id: verification/review-report
+    status: pending
+  verification/test-report:
+    id: verification/test-report
+    status: pending
+  verification/acceptance-report:
+    id: verification/acceptance-report
+    status: pending
+  change-record/constitution:
+    id: change-record/constitution
+    status: pending
+  change-record/changelog:
+    id: change-record/changelog
+    status: pending
+checks:
+  architecture-review:
+    id: architecture-review
+    status: passed
+    result:
+      command: <architecture-review>
+      exit_code: 0
+      duration_ms: 6
+      stdout: |-
+        architecture-review: checked 1 file(s)
+          ✓ .spec-graph/artifacts/design/c4.md: [context, container]
+      stderr: ""
+    executed_at: "2026-06-26T01:26:20.340Z"
+  complexity-budget:
+    id: complexity-budget
+    status: passed
+    result:
+      command: <complexity-scan>
+      exit_code: 0
+      duration_ms: 38
+      stdout: |-
+        complexity-scan: scanned 31 file(s), max: 25
+          ✓ all within budget
+      stderr: ""
+    executed_at: "2026-06-26T01:30:41.401Z"
+  data-model-consistency:
+    id: data-model-consistency
+    status: passed
+    result:
+      command: <data-model-validate>
+      exit_code: 0
+      duration_ms: 1
+      stdout: "data-model-validate: contract/db-schema completed (no file)"
+      stderr: ""
+    executed_at: "2026-06-25T15:08:18.559Z"
+  schema-drift:
+    id: schema-drift
+    status: passed
+    result:
+      command: <schema-drift-scan>
+      exit_code: 0
+      duration_ms: 25
+      stdout: "schema-drift-scan: first run, recorded 1 hash(es)"
+      stderr: ""
+    executed_at: "2026-06-25T15:08:21.731Z"
+  clarify-scan:
+    id: clarify-scan
+    status: passed
+    result:
+      command: <clarify-scan>
+      exit_code: 0
+      duration_ms: 0
+      stdout: ""
+      stderr: ""
+    executed_at: "2026-06-26T01:28:02.762Z"
+  story-slicing:
+    id: story-slicing
+    status: passed
+    result:
+      command: <story-slicing-check>
+      exit_code: 0
+      duration_ms: 0
+      stdout: ""
+      stderr: ""
+    executed_at: "2026-06-26T01:28:02.926Z"
+  ac-test-binding:
+    id: ac-test-binding
+    status: passed
+    result:
+      command: <ac-test-binding-check>
+      exit_code: 0
+      duration_ms: 0
+      stdout: ""
+      stderr: ""
+    executed_at: "2026-06-26T01:28:03.097Z"
+  lint:
+    id: lint
+    status: pending
+  typecheck:
+    id: typecheck
+    status: pending
+  unit-test:
+    id: unit-test
+    status: pending
+  constitution-validate:
+    id: constitution-validate
+    status: passed
+    executed_at: "2026-06-26T03:02:18.058Z"
+metadata:
+  created_at: "2026-06-25T14:39:39.570Z"
+  change_type: feature

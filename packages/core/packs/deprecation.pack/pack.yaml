@@ -1,0 +1,61 @@
+# deprecation.pack — 变更意图包:弃用 / 移除
+#
+# 灵魂:feature 的镜像逆流。沿 contract consumer 边驱动,跨多版本/时间。
+# 压测点:跨版本宽限期 —— 一个变更跨越多个 release,WorkUnit 需能挂起等待(非线性推进)。
+
+name: deprecation
+version: "1.0.0"
+kind: change-intent
+priority: 10
+description: "Deprecation intent — consumer-driven sunset, multi-version grace, removal-verified."
+
+applies_when_change:
+  type: deprecation
+
+provides:
+  artifacts:
+    - id: change-record/deprecation-notice
+      kind: change-record
+      schema_ref: templates/deprecation-notice.md # 弃用对象 + sunset 版本 + 迁移路径
+    - id: verification/consumer-clearance
+      kind: verification
+      schema_ref: null # 证明零活跃消费者残留
+
+  actions: [propose, implement, review, test, accept, integrate, release] # 含 release(版本切)
+
+  checks:
+    - id: no-live-consumer
+      kind: test
+      command: "<scan-consumer-references>" # 沿 consumer 边扫,零引用才可移除
+      layer: integration
+
+  # 弃用骨架:mark → (跨版本 wait) → remove。wait 是挂起态,非阻塞失败
+  pipeline_skeleton:
+    stages: [implement, review, test, accept] # implement 含 mark 与 remove 两相
+    max_retries: 5
+    on_exhausted: escalate
+    spans_releases: true # 新字段:本流跨多个 release,允许中途挂起
+
+  gates:
+    - id: deprecation-entry
+      on_transition: [propose, implement]
+      require_artifacts: [change-record/deprecation-notice]
+      require_traces:
+        # 入口必须能枚举出消费者(否则不知道通知谁)
+        - name: contract_to_consumers
+          from_kind: contract
+          to_kind: work-unit
+          via: [consumes]
+          cardinality: exists
+      fail_mode: block
+      enabled: true
+    - id: deprecation-exit
+      on_transition: [accept, integrate]
+      require_checks: [no-live-consumer] # 零活跃消费者
+      require_artifacts: [verification/consumer-clearance]
+      require:
+        - semver_major_bump_if_public # 公开面移除必须 major bump
+      fail_mode: block
+      enabled: true
+
+context_ref: context.md

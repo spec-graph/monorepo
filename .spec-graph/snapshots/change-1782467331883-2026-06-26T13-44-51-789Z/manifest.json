@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782467331883",
+  "change_title": "Enforce 4-layer acceptance model: auto-wire required layer checks into exit gate",
+  "archived_at": "2026-06-26T13:44:51.794Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

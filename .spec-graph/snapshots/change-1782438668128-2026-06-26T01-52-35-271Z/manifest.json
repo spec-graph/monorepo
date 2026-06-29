@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782438668128",
+  "change_title": "Bootstrap change lifecycle",
+  "archived_at": "2026-06-26T01:52:35.280Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

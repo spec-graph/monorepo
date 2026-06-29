@@ -1,0 +1,161 @@
+version: "1"
+file_scope:
+  read:
+    - src/**
+    - "*.md"
+    - "*.yaml"
+    - "*.json"
+    - "*.toml"
+    - .spec-graph/**
+  write:
+    - src/**
+    - .spec-graph/**
+roles:
+  spec-author:
+    description: Produces spec artifacts (PRD, stories, architecture docs, etc.)
+    tools:
+      - Read
+      - Write
+      - Edit
+      - Glob
+      - Grep
+    file_scope:
+      read:
+        - .spec-graph/**
+        - _wdf_output/**
+        - "*.md"
+        - "*.yaml"
+      write:
+        - .spec-graph/**
+        - _wdf_output/**
+        - "*.md"
+    actions:
+      - produce_artifact
+  quality-runner:
+    description: Runs lint, test, and quality checks declared in the graph
+    tools:
+      - Read
+      - Bash
+      - Glob
+      - Grep
+    file_scope:
+      read:
+        - src/**
+        - "*.json"
+        - "*.yaml"
+        - "*.toml"
+        - .spec-graph/**
+      write:
+        - .spec-graph/**
+    actions:
+      - run_check
+  traceability-reviewer:
+    description: Verifies traceability links between artifacts and requirements
+    tools:
+      - Read
+      - Edit
+      - Glob
+      - Grep
+    file_scope:
+      read:
+        - .spec-graph/**
+        - "*.md"
+        - "*.yaml"
+      write:
+        - .spec-graph/traces/**
+    actions:
+      - verify_trace
+  governance-reviewer:
+    description: Resolves forbidden invariant violations and constitutional issues
+    tools:
+      - Read
+      - Edit
+      - Write
+      - Glob
+      - Grep
+    file_scope:
+      read:
+        - .spec-graph/**
+        - "*.md"
+        - "*.yaml"
+        - "*.json"
+      write:
+        - .spec-graph/**
+        - "*.md"
+        - "*.yaml"
+    actions:
+      - resolve_violation
+  workflow-operator:
+    description: Advances the workflow state machine through gated transitions
+    tools:
+      - Read
+      - Bash
+    file_scope:
+      read:
+        - .spec-graph/**
+      write:
+        - .spec-graph/machine-state.yaml
+    actions:
+      - transition
+  stage-agent:
+    description: Performs full stage work — produces artifacts, runs checks, verifies traces
+    tools:
+      - Read
+      - Write
+      - Edit
+      - Bash
+      - Glob
+      - Grep
+    file_scope:
+      read:
+        - src/**
+        - .spec-graph/**
+        - _wdf_output/**
+        - "*.md"
+        - "*.yaml"
+        - "*.json"
+        - "*.toml"
+      write:
+        - src/**
+        - .spec-graph/**
+        - _wdf_output/**
+        - "*.md"
+        - "*.yaml"
+    actions:
+      - perform_stage
+      - produce_artifact
+      - run_check
+      - verify_trace
+agents:
+  claude-code:
+    enabled: true
+    auto_approve_tools:
+      - Read
+      - Write
+      - Edit
+      - Bash
+      - Glob
+      - Grep
+    note: Default Claude Code permissions — adjust based on project trust level
+  codex:
+    enabled: true
+    auto_approve_tools:
+      - Read
+      - Write
+      - Edit
+      - Bash
+      - Glob
+      - Grep
+    note: Default OpenCode/Codex CLI permissions
+level: semi-auto
+allow:
+  auto_execute:
+    - run_check
+    - transition
+  agent_actions:
+    - produce_artifact
+    - run_check
+    - verify_trace
+    - resolve_violation
+    - perform_stage
+    - transition

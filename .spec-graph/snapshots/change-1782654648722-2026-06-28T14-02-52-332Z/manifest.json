@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782654648722",
+  "change_title": "Tier 3: Scope prefix overlap detection",
+  "archived_at": "2026-06-28T14:02:52.338Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

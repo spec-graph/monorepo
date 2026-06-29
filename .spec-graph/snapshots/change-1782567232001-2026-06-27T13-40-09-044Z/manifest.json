@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782567232001",
+  "change_title": "Checklist command",
+  "archived_at": "2026-06-27T13:40:09.053Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

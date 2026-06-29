@@ -1,0 +1,39 @@
+{
+  "id": "change-1782445907483",
+  "title": "Contract ripple: reverify subcommand",
+  "description": "Add contract reverify <contract_id> --consumer <id>: bumps bound_version to current, records reverified_at. Closes ripple loop.",
+  "created_at": "2026-06-26T03:51:47.483Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T07:38:32.919Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T07:38:32.920Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-26T07:38:33.121Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-26T07:38:33.279Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782445907483-2026-06-26T07-38-33-275Z"
+    }
+  ],
+  "completed_at": "2026-06-26T07:38:33.120Z",
+  "archive": {
+    "archived_at": "2026-06-26T07:38:33.279Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782445907483-2026-06-26T07-38-33-275Z",
+    "final_status": "completed"
+  }
+}

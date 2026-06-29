@@ -1,0 +1,39 @@
+{
+  "id": "change-1782664354246",
+  "title": "Enhance doctor with feature-usage diagnostics",
+  "description": "Add 'features' category to doctor that checks which enhanced capabilities are configured: hooks.yaml, diff-select (touchfiles on checks), safety-net snapshot, migration plan, scope locks, constitution, project config. Reports which features are active vs available but unused.",
+  "created_at": "2026-06-28T16:32:34.246Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T16:32:56.064Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T16:32:56.065Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T16:37:28.325Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T16:37:28.503Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782664354246-2026-06-28T16-37-28-499Z"
+    }
+  ],
+  "completed_at": "2026-06-28T16:37:28.324Z",
+  "archive": {
+    "archived_at": "2026-06-28T16:37:28.503Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782664354246-2026-06-28T16-37-28-499Z",
+    "final_status": "completed"
+  }
+}

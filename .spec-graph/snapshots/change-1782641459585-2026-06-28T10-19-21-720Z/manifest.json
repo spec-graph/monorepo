@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782641459585",
+  "change_title": "Tier 2: Multi-unit story execution",
+  "archived_at": "2026-06-28T10:19:21.725Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

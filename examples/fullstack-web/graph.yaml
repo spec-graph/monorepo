@@ -1,0 +1,492 @@
+# graph.yaml — 全栈 Web 项目的 Compose 产物
+#
+# 由 Sense 产物 profile.yaml + packs/ 目录下所有 pack 经 Compose 引擎合成。
+# 本文件是 Enforce 阶段的唯一真相源,冻结后不再咨询 LLM。
+
+version: "1"
+meta:
+  composed_at: "2026-06-25T10:35:00Z"
+  profile_hash: "sha256:abc123..."
+  change_intent: feature # 默认意图;若 changes/ 下有变更描述符则按其中 type
+  packs_used:
+    - name: foundation
+      matched: always
+      priority: 0
+    - name: requirement-analysis
+      matched: always
+      priority: 20
+    - name: architecture
+      matched: { criticality: "!prototype" }
+      priority: 20
+    - name: task-decomposition
+      matched: always
+      priority: 20
+    - name: api-design
+      matched: { boundary: published-api }
+      priority: 20
+    - name: data-design
+      matched: { persistence: "$exists" }
+      priority: 20
+    - name: frontend
+      matched: { has_ui: web }
+      priority: 10
+    - name: backend
+      matched: { boundary: published-api }
+      priority: 10
+    - name: feature
+      matched: { type: feature }
+      kind: change-intent
+
+# =============================================================================
+# 1. 工件注册表(所有 pack artifacts 的并集,按 id 去重)
+# =============================================================================
+artifacts:
+  # --- requirement-analysis ---
+  - id: requirement/impact-map
+    kind: requirement
+    schema_ref: templates/impact-map.md
+    optional: true
+    produced_by: propose
+  - id: requirement/product-brief
+    kind: requirement
+    schema_ref: templates/product-brief.md
+    optional: true
+    produced_by: propose
+  - id: requirement/story-map
+    kind: requirement
+    schema_ref: templates/story-map.md
+    produced_by: specify
+  - id: requirement/prd
+    kind: requirement
+    schema_ref: templates/prd.md
+    produced_by: specify
+
+  # --- architecture ---
+  - id: design/c4
+    kind: design
+    schema_ref: templates/c4-architecture.md
+    produced_by: design
+  - id: design/adr
+    kind: design
+    schema_ref: templates/adr.md
+    optional: true
+    produced_by: design
+  - id: design/readiness
+    kind: design
+    schema_ref: templates/readiness-check.md
+    produced_by: design
+
+  # --- task-decomposition ---
+  - id: plan/epics
+    kind: plan
+    schema_ref: templates/epics.md
+    produced_by: plan
+  - id: plan/story
+    kind: plan
+    schema_ref: templates/story.md
+    produced_by: plan
+
+  # --- api-design ---
+  - id: contract/openapi
+    kind: contract
+    schema_ref: templates/openapi.yaml
+    produced_by: contract
+    producer_track: be
+    consumer_tracks: [fe, be]
+  - id: contract/grpc-idl
+    kind: contract
+    schema_ref: templates/grpc.proto
+    optional: true
+    produced_by: contract
+    producer_track: be
+    consumer_tracks: [be]
+  - id: contract/graphql-schema
+    kind: contract
+    schema_ref: templates/graphql-schema.gql
+    optional: true
+    produced_by: contract
+    producer_track: be
+    consumer_tracks: [fe]
+  - id: contract/async-schema
+    kind: contract
+    schema_ref: templates/async-schema.yaml
+    optional: true
+    produced_by: contract
+    producer_track: be
+    consumer_tracks: [be]
+
+  # --- data-design ---
+  - id: contract/db-schema
+    kind: contract
+    schema_ref: templates/db-schema.md
+    produced_by: contract
+    producer_track: be
+    consumer_tracks: [be]
+  - id: plan/migration-plan
+    kind: plan
+    schema_ref: templates/migration-plan.md
+    optional: true
+    produced_by: plan
+  - id: design/data-model
+    kind: design
+    schema_ref: templates/data-model.md
+    produced_by: design
+
+  # --- frontend ---
+  - id: design/user-flows
+    kind: design
+    schema_ref: templates/user-flows.md
+    produced_by: design
+  - id: design/wireframe
+    kind: design
+    schema_ref: templates/wireframe.md
+    produced_by: design
+  - id: design/design-tokens
+    kind: design
+    schema_ref: templates/design-tokens.md
+    optional: true
+    produced_by: design
+  - id: implementation/frontend
+    kind: implementation
+    schema_ref: null
+    produced_by: implement
+
+  # --- backend ---
+  - id: implementation/backend
+    kind: implementation
+    schema_ref: null
+    produced_by: implement
+
+  # --- foundation (governance) ---
+  - id: verification/review-report
+    kind: verification
+    schema_ref: templates/review-report.json
+    produced_by: review
+  - id: verification/test-report
+    kind: verification
+    schema_ref: templates/test-report.json
+    produced_by: test
+  - id: verification/acceptance-report
+    kind: verification
+    schema_ref: templates/acceptance-report.md
+    produced_by: accept
+  - id: change-record/constitution
+    kind: change-record
+    schema_ref: templates/constitution.yaml
+    produced_by: propose
+  - id: change-record/changelog
+    kind: change-record
+    schema_ref: templates/changelog.md
+    produced_by: integrate
+
+# =============================================================================
+# 2. 动作集合(所有 pack actions 的并集,去重)
+# =============================================================================
+actions:
+  - propose
+  - specify
+  - design
+  - contract
+  - plan
+  - implement
+  - review
+  - test
+  - accept
+  - integrate
+  - archive
+
+# =============================================================================
+# 3. 检查点(所有 pack checks 的并集,同 id 同配置自动去重)
+# =============================================================================
+checks:
+  # --- foundation 通用 ---
+  - id: lint
+    kind: lint
+    command: "npm run lint"
+    layer: unit
+  - id: typecheck
+    kind: lint
+    command: "npx tsc --noEmit"
+    layer: unit
+  - id: unit-test
+    kind: test
+    command: "npm test"
+    layer: unit
+    threshold: { coverage: 0.80 }
+
+  # --- requirement-analysis ---
+  - id: clarify-scan
+    kind: lint
+    command: "<clarify-scan>"
+    layer: unit
+    threshold: { ambiguity: 0, placeholder: 0, non_measurable: 0 }
+
+  # --- architecture ---
+  - id: architecture-review
+    kind: lint
+    command: "<architecture-review>"
+    layer: unit
+  - id: complexity-budget
+    kind: lint
+    command: "<complexity-scan>"
+    layer: unit
+    threshold: { cyclomatic: 15 }
+
+  # --- task-decomposition ---
+  - id: story-slicing
+    kind: lint
+    command: "<story-slicing-check>"
+    layer: unit
+    threshold: { contract_fields_present: 7 }
+  - id: ac-test-binding
+    kind: lint
+    command: "<ac-test-binding-check>"
+    layer: unit
+
+  # --- api-design ---
+  - id: contract-lint
+    kind: lint
+    command: "<contract-lint>"
+    layer: unit
+  - id: breaking-change
+    kind: lint
+    command: "<breaking-change-scan>"
+    layer: unit
+    threshold: { breaking: 0 }
+
+  # --- data-design ---
+  - id: data-model-consistency
+    kind: lint
+    command: "<data-model-validate>"
+    layer: unit
+  - id: schema-drift
+    kind: lint
+    command: "<schema-drift-scan>"
+    layer: unit
+
+  # --- frontend ---
+  - id: lighthouse
+    kind: lighthouse
+    command: "npx lighthouse-ci assert"
+    layer: system
+    threshold: { performance: 90, accessibility: 90 }
+  - id: a11y
+    kind: a11y
+    command: "npx axe-ci"
+    layer: system
+  - id: e2e-browser
+    kind: test
+    command: "npx playwright test"
+    layer: deployment
+
+  # --- backend ---
+  - id: contract-test
+    kind: test
+    command: "npm run test:contract"
+    layer: integration
+  - id: feature-test
+    kind: test
+    command: "npm run test:integration"
+    layer: integration
+
+# =============================================================================
+# 4. 门(基金会骨架 + domain pack 新增 + gate_patches 累加)
+# =============================================================================
+gates:
+  # --- 入口门:foundation 骨架 + 所有 planning pack gate_patches 累加 ---
+  - id: entry-phase4
+    on_transition: [plan, implement]
+    require_checks: []
+    require_artifacts:
+      - requirement/prd # ← requirement-analysis gate_patch
+      - design/readiness # ← architecture gate_patch
+      - plan/story # ← task-decomposition gate_patch
+      - plan/epics # ← task-decomposition gate_patch
+      - contract/openapi # ← api-design gate_patch
+      - contract/db-schema # ← data-design gate_patch
+    require_traces:
+      - name: story_to_req # ← requirement-analysis gate_patch
+        from_kind: plan/story
+        to_kind: requirement/prd
+        via: [derives]
+        cardinality: every
+      - name: c4_to_req # ← architecture gate_patch
+        from_kind: design/c4
+        to_kind: requirement/prd
+        via: [derives]
+        cardinality: every
+    fail_mode: block
+    enabled: true
+
+  # --- 出口门:foundation 骨架 + 所有 domain pack gate_patches 累加 ---
+  - id: exit-merged
+    on_transition: [accept, integrate]
+    require_checks:
+      - lint # ← foundation
+      - typecheck # ← foundation
+      - unit-test # ← foundation
+      - ac-test-binding # ← task-decomposition gate_patch
+      - breaking-change # ← api-design gate_patch
+      - schema-drift # ← data-design gate_patch
+      - lighthouse # ← frontend gate_patch
+      - a11y # ← frontend gate_patch
+      - e2e-browser # ← frontend gate_patch
+      - contract-test # ← backend gate_patch
+      - feature-test # ← backend gate_patch
+    require_artifacts:
+      - verification/acceptance-report # ← foundation
+    require_traces:
+      - name: ac_to_test # ← task-decomposition gate_patch
+        from_kind: plan/story
+        to_kind: verification/test-report
+        via: [verifies]
+        cardinality: every
+    fail_mode: block
+    enabled: true
+
+  # --- planning 阶段门(domain pack 新增) ---
+  - id: requirements-clarified
+    on_transition: [specify, design]
+    require_artifacts: [requirement/prd]
+    require_checks: [clarify-scan]
+    require_traces:
+      - name: story_to_req
+        from_kind: plan/story
+        to_kind: requirement/prd
+        via: [derives]
+        cardinality: every
+    fail_mode: block
+    enabled: true
+
+  - id: architecture-ready
+    on_transition: [design, plan]
+    require_artifacts: [design/c4, design/readiness]
+    require_checks: [architecture-review]
+    require_traces:
+      - name: c4_to_req
+        from_kind: design/c4
+        to_kind: requirement/prd
+        via: [derives]
+        cardinality: every
+    fail_mode: block
+    enabled: true
+
+  - id: stories-decomposed
+    on_transition: [plan, implement]
+    require_artifacts: [plan/epics, plan/story]
+    require_checks: [story-slicing, ac-test-binding]
+    fail_mode: block
+    enabled: true
+
+  - id: contract-frozen
+    on_transition: [contract, implement]
+    require_artifacts: [contract/openapi]
+    require_checks: [contract-lint, breaking-change]
+    fail_mode: block
+    enabled: true
+
+  - id: data-model-frozen
+    on_transition: [design, implement]
+    require_artifacts: [contract/db-schema, design/data-model]
+    require_checks: [data-model-consistency]
+    fail_mode: block
+    enabled: true
+
+# =============================================================================
+# 5. 并行轨道(所有 pack contributes_track 的收集)
+# =============================================================================
+tracks:
+  - id: fe
+    scope: frontend
+    actions: [implement, review, test, accept]
+    consumes:
+      - contract: contract/openapi
+        binding: by-version
+        status: bound # mono 拓扑,同一 repo,backend 就绪后直接绑定
+
+  - id: be
+    scope: backend
+    actions: [contract, implement, review, test, accept]
+    produces: [contract/openapi, contract/db-schema]
+
+# =============================================================================
+# 6. 流水线骨架(由 change-intent pack 提供;feature 为默认)
+# =============================================================================
+pipeline_skeleton:
+  stages: [implement, review, test, accept]
+  max_retries: 5
+  on_exhausted: escalate
+
+# =============================================================================
+# 7. 验收层(各 pack 同名 layer 的 checks 取并集)
+# =============================================================================
+acceptance_layers:
+  unit:
+    required: true
+    checks:
+      [
+        lint,
+        typecheck,
+        unit-test,
+        clarify-scan,
+        architecture-review,
+        complexity-budget,
+        story-slicing,
+        ac-test-binding,
+        contract-lint,
+        breaking-change,
+        data-model-consistency,
+        schema-drift,
+      ]
+  integration:
+    required: true
+    checks: [contract-test, feature-test]
+  system:
+    required: true
+    checks: [lighthouse, a11y]
+  deployment:
+    required: true
+    checks: [e2e-browser]
+
+# =============================================================================
+# 8. 追溯边(由 gate traces + contract bindings 自动推导)
+# =============================================================================
+traces:
+  # --- 需求追溯 ---
+  - name: story_to_req
+    from_kind: plan/story
+    to_kind: requirement/prd
+    via: [derives]
+    cardinality: every
+
+  - name: c4_to_req
+    from_kind: design/c4
+    to_kind: requirement/prd
+    via: [derives]
+    cardinality: every
+
+  # --- 测试追溯 ---
+  - name: ac_to_test
+    from_kind: plan/story
+    to_kind: verification/test-report
+    via: [verifies]
+    cardinality: every
+
+  # --- 契约消费追溯 ---
+  - name: openapi_producer
+    from_kind: implementation/backend
+    to_kind: contract/openapi
+    via: [produces]
+    cardinality: single
+
+  - name: openapi_consumer_fe
+    from_kind: contract/openapi
+    to_kind: implementation/frontend
+    via: [consumes]
+    cardinality: single
+
+  - name: dbschema_producer
+    from_kind: implementation/backend
+    to_kind: contract/db-schema
+    via: [produces]
+    cardinality: single

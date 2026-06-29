@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782555843253",
+  "change_title": "Constitution versioning + diff",
+  "archived_at": "2026-06-27T13:32:46.705Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

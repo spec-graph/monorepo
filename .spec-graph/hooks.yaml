@@ -1,0 +1,71 @@
+version: "1"
+hooks:
+  # ── Dispatch ──
+  - command: echo "✓ post-dispatch: manifest ready at $(date +%H:%M:%S)"
+    when: post
+    command_name: dispatch
+
+  # ── Machine (transition/update) ──
+  - command: echo "✓ post-machine: state updated at $(date +%H:%M:%S)"
+    when: post
+    command_name: machine
+
+  # ── Dashboard ──
+  - command: echo "✓ post-dashboard: dashboard generated at $(date +%H:%M:%S)"
+    when: post
+    command_name: dashboard
+
+  # ── Distill ──
+  - command: echo "✓ post-distill: artifact compressed at $(date +%H:%M:%S)"
+    when: post
+    command_name: distill
+
+  # ── Review ──
+  - command: echo "✓ post-review: review prompts generated at $(date +%H:%M:%S)"
+    when: post
+    command_name: review
+
+  # ── Change ──
+  - command: echo "✓ post-change: change lifecycle event at $(date +%H:%M:%S)"
+    when: post
+    command_name: change
+
+  # ── Compose ──
+  - command: echo "✓ post-compose: graph composed at $(date +%H:%M:%S)"
+    when: post
+    command_name: compose
+
+  # ── Gate ──
+  - command: echo "✓ post-gate: gates evaluated at $(date +%H:%M:%S)"
+    when: post
+    command_name: gate
+
+  # ── Check ──
+  - command: echo "✓ post-check: checks executed at $(date +%H:%M:%S)"
+    when: post
+    command_name: check
+
+  # ── Run ──
+  - command: echo "✓ post-run: workflow loop completed at $(date +%H:%M:%S)"
+    when: post
+    command_name: run
+
+  # ── Impact ──
+  - command: echo "✓ post-impact: impact analysis done at $(date +%H:%M:%S)"
+    when: post
+    command_name: impact
+
+  # ── Trace ──
+  - command: echo "✓ post-trace: trace updated at $(date +%H:%M:%S)"
+    when: post
+    command_name: trace
+
+  # ── Retro ──
+  - command: echo "✓ post-retro: retrospective generated at $(date +%H:%M:%S)"
+    when: post
+    command_name: retro
+
+  # ── Rollback ──
+  - command: echo "✓ post-rollback: rollback executed at $(date +%H:%M:%S)"
+    when: post
+    command_name: rollback

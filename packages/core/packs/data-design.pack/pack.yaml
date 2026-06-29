@@ -1,0 +1,59 @@
+# data-design.pack — 数据设计层
+#
+# 灵魂:数据模型与持久化策略,独立于具体存储引擎。
+# 契约文件由 backend track 在 contract action 阶段写出,
+# data-design pack 提供 schema 模板、一致性校验、冻结门。
+
+name: data-design
+version: "1.0.0"
+kind: domain
+priority: 20
+description: "Data design — persistence model, schema, and storage strategy independent of engine."
+
+applies_when:
+  persistence: "$exists" # profile 里有 persistence 维度就命中
+
+provides:
+  artifacts:
+    - id: contract/db-schema
+      kind: contract
+      schema_ref: templates/db-schema.md # ER/关系/文档/列族/时序模型
+      default_producer: be # backend track 负责写出契约文件
+      default_consumers: [be] # backend 消费;迁移工具也消费
+    - id: plan/migration-plan
+      kind: plan
+      schema_ref: templates/migration-plan.md # schema 演进策略(绿场可为空)
+      optional: true
+    - id: design/data-model
+      kind: design
+      schema_ref: templates/data-model.md # 领域模型 + 存储映射
+
+  actions: [design, plan] # design=建模型;plan=出迁移策略
+
+  checks:
+    # 数据模型校验(与 API schema 一致性)
+    - id: data-model-consistency
+      kind: lint
+      command: "<data-model-validate>" # 查 DB 字段与 API DTO 类型对齐
+      layer: unit
+    # schema 版本漂移(与已部署 schema 比)
+    - id: schema-drift
+      kind: lint
+      command: "<schema-drift-scan>"
+      layer: unit
+
+  gates:
+    - id: data-model-frozen
+      on_transition: [design, implement]
+      require_artifacts: [contract/db-schema, design/data-model]
+      require_checks: [data-model-consistency]
+      fail_mode: block
+      enabled: true
+
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [contract/db-schema]
+    exit-merged:
+      add_checks: [schema-drift]
+
+context_ref: context.md

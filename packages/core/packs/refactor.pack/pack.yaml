@@ -1,0 +1,71 @@
+# refactor.pack — 变更意图包:重构
+#
+# 灵魂:行为零变更 = 验收本身。一旦行为变了,它就不是 refactor 而是 feature。
+#
+# 压测点:
+#   1. characterize —— 重构前先用刻画测试钉住现行为(若目标无测试)。这是 test 的前置用法,
+#      不是新动作(沿用 test),但顺序在 transform 之前。
+#   2. 出口门的"负向不变量"—— 契约版本禁止 bump、测试结果逐条不变(没有新 AC)。
+#      这是首个"禁止某事发生"的门,而非"要求某事存在"的门。
+
+name: refactor
+version: "1.0.0"
+kind: change-intent
+priority: 10
+description: "Refactor intent — behavior-preserving; characterization-pinned, equivalence is the acceptance."
+
+applies_when_change:
+  type: refactor
+
+provides:
+  artifacts:
+    - id: verification/characterization-test
+      kind: verification
+      schema_ref: null # 钉住重构前行为的测试集
+    - id: design/refactor-scope
+      kind: design
+      schema_ref: templates/refactor-scope.md # 目标 + 等价性边界声明
+
+  actions: [propose, test, implement, review, accept, integrate] # test 即 characterize,前置
+
+  checks:
+    - id: characterization-green-before
+      kind: test
+      command: "npm test -- <target>" # 入口:目标已被测试覆盖
+      layer: unit
+    - id: equivalence-after
+      kind: test
+      command: "npm test -- <target>" # 出口:逐条结果与重构前一致
+      layer: unit
+    - id: complexity-not-worse
+      kind: lint
+      command: "<complexity-check>" # 复杂度/重复率不得变差
+      layer: unit
+
+  pipeline_skeleton:
+    stages: [implement, review, test, accept] # implement=transform, test=equivalence
+    max_retries: 5
+    on_exhausted: escalate
+
+  gates:
+    # 入口门:不准重构无测试的代码 —— 先补刻画测试
+    - id: refactor-entry
+      on_transition: [propose, implement]
+      require_artifacts:
+        [verification/characterization-test, design/refactor-scope]
+      require_checks: [characterization-green-before]
+      fail_mode: block
+      enabled: true
+    # 出口门:负向不变量 —— 行为不变、契约不 bump、无新 AC
+    - id: refactor-exit
+      on_transition: [accept, integrate]
+      require_checks: [equivalence-after, complexity-not-worse]
+      # 负向断言(新增门语义:forbid 而非 require)
+      forbid:
+        - contract_version_bump # 任一 contract.version 变化 = 不再是 refactor
+        - new_requirement # 新增 REQ/AC = 不再是 refactor
+        - behavior_delta # 任一既有测试结果翻转
+      fail_mode: block
+      enabled: true
+
+context_ref: context.md

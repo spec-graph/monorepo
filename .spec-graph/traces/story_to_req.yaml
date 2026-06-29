@@ -1,0 +1,6 @@
+traces:
+  - from: plan/story
+    from_kind: plan/story
+    to: requirement/prd
+    to_kind: requirement/prd
+    relation: derives

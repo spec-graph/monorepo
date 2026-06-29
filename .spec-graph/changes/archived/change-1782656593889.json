@@ -1,0 +1,39 @@
+{
+  "id": "change-1782656593889",
+  "title": "Wire hooks to transition and run commands",
+  "description": "Add pre/post hook execution to machine transition and run commands (dispatch already has hooks). This completes the hook coverage for the main workflow-driving commands.",
+  "created_at": "2026-06-28T14:23:13.889Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T14:23:21.038Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T14:23:21.039Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T14:24:18.357Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T14:24:18.518Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782656593889-2026-06-28T14-24-18-507Z"
+    }
+  ],
+  "completed_at": "2026-06-28T14:24:18.357Z",
+  "archive": {
+    "archived_at": "2026-06-28T14:24:18.518Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782656593889-2026-06-28T14-24-18-507Z",
+    "final_status": "completed"
+  }
+}

@@ -1,0 +1,58 @@
+# task-decomposition.pack — 任务分解层
+#
+# 灵魂:把需求切成可交付、可测试、可并行的 Work-unit(Story)。
+# 所有项目都必须有此包,没有例外。提供 epics + stories 作为 plan 工件。
+
+name: task-decomposition
+version: "1.0.0"
+kind: domain
+priority: 20
+description: "Task decomposition — epics, story slicing, and acceptance-criteria binding."
+
+applies_when: always # 任何项目都需要任务分解
+
+provides:
+  artifacts:
+    - id: plan/epics
+      kind: plan
+      schema_ref: templates/epics.md
+    - id: plan/story
+      kind: plan
+      schema_ref: templates/story.md # 7 contract fields + AC
+
+  actions: [plan] # plan 阶段产出 epics → stories
+
+  checks:
+    # Story 切片质量:每个 story 必须有 7 contract fields
+    - id: story-slicing
+      kind: lint
+      command: "<story-slicing-check>"
+      layer: unit
+      threshold: { contract_fields_present: 7 }
+    # AC 可测性:每个 acceptance criteria 必须可绑定 test
+    - id: ac-test-binding
+      kind: lint
+      command: "<ac-test-binding-check>"
+      layer: unit
+
+  gates:
+    - id: stories-decomposed
+      on_transition: [plan, implement]
+      require_artifacts: [plan/epics, plan/story]
+      require_checks: [story-slicing, ac-test-binding]
+      fail_mode: block
+      enabled: true
+
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [plan/story, plan/epics]
+    exit-merged:
+      add_checks: [ac-test-binding]
+      add_traces:
+        - name: ac_to_test
+          from_kind: plan/story
+          to_kind: verification/test-report
+          via: [verifies]
+          cardinality: every
+
+context_ref: context.md

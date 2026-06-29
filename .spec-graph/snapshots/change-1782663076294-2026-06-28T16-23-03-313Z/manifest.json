@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782663076294",
+  "change_title": "Inject codebase summary into dispatch manifest",
+  "archived_at": "2026-06-28T16:23:03.316Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

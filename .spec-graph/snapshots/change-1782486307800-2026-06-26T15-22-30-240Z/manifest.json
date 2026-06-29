@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782486307800",
+  "change_title": "Constitutional command safety: whitelist + forbidden patterns (inherit wdf SPEC §5)",
+  "archived_at": "2026-06-26T15:22:30.247Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

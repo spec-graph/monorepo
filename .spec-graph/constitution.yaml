@@ -1,0 +1,83 @@
+version: 0.1.0
+project_name: spec-graph
+project_description: Domain-neutral spec-driven workflow orchestration kernel with Claude Code skill integration
+effective_date: "2026-06-27"
+last_revised: "2026-06-27T00:52:48.677Z"
+quality:
+  thresholds:
+    test_coverage: 0.8
+    cyclomatic_complexity: 15
+    ambiguity_score: 0
+    placeholder_count: 0
+    non_measurable_count: 5
+    lint_warnings: 0
+  required_linters:
+    - lint
+    - typecheck
+  require_review_approvers: 1
+  articles:
+    - id: c4-has-system-context
+      description: C4 diagram must include a System Context section
+      rule:
+        type: required_section
+        artifact_kind: design/c4
+        section: System Context (Level 1)
+traceability:
+  required_traces:
+    - name: story_to_prd
+      from_kind: plan/story
+      to_kind: requirement/prd
+      via:
+        - derives
+      cardinality: every
+    - name: ac_to_test
+      from_kind: plan/story
+      to_kind: verification/test-report
+      via:
+        - verifies
+      cardinality: every
+    - name: design_to_req
+      from_kind: design/c4
+      to_kind: requirement/prd
+      via:
+        - derives
+      cardinality: every
+  require_ac_test_binding: true
+  require_commit_story_ref: true
+semver:
+  major_bump_on:
+    - contract-removed
+    - contract-breaking-change
+    - public-api-removed
+  minor_bump_on:
+    - contract-added
+    - feature-added
+  patch_bump_on:
+    - bugfix
+    - internal-refactor
+  deprecation_grace_releases: 2
+security:
+  command_whitelist:
+    - npm test
+    - npm run
+    - npx
+    - node
+    - jest
+    - vitest
+    - tsc
+    - eslint
+  forbidden_patterns:
+    - "&&"
+    - "||"
+    - ;
+    - "|"
+    - $(
+    - "`"
+    - ">"
+    - <
+    - curl
+    - wget
+    - sudo
+    - "su "
+    - eval
+    - rm -rf

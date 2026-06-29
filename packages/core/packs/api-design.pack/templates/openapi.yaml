@@ -1,0 +1,281 @@
+openapi: 3.0.3
+info:
+  title: {{ project_name }} API
+  description: |
+    {{ project_description }}
+  version: {{ api_version }}
+  contact:
+    name: {{ contact_name }}
+    email: {{ contact_email }}
+  license:
+    name: {{ license }}
+
+servers:
+  - url: http://localhost:3000
+    description: 本地开发环境
+  - url: https://staging.{{ domain }}
+    description: Staging 环境
+  - url: https://api.{{ domain }}
+    description: 生产环境
+
+tags:
+  - name: {{ tag_1_name }}
+    description: {{ tag_1_description }}
+  - name: {{ tag_2_name }}
+    description: {{ tag_2_description }}
+
+paths:
+  # ========================================================================
+  # 示例路径 - 请替换为实际 API
+  # ========================================================================
+  /api/v1/{{ resource_plural }}:
+    get:
+      tags:
+        - {{ resource_plural }}
+      summary: 获取 {{ resource_plural }} 列表
+      description: 分页获取 {{ resource_plural }} 列表
+      operationId: list{{ ResourcePlural }}
+      parameters:
+        - name: page
+          in: query
+          description: 页码(从 1 开始)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          description: 每页数量
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: 成功返回列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/{{ ResourcePlural }}List'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 未授权
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - {{ resource_plural }}
+      summary: 创建新 {{ resource_name }}
+      description: 创建一个新的 {{ resource_name }}
+      operationId: create{{ ResourceName }}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Create{{ ResourceName }}Request'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/{{ ResourceName }}'
+        '400':
+          description: 请求参数错误
+        '401':
+          description: 未授权
+        '403':
+          description: 无权限
+        '409':
+          description: 资源冲突(如唯一键重复)
+
+  /api/v1/{{ resource_plural }}/{id}:
+    get:
+      tags:
+        - {{ resource_plural }}
+      summary: 获取单个 {{ resource_name }}
+      description: 根据 ID 获取 {{ resource_name }} 详情
+      operationId: get{{ ResourceName }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: {{ resource_name }} ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功返回
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/{{ ResourceName }}'
+        '404':
+          description: 资源不存在
+
+    patch:
+      tags:
+        - {{ resource_plural }}
+      summary: 更新 {{ resource_name }}
+      description: 部分更新 {{ resource_name }} 属性
+      operationId: update{{ ResourceName }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Update{{ ResourceName }}Request'
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          description: 资源不存在
+        '409':
+          description: 版本冲突(乐观锁)
+
+    delete:
+      tags:
+        - {{ resource_plural }}
+      summary: 删除 {{ resource_name }}
+      description: 删除指定 {{ resource_name }}(软删除/硬删除)
+      operationId: delete{{ ResourceName }}
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+        '404':
+          description: 资源不存在
+
+components:
+  schemas:
+    # ========================================================================
+    # 通用类型
+    # ========================================================================
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误代码
+        message:
+          type: string
+          description: 错误消息
+        details:
+          type: object
+          description: 详细错误信息
+      required:
+        - error
+        - message
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            perPage:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - perPage
+            - total
+            - totalPages
+      required:
+        - data
+        - pagination
+
+    # ========================================================================
+    # {{ ResourceName }} 资源类型
+    # ========================================================================
+    {{ ResourceName }}:
+      type: object
+      description: {{ resource_name }} 资源
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 唯一标识
+        createdAt:
+          type: string
+          format: date-time
+          description: 创建时间
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新时间
+        # 请添加实际字段
+      required:
+        - id
+        - createdAt
+        - updatedAt
+
+    {{ ResourcePlural }}List:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/{{ ResourceName }}'
+
+    Create{{ ResourceName }}Request:
+      type: object
+      description: 创建 {{ resource_name }} 请求
+      properties:
+        # 请添加实际字段
+      required: []
+
+    Update{{ ResourceName }}Request:
+      type: object
+      description: 更新 {{ resource_name }} 请求
+      properties:
+        # 请添加实际字段
+      required: []
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token 认证
+
+security:
+  - BearerAuth: []
+
+externalDocs:
+  description: 完整 API 文档
+  url: https://docs.{{ domain }}

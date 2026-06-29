@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782695803892",
+  "change_title": "Test plan generation",
+  "archived_at": "2026-06-29T01:18:19.975Z",
+  "final_status": "discarded",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "A2-B3-Atomic-merge-Retro-Stale-1782703675628",
+  "title": "A2-B3: Atomic merge + Retro + Stale marking + Rollback + Phase restart",
+  "description": "Implement 5 features from round 3 comparison: (A2) Atomic merge guard with git merge --no-commit --no-ff; (A3) Retrospective command for lessons learned; (B1) Impact --mark-stale to flag affected artifacts; (B2) Safe rollback command using snapshots; (B3) Phase restart via machine restart-stage",
+  "created_at": "2026-06-29T03:27:55.626Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "plan_path": ".spec-graph/changes/A2-B3-Atomic-merge-Retro-Stale-1782703675628-plan.md",
+  "applied_at": "2026-06-29T03:28:05.236Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-29T03:28:05.237Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-29T03:28:05.431Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-29T03:28:05.623Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/A2-B3-Atomic-merge-Retro-Stale-1782703675628-2026-06-29T03-28-05-618Z"
+    }
+  ],
+  "completed_at": "2026-06-29T03:28:05.430Z",
+  "archive": {
+    "archived_at": "2026-06-29T03:28:05.623Z",
+    "snapshot_dir": ".spec-graph/snapshots/A2-B3-Atomic-merge-Retro-Stale-1782703675628-2026-06-29T03-28-05-618Z",
+    "final_status": "completed"
+  }
+}

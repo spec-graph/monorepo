@@ -1,0 +1,77 @@
+# api-design.pack — API 设计层
+#
+# 灵魂:定义系统边界与对外契约规范,独立于实现语言/框架。
+# 契约文件由 backend track 在 contract action 阶段写出,
+# api-design pack 提供 schema 模板、lint 规则、冻结门。
+
+name: api-design
+version: "1.0.0"
+kind: domain
+priority: 20
+description: "API design — contract-first surface definition, independent of backend implementation."
+
+applies_when:
+  $or:
+    - { boundary: published-api }
+    - { deployment: hosted-service } # 内部服务也需要 API 契约
+
+provides:
+  artifacts:
+    # REST/OpenAPI(最常用)
+    - id: contract/openapi
+      kind: contract
+      schema_ref: templates/openapi.yaml
+      default_producer: be # backend track 负责写出契约文件
+      default_consumers: [fe, be] # frontend / backend 消费
+    # gRPC(可选)
+    - id: contract/grpc-idl
+      kind: contract
+      schema_ref: templates/grpc.proto
+      optional: true
+      default_producer: be # backend track 负责写出契约文件
+      default_consumers: [be]
+    # GraphQL(可选)
+    - id: contract/graphql-schema
+      kind: contract
+      schema_ref: templates/graphql-schema.gql
+      optional: true
+      default_producer: be # backend track 负责写出契约文件
+      default_consumers: [fe]
+    # Async 事件/消息契约(可选)
+    - id: contract/async-schema
+      kind: contract
+      schema_ref: templates/async-schema.yaml # AsyncAPI / CloudEvents
+      optional: true
+      default_producer: be # backend track 负责写出契约文件
+      default_consumers: [be]
+
+  actions: [design, contract] # design=草拟契约;contract=冻结版本
+
+  checks:
+    # 契约静态校验(lint + 类型一致性)
+    - id: contract-lint
+      kind: lint
+      command: "<contract-lint>" # 如 spectral lint openapi
+      layer: unit
+    # 破坏性变更检测(与上一版本比)
+    - id: breaking-change
+      kind: lint
+      command: "<breaking-change-scan>"
+      layer: unit
+      threshold: { breaking: 0 }
+
+  gates:
+    - id: contract-frozen
+      on_transition: [contract, implement]
+      require_artifacts: [contract/openapi] # 至少一种契约冻结
+      require_checks: [contract-lint, breaking-change]
+      fail_mode: block
+      enabled: true
+
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [contract/openapi]
+    exit-merged:
+      add_checks: [breaking-change]
+
+context_ref: context.md

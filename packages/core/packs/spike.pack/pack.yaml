@@ -1,0 +1,57 @@
+# spike.pack — 变更意图包:探针 / 探索
+#
+# 灵魂:唯一"done = 知识/决策"而非"集成代码"的流。代码是抛弃式的。
+#
+# 压测点(对内核冲击最大):
+#   1. 非集成终态 —— WorkUnitState 当前止于 'integrated'。spike 需要 'concluded'/'discarded',
+#      产出是一份报告,不进主线。FSM 必须加非集成终态。
+#   2. fail-open —— 其它意图包 fail-closed(失败=阻断)。spike 结论"别做"也是成功;
+#      门的 fail_mode 是意图相对的,不是全局常量。
+#   3. 所有生产门关闭 —— 探索期不跑 lint/coverage/契约门(那会扼杀探索)。
+
+name: spike
+version: "1.0.0"
+kind: change-intent
+priority: 10
+description: "Spike intent — timeboxed exploration; output is a findings report, not mergeable code. Fail-open."
+
+applies_when_change:
+  type: spike
+
+provides:
+  artifacts:
+    - id: change-record/spike-question
+      kind: change-record
+      schema_ref: templates/spike-question.md # 要回答的问题 + 时间盒预算
+    - id: verification/spike-findings
+      kind: verification
+      schema_ref: templates/spike-findings.md # 结论 + 建议(graduate / discard)
+
+  actions: [propose, implement, accept] # implement=explore, accept=decide;无 integrate
+
+  checks: [] # 探索期不挂生产 check
+
+  # 探针骨架:无 review/test/integrate;终于 decide
+  pipeline_skeleton:
+    stages: [implement, accept] # explore → decide
+    max_retries: 1 # 探针不重试,时间盒到就收
+    on_exhausted: conclude # 新 on_exhausted 值:不升级,直接出结论
+
+  # 终态扩展:spike 不走 integrated,走 concluded(graduate)或 discarded
+  terminal_states: [concluded, discarded] # 压测 WorkUnitState 需加非集成终态
+
+  gates:
+    # 入口门:只要一个问题 + 时间盒,极轻
+    - id: spike-entry
+      on_transition: [propose, implement]
+      require_artifacts: [change-record/spike-question]
+      fail_mode: block
+      enabled: true
+    # 出口门:只要一份结论报告。fail-open:结论"别做"也算通过,不阻断
+    - id: spike-exit
+      on_transition: [implement, accept]
+      require_artifacts: [verification/spike-findings]
+      fail_mode: warn # fail-open:产出知识即达成,不强制可合并
+      enabled: true
+
+context_ref: context.md

@@ -1,0 +1,39 @@
+{
+  "id": "change-1782657492797",
+  "title": "Enhanced codebase scanning for Sense phase (brownfield support)",
+  "description": "Enhance the Sense engine to deeply analyze existing codebases: detect project structure (src/lib/docs/tests dirs), identify frameworks (React, Express, Next.js, Vue, etc.) from package.json dependencies, find test frameworks and coverage configs, detect TypeScript/JavaScript mix, identify existing CI/CD configs. This enables spec-graph to provide meaningful guidance when taking over legacy projects, not just greenfield ones.",
+  "created_at": "2026-06-28T14:38:12.797Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T14:38:21.161Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T14:38:21.162Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T14:41:37.173Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T14:41:37.338Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782657492797-2026-06-28T14-41-37-334Z"
+    }
+  ],
+  "completed_at": "2026-06-28T14:41:37.172Z",
+  "archive": {
+    "archived_at": "2026-06-28T14:41:37.338Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782657492797-2026-06-28T14-41-37-334Z",
+    "final_status": "completed"
+  }
+}

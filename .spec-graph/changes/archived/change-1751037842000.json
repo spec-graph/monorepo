@@ -1,0 +1,29 @@
+{
+  "id": "change-1751037842000",
+  "title": "Agent Registry + Auto-Dispatch: sub-agent orchestration via agent tool",
+  "description": "Add Agent Registry and auto-dispatch mechanism to spec-graph. Different pipeline stages automatically select specialized sub-agents (pm/architect/developer/reviewer/qa) that work independently via the agent tool. Each sub-agent gets isolated context (only relevant artifacts), its own system prompt, and communicates through artifacts. No new kernel primitives needed — extends Work-unit with executor field, adds AgentDecl type, and pack.yaml agents/agent_bindings declarations. Inspired by superpowers subagent-driven-development, BMAD role-based agents, and gstack multi-review pipeline.",
+  "created_at": "2026-06-27T08:44:02.000Z",
+  "type": "feature",
+  "priority": "high",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "completed_at": "2026-06-27T08:55:00.000Z",
+  "applied_at": "2026-06-27T08:44:02.000Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T08:44:02.000Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed with agent bindings"
+    },
+    {
+      "timestamp": "2026-06-27T08:55:00.000Z",
+      "action": "complete",
+      "message": "agent registry types + foundation agents + ddd domain agents + dispatch protocol + 5 compose tests. 345/345 tests pass"
+    }
+  ]
+}

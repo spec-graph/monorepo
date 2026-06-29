@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782662359923",
+  "change_title": "Refactoring safety net (baseline snapshot + regression detection)",
+  "archived_at": "2026-06-28T16:00:06.804Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

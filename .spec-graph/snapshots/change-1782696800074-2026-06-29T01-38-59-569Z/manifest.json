@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782696800074",
+  "change_title": "Plan path integration",
+  "archived_at": "2026-06-29T01:38:59.575Z",
+  "final_status": "discarded",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

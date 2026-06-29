@@ -1,0 +1,35 @@
+{
+  "id": "change-1782696214653",
+  "title": "Test plan_path",
+  "description": "test",
+  "created_at": "2026-06-29T01:23:34.653Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "discarded",
+  "plan_path": ".spec-graph/changes/change-1782696214653-plan.md",
+  "discarded_at": "2026-06-29T01:24:53.347Z",
+  "discard_reason": "test",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-29T01:24:53.348Z",
+      "action": "discard",
+      "message": "discarded: test"
+    },
+    {
+      "timestamp": "2026-06-29T01:24:53.537Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782696214653-2026-06-29T01-24-53-527Z"
+    }
+  ],
+  "archive": {
+    "archived_at": "2026-06-29T01:24:53.537Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782696214653-2026-06-29T01-24-53-527Z",
+    "final_status": "discarded"
+  }
+}

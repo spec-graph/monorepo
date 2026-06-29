@@ -1,0 +1,80 @@
+{
+  "name": "spec-graph",
+  "version": "1.0.0",
+  "description": "Domain-neutral spec-driven workflow orchestration kernel. 6 primitives (Work-unit, Artifact, Contract, Check, Gate, Trace-edge) + 8-stage FSM + 38 CLI commands. Automatically analyzes your project and composes customized governance workflows.",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "spec-graph": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "packs/",
+    "hooks/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "prettier --check src packs examples skills",
+    "lint:fix": "prettier --write src packs examples skills",
+    "prepublishOnly": "npm run build && npm test",
+    "pack": "npm pack"
+  },
+  "keywords": [
+    "specification",
+    "graph",
+    "workflow",
+    "orchestration",
+    "requirements",
+    "architecture",
+    "traceability",
+    "governance",
+    "quality-gates",
+    "fsm",
+    "state-machine",
+    "ai-agent",
+    "claude-code",
+    "codex",
+    "skills",
+    "agent-workflow",
+    "brownfield",
+    "greenfield",
+    "dev-tool",
+    "cli"
+  ],
+  "author": "spec-graph team",
+  "license": "MIT",
+  "homepage": "https://github.com/spec-graph/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spec-graph/core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/spec-graph/core/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.0.1",
+    "prettier": "^3.8.4",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.6"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "js-yaml": "^4.1.0",
+    "minimatch": "^10.2.5",
+    "ora": "^5.4.1"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782555403969",
+  "change_title": "Per-artifact status states (ready/blocked)",
+  "archived_at": "2026-06-28T15:11:14.970Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

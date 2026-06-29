@@ -1,0 +1,34 @@
+{
+  "name": "spec-graph-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "spec-graph monorepo: core kernel, server, and web UI",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspace=packages/core",
+    "dev:core": "npm run dev --workspace=packages/core",
+    "dev:server": "npm run dev --workspace=packages/server",
+    "dev:ui": "npm run dev --workspace=packages/ui",
+    "publish:core": "npm publish --workspace=packages/core",
+    "publish:server": "npm publish --workspace=packages/server",
+    "publish:ui": "npm publish --workspace=packages/ui"
+  },
+  "keywords": [
+    "specification",
+    "workflow",
+    "orchestration",
+    "monorepo"
+  ],
+  "author": "spec-graph team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spec-graph/spec-graph.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

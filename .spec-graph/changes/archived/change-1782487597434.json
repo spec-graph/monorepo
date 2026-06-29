@@ -1,0 +1,39 @@
+{
+  "id": "change-1782487597434",
+  "title": "Constitutional articles: qualitative invariants (inherit spec-kit 9 Articles)",
+  "description": "Add articles to constitution — named qualitative rules (required_section, min_length, co_completed) validated by a generic articles-validate builtin check. Extends constitution beyond numeric thresholds to per-artifact content quality.",
+  "created_at": "2026-06-26T15:26:37.434Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T15:26:55.536Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T15:26:55.537Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T01:27:03.264Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T01:27:09.817Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782487597434-2026-06-27T01-27-09-807Z"
+    }
+  ],
+  "completed_at": "2026-06-27T01:27:03.263Z",
+  "archive": {
+    "archived_at": "2026-06-27T01:27:09.817Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782487597434-2026-06-27T01-27-09-807Z",
+    "final_status": "completed"
+  }
+}

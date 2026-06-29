@@ -1,0 +1,21 @@
+# Template files with placeholder syntax
+packs/*/templates/*.yaml
+packs/*/templates/*.yml
+packs/*/templates/*.md
+
+# Generated files
+.spec-graph/
+node_modules/
+dist/
+build/
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

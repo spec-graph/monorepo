@@ -1,0 +1,39 @@
+{
+  "id": "change-1782567690687",
+  "title": "Rich artifact documents with templates",
+  "description": "Add content layer to spec-graph: each artifact can have an associated markdown document (.spec-graph/artifacts/<id>.md) with rich content. Add 'spec-graph artifact init <id> --template <template>' command to generate skeleton documents from templates. Add templates for PRD, architecture, story, epic, task, ADR. Add explicit linking via frontmatter (story references requirement IDs, task links to story). Persist AI-generated analysis and planning to these documents. This bridges the gap between state tracking (current spec-graph) and content management (BMAD/OpenSpec).",
+  "created_at": "2026-06-27T13:41:30.687Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-27T13:42:19.574Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T13:42:19.575Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T13:56:23.596Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T13:56:35.041Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782567690687-2026-06-27T13-56-35-031Z"
+    }
+  ],
+  "completed_at": "2026-06-27T13:56:23.594Z",
+  "archive": {
+    "archived_at": "2026-06-27T13:56:35.041Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782567690687-2026-06-27T13-56-35-031Z",
+    "final_status": "completed"
+  }
+}

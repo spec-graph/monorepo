@@ -1,0 +1,39 @@
+{
+  "id": "change-1782544310779",
+  "title": "Manifest gate failure details + check_command embedding + audit trail",
+  "description": "Expose missing_artifacts/failed_checks/missing_traces/forbidden_violations at manifest top level so coordinator knows WHAT failed (not just that gate_passed===false). Embed actual CheckDecl.command as action.check_command for run_check actions so coordinator can run shell directly without consulting graph.yaml. Append dispatch entries to active change audit_log for traceability. Document NEEDS_CONTEXT retry cap (3) in coordinator protocol.",
+  "created_at": "2026-06-27T07:11:50.779Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-27T07:14:13.904Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T07:14:13.905Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T07:14:14.806Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T07:14:16.083Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782544310779-2026-06-27T07-14-16-075Z"
+    }
+  ],
+  "completed_at": "2026-06-27T07:14:14.805Z",
+  "archive": {
+    "archived_at": "2026-06-27T07:14:16.083Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782544310779-2026-06-27T07-14-16-075Z",
+    "final_status": "completed"
+  }
+}

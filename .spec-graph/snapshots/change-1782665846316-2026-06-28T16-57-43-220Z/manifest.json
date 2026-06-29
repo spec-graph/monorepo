@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782665846316",
+  "change_title": "Complete pack templates: backend + feature",
+  "archived_at": "2026-06-28T16:57:43.224Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

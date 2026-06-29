@@ -1,0 +1,50 @@
+# backend.pack — 后端 / API 实现领域层
+#
+# 灵魂:backend track 在 contract action 阶段写出契约文件(openapi/db-schema),
+# 在 implement 阶段产出可运行代码。
+# 契约的 schema/设计规范由 api-design / data-design pack 提供,
+# backend 负责按规范落地契约并产出实现。
+
+name: backend
+version: "1.0.0"
+priority: 10
+description: "Backend domain — produces API/DB contracts + BE implementation + integration acceptance."
+
+applies_when:
+  $or:
+    - { boundary: published-api }
+    - { deployment: hosted-service }
+
+provides:
+  artifacts:
+    - id: implementation/backend
+      kind: implementation
+      schema_ref: null
+
+  actions: [contract, implement, review, test, accept]
+
+  checks:
+    # L2 integration(wdf FEATURE acceptance)
+    - id: contract-test
+      kind: test
+      command: "npm run test:contract" # 契约两端对齐(pact 等)
+      layer: integration
+    - id: feature-test
+      kind: test
+      command: "npm run test:integration"
+      layer: integration
+
+  acceptance_layers:
+    integration: { required: true, checks: [contract-test, feature-test] }
+
+  gate_patches:
+    exit-merged:
+      add_checks: [contract-test, feature-test]
+
+contributes_track:
+  id: be
+  scope: backend
+  actions: [contract, implement, review, test, accept]
+  produces: [contract/openapi, contract/db-schema] # backend track 写出契约文件
+
+context_ref: context.md

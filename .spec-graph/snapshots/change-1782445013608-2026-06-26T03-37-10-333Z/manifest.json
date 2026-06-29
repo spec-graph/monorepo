@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782445013608",
+  "change_title": "Lifecycle e2e",
+  "archived_at": "2026-06-26T03:37:10.338Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

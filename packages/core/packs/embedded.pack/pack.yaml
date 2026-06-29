@@ -1,0 +1,129 @@
+# embedded.pack — 嵌入式 / 固件开发领域层
+#
+# 压测两块 web 三包未覆盖的能力:
+#   1. release 动作(固件镜像发布 / 烧录),web 流程没有显式 release
+#   2. federated 跨 repo 契约:固件作为消费者绑定另一个 repo 的 API 契约版本,
+#      两端独立开发(固件按契约版本 mock,API 各自就绪后做联邦集成)
+#   3. deployment 层 = HIL 硬件在环(不是浏览器 e2e)
+#   4. 全新契约类型:寄存器图 / CAN DBC(证明 contract 不止 API)
+
+name: embedded
+version: "1.0.0"
+priority: 10
+description: "Embedded/firmware domain — register-map contract, HIL acceptance, firmware release."
+
+applies_when:
+  deployment: firmware
+
+provides:
+  artifacts:
+    # --- 嵌入式特有设计产物 ---
+    - id: design/hardware-selection
+      kind: design
+      schema_ref: templates/hardware-selection.md # 元器件选型(嵌入式特有)
+    - id: design/state-machine
+      kind: design
+      schema_ref: templates/state-machine.md
+    # --- 全新契约类型:寄存器图(证明 Contract 不预设为 API) ---
+    - id: contract/register-map
+      kind: contract
+      schema_ref: templates/register-map.yaml
+      default_producer: firmware # 固件定义寄存器布局
+      default_consumers: [firmware] # 驱动层消费
+    - id: contract/can-dbc
+      kind: contract
+      schema_ref: templates/can.dbc
+      default_producer: firmware
+      default_consumers: [firmware]
+      optional: true
+    # --- 实现 ---
+    - id: implementation/firmware
+      kind: implementation
+      schema_ref: null
+    # --- release 产物(web 没有) ---
+    - id: implementation/firmware-image
+      kind: implementation
+      schema_ref: null # .bin/.hex 烧录镜像
+
+  # release 动作首次出现(web 三包无)
+  actions:
+    [design, contract, implement, review, test, accept, integrate, release]
+
+  checks:
+    # L1 unit:嵌入式静态分析 + 单元测试
+    - id: static-analysis
+      kind: lint
+      command: "cppcheck --error-exitcode=1 src/"
+      layer: unit
+    - id: unit-test-embedded
+      kind: test
+      command: "make test"
+      layer: unit
+    # L2 integration:simulator 上模块联调
+    - id: simulator-test
+      kind: test
+      command: "make sim-test"
+      layer: integration
+    # L3 system:emulator 跑全固件
+    - id: emulator-full
+      kind: test
+      command: "make emu-run"
+      layer: system
+    # L4 deployment:HIL 硬件在环(不是浏览器!)
+    - id: hil-test
+      kind: hil
+      command: "make hil-test" # 真硬件烧录 + 在环测试
+      layer: deployment
+      threshold: { binary_size_max_kb: 256, power_budget_mw: 50 }
+
+  acceptance_layers:
+    unit: { required: true, checks: [static-analysis, unit-test-embedded] }
+    integration: { required: true, checks: [simulator-test] }
+    system: { required: true, checks: [emulator-full] }
+    deployment: { required: true, checks: [hil-test] }
+
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [design/hardware-selection, contract/register-map]
+    exit-merged:
+      add_checks:
+        [
+          static-analysis,
+          unit-test-embedded,
+          simulator-test,
+          emulator-full,
+          hil-test,
+        ]
+
+  # domain pack 可新增门(不只是 patch foundation 的门):
+  # release 是 web 三包没有的动作,其门由本包贡献
+  gates:
+    - id: release-firmware
+      on_transition: [integrate, release]
+      require_checks: [hil-test] # 必须通过 HIL 才能发布镜像
+      require_artifacts: [implementation/firmware-image]
+      require_traces:
+        - name: req_to_hil
+          from_kind: requirement/prd
+          to_kind: verification/test-report
+          via: [verifies]
+          cardinality: every
+      fail_mode: block
+      enabled: true
+
+contributes_track:
+  id: firmware
+  scope: firmware
+  actions: [contract, implement, review, test, accept, integrate, release]
+  produces: [contract/register-map]
+  # federated 跨 repo:若 profile.topology=federated 且存在配套 API,
+  # 固件作为消费者绑定外部 repo 的 API 契约版本(独立 mock 开发)
+  consumes: [contract/openapi]
+  federated_consume:
+    contract: contract/openapi
+    source: external-repo # 契约来自另一个 spec-graph 项目
+    binding: by-version # 绑定到具体契约版本,按版本 mock
+    integration: deferred # 两端各自就绪后做 federated 集成验证
+
+context_ref: context.md
+constitution_ref: rules/constitution.yaml

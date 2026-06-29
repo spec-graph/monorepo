@@ -1,0 +1,39 @@
+{
+  "id": "change-1782656738836",
+  "title": "Auto-detect ambiguous adjectives in checklist documents",
+  "description": "Enhance checklist soft check #1 to automatically scan document content for ambiguous adjectives (fast, user-friendly, robust, scalable, flexible, intuitive, powerful, simple, easy, seamless). Each match is reported with line context. Transforms a soft (manual) check into a mechanical (auto-detected) check.",
+  "created_at": "2026-06-28T14:25:38.836Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T14:25:45.944Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T14:25:45.945Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T14:31:00.164Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T14:31:00.310Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782656738836-2026-06-28T14-31-00-300Z"
+    }
+  ],
+  "completed_at": "2026-06-28T14:31:00.163Z",
+  "archive": {
+    "archived_at": "2026-06-28T14:31:00.309Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782656738836-2026-06-28T14-31-00-300Z",
+    "final_status": "completed"
+  }
+}

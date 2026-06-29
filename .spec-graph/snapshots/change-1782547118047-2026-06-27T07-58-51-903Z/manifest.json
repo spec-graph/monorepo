@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782547118047",
+  "change_title": "Run command action handlers + verify_trace trace_query exposure",
+  "archived_at": "2026-06-27T07:58:51.910Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

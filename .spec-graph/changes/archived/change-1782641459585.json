@@ -1,0 +1,39 @@
+{
+  "id": "change-1782641459585",
+  "title": "Tier 2: Multi-unit story execution",
+  "description": "Add execution_units field to ChangeDescriptor allowing stories to be split into multiple independent execution units. Each unit has its own scope, checks, and artifacts. Derive story status from unit statuses. Enables parallel execution of large stories.",
+  "created_at": "2026-06-28T10:10:59.585Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T10:13:12.273Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T10:13:12.274Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T10:18:47.251Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T10:19:21.726Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782641459585-2026-06-28T10-19-21-720Z"
+    }
+  ],
+  "completed_at": "2026-06-28T10:18:47.250Z",
+  "archive": {
+    "archived_at": "2026-06-28T10:19:21.726Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782641459585-2026-06-28T10-19-21-720Z",
+    "final_status": "completed"
+  }
+}

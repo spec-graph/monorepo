@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782445457636",
+  "change_title": "Fix $exists semantics for 'unknown' dimension values",
+  "archived_at": "2026-06-26T03:50:24.357Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

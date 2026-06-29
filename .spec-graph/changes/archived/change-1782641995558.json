@@ -1,0 +1,39 @@
+{
+  "id": "change-1782641995558",
+  "title": "Tier 2: Hook/extension system (pre/post command hooks)",
+  "description": "Add .spec-graph/hooks.yaml config allowing users to register shell commands that run before/after spec-graph commands. Hook types: pre-dispatch, post-dispatch, pre-transition, post-transition, pre-check, post-check. Each hook has command (shell command), when (pre/post), and optional condition (glob matching command args). Enables custom CI integration, notifications, artifact sync without modifying spec-graph core.",
+  "created_at": "2026-06-28T10:19:55.558Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T10:20:14.344Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T10:20:14.345Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T13:17:36.783Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T13:18:49.063Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782641995558-2026-06-28T13-18-49-052Z"
+    }
+  ],
+  "completed_at": "2026-06-28T13:17:36.782Z",
+  "archive": {
+    "archived_at": "2026-06-28T13:18:49.063Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782641995558-2026-06-28T13-18-49-052Z",
+    "final_status": "completed"
+  }
+}

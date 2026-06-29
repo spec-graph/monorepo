@@ -1,0 +1,35 @@
+{
+  "id": "change-1782696432661",
+  "title": "Test minimal plan",
+  "description": "test",
+  "created_at": "2026-06-29T01:27:12.661Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "discarded",
+  "plan_path": ".spec-graph/changes/change-1782696432661-plan.md",
+  "discarded_at": "2026-06-29T01:27:34.663Z",
+  "discard_reason": "test",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-29T01:27:34.664Z",
+      "action": "discard",
+      "message": "discarded: test"
+    },
+    {
+      "timestamp": "2026-06-29T01:27:34.850Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782696432661-2026-06-29T01-27-34-844Z"
+    }
+  ],
+  "archive": {
+    "archived_at": "2026-06-29T01:27:34.850Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782696432661-2026-06-29T01-27-34-844Z",
+    "final_status": "discarded"
+  }
+}

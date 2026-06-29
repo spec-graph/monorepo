@@ -1,0 +1,39 @@
+{
+  "id": "change-1782657774504",
+  "title": "Incremental impact analysis (ripple effect tracking)",
+  "description": "Implement impact analysis: when an artifact changes, automatically identify downstream artifacts and checks affected. Uses trace edges + check dependencies to compute ripple. Helps coordinator prioritize work and understand blast radius of changes. Critical for legacy project takeovers where understanding dependencies is crucial.",
+  "created_at": "2026-06-28T14:42:54.504Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T14:43:30.577Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T14:43:30.578Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T14:59:40.636Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T14:59:40.811Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782657774504-2026-06-28T14-59-40-801Z"
+    }
+  ],
+  "completed_at": "2026-06-28T14:59:40.635Z",
+  "archive": {
+    "archived_at": "2026-06-28T14:59:40.811Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782657774504-2026-06-28T14-59-40-801Z",
+    "final_status": "completed"
+  }
+}

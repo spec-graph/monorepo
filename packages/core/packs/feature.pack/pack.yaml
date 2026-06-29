@@ -1,0 +1,37 @@
+# feature.pack — 新功能开发
+#
+# 灵魂:从需求到实现的完整功能开发流程。
+# 这是默认的变更意图包——没有指定 change.type 时,默认命中 feature。
+
+name: feature
+version: "1.0.0"
+kind: change-intent
+priority: 0
+description: "Feature development — full lifecycle from requirement to production."
+
+applies_when_change:
+  type: [feature, enhancement, add] # 新功能 / 增强 / 新增
+
+provides:
+  actions:
+    [
+      propose,
+      specify,
+      design,
+      contract,
+      plan,
+      implement,
+      review,
+      test,
+      accept,
+      integrate,
+      archive,
+    ]
+
+  # 标准流水线骨架:dev → review → test → accept
+  pipeline_skeleton:
+    stages: [implement, review, test, accept]
+    max_retries: 5
+    on_exhausted: escalate
+
+context_ref: context.md

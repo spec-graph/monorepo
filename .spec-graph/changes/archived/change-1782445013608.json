@@ -1,0 +1,39 @@
+{
+  "id": "change-1782445013608",
+  "title": "Lifecycle e2e",
+  "description": "verify complete+discard subcommands",
+  "created_at": "2026-06-26T03:36:53.608Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T03:36:53.968Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T03:36:53.968Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-26T03:37:10.076Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-26T03:37:10.339Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782445013608-2026-06-26T03-37-10-333Z"
+    }
+  ],
+  "completed_at": "2026-06-26T03:37:10.074Z",
+  "archive": {
+    "archived_at": "2026-06-26T03:37:10.339Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782445013608-2026-06-26T03-37-10-333Z",
+    "final_status": "completed"
+  }
+}

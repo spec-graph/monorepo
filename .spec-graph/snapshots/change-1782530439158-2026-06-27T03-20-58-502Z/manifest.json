@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782530439158",
+  "change_title": "PostToolUse hook: dispatch manifest auto-injection",
+  "archived_at": "2026-06-27T03:20:58.509Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

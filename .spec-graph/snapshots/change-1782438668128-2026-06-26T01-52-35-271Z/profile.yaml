@@ -1,0 +1,91 @@
+version: "1"
+meta:
+  created_at: "2026-06-26T01:40:51.257Z"
+  source:
+    repo_scan: true
+    llm_classified: true
+facts:
+  has_ui:
+    value: none
+    confidence: low
+    source: llm
+    evidence: No UI framework detected
+  boundary:
+    value: internal
+    confidence: low
+    source: llm
+    evidence: No public API boundary detected
+  deployment:
+    value: process
+    confidence: low
+    source: llm
+    evidence: "Default deployment: standalone process"
+  topology:
+    value: mono
+    confidence: low
+    source: llm
+    evidence: No deployment config detected
+  field:
+    value: brownfield
+    confidence: high
+    source: repo
+    evidence: Found 45 source files
+  consumers:
+    value: self
+    confidence: low
+    source: llm
+    evidence: "Default: internal use only"
+  criticality:
+    value: standard
+    confidence: low
+    source: llm
+    evidence: "Default: standard criticality"
+  team:
+    value: small
+    confidence: low
+    source: llm
+    evidence: "Default: small team assumption"
+  persistence:
+    value: unknown
+    confidence: low
+    source: llm
+    evidence: Default fallback
+repo_signals:
+  hasPackageJson: true
+  packageManager: null
+  hasExportsField: false
+  hasDependencies:
+    - chalk
+    - cli-table3
+    - commander
+    - js-yaml
+    - ora
+  hasDevDependencies:
+    - "@types/js-yaml"
+    - "@types/node"
+    - prettier
+    - tsx
+    - typescript
+    - vitest
+  hasNextConfig: false
+  hasViteConfig: false
+  hasWebpackConfig: false
+  hasReact: false
+  hasVue: false
+  hasTailwind: false
+  hasDesignTokens: false
+  hasOpenApiYaml: false
+  hasPrismaSchema: false
+  hasDockerfile: false
+  hasK8sConfig: false
+  hasGraphqlSchema: false
+  hasGrpcProtos: false
+  hasPlatformioIni: false
+  hasArduinoFiles: false
+  hasRegisterMap: false
+  hasCiConfig: false
+  hasSrcDir: true
+  hasTestDir: false
+  hasGit: false
+  srcFileCount: 45
+  testFileCount: 0

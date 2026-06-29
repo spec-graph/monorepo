@@ -1,0 +1,39 @@
+{
+  "id": "change-1782664813432",
+  "title": "Pack optimization: templates, agents, touchfiles, context",
+  "description": "Comprehensive pack optimization: (1) Add missing templates to 8 packs that lack them, (2) Add agent bindings to domain packs, (3) Add touchfiles to checks for diff-select, (4) Add context.md to key packs. This makes all 17 packs production-ready.",
+  "created_at": "2026-06-28T16:40:13.432Z",
+  "type": "refactor",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T16:40:29.322Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T16:40:29.323Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T16:50:18.671Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T16:50:18.892Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782664813432-2026-06-28T16-50-18-882Z"
+    }
+  ],
+  "completed_at": "2026-06-28T16:50:18.671Z",
+  "archive": {
+    "archived_at": "2026-06-28T16:50:18.892Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782664813432-2026-06-28T16-50-18-882Z",
+    "final_status": "completed"
+  }
+}

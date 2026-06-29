@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782641995558",
+  "change_title": "Tier 2: Hook/extension system (pre/post command hooks)",
+  "archived_at": "2026-06-28T13:18:49.062Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

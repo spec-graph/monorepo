@@ -1,0 +1,293 @@
+# foundation.pack — 领域无关的治理底盘 + 通用流水线骨架
+#
+# 常驻包(总是命中)。提供所有软件项目共享的:
+#   - 治理产物(constitution/changelog)
+#   - 验收产物(review/test/acceptance report)
+#   - 通用代码 check(lint/typecheck/unit-test)
+#   - 通用流水线骨架(implement→review→test→accept)
+#   - 验收层骨架(unit/integration/system/deployment)
+#
+# 规划产物(需求/架构/任务/API/数据)已全部拆到独立 planning pack,
+# 由各自 pack 通过 gate_patches 把产物约束注入 entry-phase4 / exit-merged 门。
+# 本包只保留门骨架(无具体 artifact 要求),保证 governance 不随 planning 分解而散落。
+
+name: foundation
+version: "1.0.0"
+priority: 0 # 最低优先级,任何 pack 都可覆盖其默认
+description: "Domain-neutral governance chassis + generic pipeline skeleton + acceptance layer framework."
+
+applies_when: always # 常驻包:无条件命中
+
+provides:
+  artifacts:
+    # --- 验收 / 治理产物 ---
+    - id: verification/review-report
+      kind: verification
+      schema_ref: templates/review-report.json
+    - id: verification/test-report
+      kind: verification
+      schema_ref: templates/test-report.json
+    - id: verification/acceptance-report
+      kind: verification
+      schema_ref: templates/acceptance-report.md
+    - id: change-record/constitution
+      kind: change-record
+      schema_ref: templates/constitution.yaml
+    - id: change-record/changelog
+      kind: change-record
+      schema_ref: templates/changelog.md
+
+  actions:
+    - propose
+    - specify
+    - design
+    - plan
+    - implement # 骨架级;domain pack 贡献具体 track
+    - review
+    - test
+    - accept
+    - integrate
+    - archive
+
+  checks:
+    # 通用代码 check（任何代码项目都适用）
+    # touchfiles 不在此声明 — 各项目目录结构不同（src/ vs lib/ vs cmd/ vs firmware/）
+    # 用户应在 .spec-graph/config.yaml 中按实际结构配置 touchfiles
+    - id: lint
+      kind: lint
+      command: "npm run lint"
+      layer: unit
+    - id: typecheck
+      kind: lint
+      command: "npx tsc --noEmit"
+      layer: unit
+    - id: unit-test
+      kind: test
+      command: "npm test"
+      layer: unit
+      threshold: { coverage: 0.80 }
+    # 宪法自检:存在性 + 内部一致 + 与 pack 阈值漂移检测
+    # 宪法是阈值的真相源;此处故意不声明 threshold,
+    # 让 constitution.yaml 的 quality.thresholds 在运行时覆盖 pack 的硬编码值
+    - id: constitution-validate
+      kind: lint
+      command: "<constitution-validate>"
+      layer: unit
+    # 契约漂移自检:扫描 .spec-graph/contracts/ 注册表,
+    # 任何消费者绑定到非 current_version 即失败(可作为 gate 的 require_checks)
+    - id: contract-drift-scan
+      kind: lint
+      command: "<contract-drift-scan>"
+      layer: integration
+    # 作用域锁自检:扫描 .spec-graph/isolation/scope-*.yaml,
+    # 验证变更文件是否超出作用域(严格模式失败,警告模式仅报告)
+    - id: scope-lock-validate
+      kind: lint
+      command: "<scope-lock-validate>"
+      layer: integration
+    # 克隆检测:基于 token hash 的重复函数发现,
+    # 阈值 dup_ratio_max 超标即 block(默认 0.10)
+    - id: clone-detection
+      kind: clone
+      command: "<clone-detection>"
+      layer: unit
+      threshold: { dup_ratio_max: 0.10 }
+    # 复用扫描:报告未被 trace satisfies 边链接的导出符号,
+    # 始终通过(信息性),提示潜在复用机会或孤儿代码
+    - id: reuse-scan
+      kind: reuse
+      command: "<reuse-scan>"
+      layer: integration
+    # 验收层审计:扫描 graph.acceptance_layers,
+    # 报告 required=true 但 checks 为空的层(信息性,声明但无法验证)
+    - id: acceptance-layer-audit
+      kind: lint
+      command: "<acceptance-layer-audit>"
+      layer: integration
+    # 共享契约审计:扫描 graph.tracks,报告被 ≥2 track 消费但无 producer
+    # 的契约(§6.3 第三层:人工建议引入 contract/shared-lib,不自动连边)
+    - id: shared-contract-audit
+      kind: lint
+      command: "<shared-contract-audit>"
+      layer: integration
+    # 命令安全校验:扫描 graph.checks,验证每个 command 字段是否通过白名单
+    # 前缀匹配 + 无禁止模式(继承 wdf-method SPEC §5)
+    # 仅校验非 builtin 命令(带 <...> 标记的 sentinel 命令走 TS dispatch,安全)
+    - id: command-safety-validate
+      kind: lint
+      command: "<command-safety-validate>"
+      layer: unit
+    # 宪法条款校验:验证 constitution.quality.articles 中声明的定性条款
+    # 支持三种规则:required_section(工件必须含某章节)/min_length(工件最低字数)/
+    # co_completed(若前件工件完成则后件必须完成)(继承 spec-kit 9 Articles)
+    - id: articles-validate
+      kind: lint
+      command: "<articles-validate>"
+      layer: unit
+
+  gates:
+    - id: entry-phase4
+      on_transition: [plan, implement]
+      # 骨架:仅声明 transition 触发点,具体 require_* 由 planning 包 gate_patches 注入
+      require_checks: []
+      require_artifacts: []
+      require_traces: []
+      require_contracts_current: false
+      fail_mode: block
+      enabled: true
+    - id: exit-merged
+      on_transition: [accept, integrate]
+      # 骨架:仅声明 transition 触发点,具体 require_* 由 domain 包 gate_patches 注入
+      # constitution-validate:确保合并前宪法存在且阈值无漂移
+      # contract-drift-scan + require_contracts_current:确保合并前所有消费者绑定到 current_version
+      require_checks:
+        [
+          lint,
+          typecheck,
+          unit-test,
+          constitution-validate,
+          contract-drift-scan,
+          scope-lock-validate,
+          clone-detection,
+          reuse-scan,
+          acceptance-layer-audit,
+          shared-contract-audit,
+          command-safety-validate,
+          articles-validate,
+        ]
+      require_artifacts:
+        [verification/acceptance-report, change-record/constitution]
+      require_traces: []
+      require_contracts_current: true
+      fail_mode: block
+      enabled: true
+
+  # 通用流水线骨架(dev→review→testing→QA + 重试);tracks 不在此写死,
+  # 由 Compose 从所有 active domain pack 的 contributes_track 收集拼装
+  pipeline_skeleton:
+    stages: [implement, review, test, accept]
+    max_retries: 5
+    on_exhausted: escalate
+
+  # 4 层验收骨架;domain pack 往各层追加 check
+  acceptance_layers:
+    unit: { required: true, checks: [lint, typecheck, unit-test] }
+    integration: { required: true, checks: [] }
+    system: { required: false, checks: [] }
+    deployment: { required: false, checks: [] }
+
+  # ============ Agent Registry(子代理编排) ============
+  # 每个 agent 是独立 sub-agent:隔离 context、专职 prompt、通过 artifact 交接。
+  # coordinator 根据 agent_bindings 自动选择;不同 pack 可 override 绑定。
+  agents:
+    # --- PM Agent:需求澄清 + 规格化 ---
+    - id: pm
+      description: "Product Manager — elicits requirements from user intent, produces proposal and requirement specs."
+      prompt_ref: agents/pm-agent.md
+      model_tier: capable
+      input_artifact_kinds: [] # 从用户输入开始,无前置 artifact
+      output_artifact_kinds: [requirement/*] # proposal, requirements, story-map
+      actions: [propose, specify]
+
+    # --- Architect Agent:设计 + 契约 ---
+    - id: architect
+      description: "Software Architect — designs system structure, produces C4/ADR, freezes interface contracts."
+      prompt_ref: agents/architect-agent.md
+      model_tier: capable
+      input_artifact_kinds: [requirement/*]
+      output_artifact_kinds: [design/*, contract/*] # c4, adr, api-spec, register-map
+      actions: [design, contract]
+
+    # --- Developer Agent:实现 ---
+    - id: developer
+      description: "Software Developer — implements code from plan + contracts, writes unit tests, commits."
+      prompt_ref: agents/developer-agent.md
+      model_tier: standard # 计划充分时机械化执行,不需最强模型
+      input_artifact_kinds: [design/*, contract/*, plan/*]
+      output_artifact_kinds: [implementation/*, verification/*] # code, unit tests
+      actions: [implement, plan]
+
+    # --- Reviewer Agent:代码审查 ---
+    - id: reviewer
+      description: "Code Reviewer — reviews implementation against design + contracts, reports issues by severity."
+      prompt_ref: agents/reviewer-agent.md
+      model_tier: capable # 审查需要判断力
+      input_artifact_kinds: [implementation/*, design/*, contract/*]
+      output_artifact_kinds: [verification/*] # review-report
+      actions: [review]
+      checks: [lint, typecheck, clone-detection, reuse-scan]
+
+    # --- QA Agent:测试 ---
+    - id: qa
+      description: "QA Engineer — runs integration/system/deployment tests, validates acceptance criteria."
+      prompt_ref: agents/qa-agent.md
+      model_tier: standard
+      input_artifact_kinds: [implementation/*, contract/*, plan/*]
+      output_artifact_kinds: [verification/*] # test-report
+      actions: [test, accept]
+      checks: [unit-test, constitution-validate, contract-drift-scan]
+
+  # --- Action → Agent 默认绑定 ---
+  # domain pack 可通过更高 priority override(如 ddd.pack 把 specify 绑到 domain-expert)
+  agent_bindings:
+    propose: pm
+    specify: pm
+    design: architect
+    contract: architect
+    plan: developer
+    implement: developer
+    review: reviewer
+    test: qa
+    accept: qa
+    diagnose: developer # bugfix/refactor 的 diagnose 由 developer 执行
+    integrate: developer # 合并操作由 developer 执行
+    release: developer # 发布由 developer 执行
+    archive: pm # 归档由 pm 执行(生成 changelog)
+
+  # ============ Meeting 声明(多 agent 协作讨论) ============
+  # 在需求阶段,多个 agent 以圆桌会议模式讨论,互相质疑、提问、收敛。
+  # 支持动态轮次(min_rounds ~ max_rounds),支持邀请领域专家。
+  meetings:
+    # --- 需求会议:propose/specify 阶段默认触发 ---
+    - id: requirements-meeting
+      description: "Requirements roundtable — PM, Architect, QA discuss user needs from their perspectives, challenge assumptions, converge on shared understanding."
+      purpose: "Transform user intent into structured, feasible, testable requirements through multi-perspective discussion."
+      on_actions: [propose, specify]
+      min_rounds: 2 # 至少 diverge + converge
+      max_rounds: 10 # 最多 10 轮(复杂需求可能需要多轮 deep-dive)
+      participants:
+        - agent_id: pm
+          role: core
+          perspective: "user needs, business value, acceptance criteria"
+        - agent_id: architect
+          role: core
+          perspective: "technical feasibility, system constraints, design implications"
+        - agent_id: qa
+          role: core
+          perspective: "testability, edge cases, quality criteria"
+        # 领域专家:按需邀请(不主动发言)
+        # coordinator 可在运行中邀请领域专家加入(如 domain-expert from ddd.pack)
+      expert_invite_protocol: agents/expert-invite-protocol.md
+      output_artifacts:
+        - requirement/proposal
+        - requirement/requirements
+      # 轮次模板( facilitator 可动态追加更多轮次)
+      rounds:
+        - number: 1
+          phase: diverge
+          objective: "Each participant shares their initial perspective on the user's request"
+          prompt: "Share your perspective on this request. What do you see as the core need? What concerns you? What's missing?"
+          speakers: [] # 空 = 所有 core 参与者
+        - number: 2
+          phase: challenge
+          objective: "Question assumptions, identify conflicts, surface hidden constraints"
+          prompt: "Review all previous contributions. Challenge any assumptions you disagree with. Ask questions to participants whose points need clarification."
+          speakers: []
+        - number: 3
+          phase: converge
+          objective: "Align on shared understanding, refine positions based on discussion"
+          prompt: "Based on the discussion so far, refine your position. State what you now agree on. Note any remaining disagreements."
+          speakers: []
+
+context_ref: context.md
+constitution_ref: rules/constitution.yaml

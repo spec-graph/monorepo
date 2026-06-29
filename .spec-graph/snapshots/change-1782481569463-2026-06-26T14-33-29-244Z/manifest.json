@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782481569463",
+  "change_title": "Compose-time shared contract suggestion (§6.3 layer 3: cross-track duplicate → shared contract)",
+  "archived_at": "2026-06-26T14:33:29.253Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

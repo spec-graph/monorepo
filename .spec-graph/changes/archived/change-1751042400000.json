@@ -1,0 +1,29 @@
+{
+  "id": "change-1751042400000",
+  "title": "Coordinator Protocol: explicit contract between spec-graph and external coordinators",
+  "description": "Add coordinator-protocol.md and next_step field to dispatch manifest. spec-graph stays neutral (no LLM API calls, no embedded sub-agent dispatch), but now provides an explicit protocol for external coordinators (Claude Code, Codex, any AI agent) to consume dispatch manifests. The protocol covers: reading the manifest, dispatching sub-agents via Agent tool, handling meetings (broadcast model, dynamic rounds, expert invitation), running next_step commands to advance the workflow, and looping back to dispatch. Adds next_step field to DispatchAction so coordinators know exactly what to run after sub-agent completion.",
+  "created_at": "2026-06-27T11:00:00.000Z",
+  "type": "feature",
+  "priority": "high",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "completed_at": "2026-06-27T11:05:00.000Z",
+  "applied_at": "2026-06-27T11:00:00.000Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T11:00:00.000Z",
+      "action": "apply",
+      "message": "coordinator protocol designed, implementing next_step field + protocol doc + tests"
+    },
+    {
+      "timestamp": "2026-06-27T11:05:00.000Z",
+      "action": "complete",
+      "message": "coordinator-protocol.md + next_step field in dispatch manifest + 3 new tests. 360/360 tests pass. spec-graph stays neutral, external coordinator consumes manifest per protocol"
+    }
+  ]
+}

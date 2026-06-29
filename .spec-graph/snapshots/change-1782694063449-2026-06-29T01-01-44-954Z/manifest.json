@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782694063449",
+  "change_title": "Per-artifact validation rules in config.yaml + Pack customization layer",
+  "archived_at": "2026-06-29T01:01:44.963Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

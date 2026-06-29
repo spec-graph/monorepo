@@ -1,0 +1,39 @@
+{
+  "id": "change-1782541494133",
+  "title": "Meeting runtime persistence + continuation + ad-hoc meetings",
+  "description": "Close 2 remaining dispatch loop gaps: meeting state not persisted (breakpoint 4) and meeting state not in manifest (breakpoint 5). (1) MeetingRuntime type with status/current_round/current_round_contributions fields, persisted to .spec-graph/meetings/<id>.yaml. (2) Full meeting command family: list/show/init/record/advance/complete/abandon. (3) Dispatch detects in-progress meetings and outputs continuation (broadcasts prior contributions) instead of fresh start. (4) Ad-hoc meetings: coordinator can self-initiate meetings for ANY unclear/deep-discussion issue — no pack declaration required. initAdHocMeeting creates synthetic MeetingDecl with default diverge/challenge/converge rounds, stored in runtime file's ad_hoc_decl field. resolveMeetingDecl falls back to ad_hoc_decl when meeting not in graph. (5) Updated CLAUDE.md with Ad-hoc Meeting protocol, coordinator-protocol.md with ad-hoc section. 7 new meeting engine tests + 3 new dispatch continuation tests + 7 ad-hoc tests = 17 new tests. 413/413 total passing.",
+  "created_at": "2026-06-27T06:24:54.133Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-27T06:25:05.715Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T06:25:05.716Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T06:25:06.744Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T06:25:07.689Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782541494133-2026-06-27T06-25-07-682Z"
+    }
+  ],
+  "completed_at": "2026-06-27T06:25:06.743Z",
+  "archive": {
+    "archived_at": "2026-06-27T06:25:07.689Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782541494133-2026-06-27T06-25-07-682Z",
+    "final_status": "completed"
+  }
+}

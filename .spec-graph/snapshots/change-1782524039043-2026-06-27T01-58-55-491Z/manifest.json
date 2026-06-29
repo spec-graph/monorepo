@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782524039043",
+  "change_title": "DDD domain development workflow: ddd.pack + kernel extensions",
+  "archived_at": "2026-06-27T01:58:55.496Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

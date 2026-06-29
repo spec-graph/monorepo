@@ -1,0 +1,75 @@
+# profile.yaml — 全栈 Web 项目示例
+#
+# 项目描述: "一个面向外部用户的 SaaS 任务管理应用,Web 前端 + REST API + PostgreSQL。
+#            团队 3 人,标准级质量要求,绿场开发。"
+
+version: "1"
+meta:
+  created_at: "2026-06-25T10:00:00Z"
+  source:
+    prompt: "面向外部用户的 SaaS 任务管理应用,Web 前端 + REST API + PostgreSQL"
+    repo_scan: true
+    llm_classified: true
+    reviewed_at: "2026-06-25T10:30:00Z"
+
+facts:
+  has_ui:
+    value: web
+    confidence: high
+    source: repo
+    evidence: "next.config.js + pages/ directory detected"
+  boundary:
+    value: published-api
+    confidence: high
+    source: repo
+    evidence: "api/routes/ directory + openapi.yaml detected"
+  topology:
+    value: mono
+    confidence: high
+    source: repo
+    evidence: "single repo, frontend/ and backend/ subdirectories"
+  deployment:
+    value: hosted-service
+    confidence: high
+    source: repo
+    evidence: "Dockerfile + docker-compose.yaml detected"
+  consumers:
+    value: external-public
+    confidence: high
+    source: repo
+    evidence: "openapi.yaml has externalServers + auth scheme"
+  field:
+    value: greenfield
+    confidence: high
+    source: repo
+    evidence: "no existing src/ or build/ artifacts"
+  criticality:
+    value: standard
+    confidence: low
+    source: llm
+  team:
+    value: small
+    confidence: low
+    source: llm
+  persistence:
+    value: database
+    confidence: high
+    source: repo
+    evidence: "prisma/schema.prisma + docker-compose postgres service detected"
+
+repo_signals:
+  package_manager: npm
+  has_package_json: true
+  has_exports_field: false
+  has_dockerfile: true
+  has_platformio_ini: false
+  has_cargo_toml: false
+  has_existing_src: false
+  has_ci_publish_workflow: true
+  has_db_config: true
+  has_sqlite_file: false
+  has_next_config: true
+  has_openapi_yaml: true
+  has_prisma_schema: true
+
+overrides: {}

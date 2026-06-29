@@ -1,0 +1,39 @@
+{
+  "id": "change-1782467331883",
+  "title": "Enforce 4-layer acceptance model: auto-wire required layer checks into exit gate",
+  "description": "Currently exit-merged gate hardcodes unit/integration checks but skips required deployment/system checks from acceptance_layers. Add a Compose-time step that collects all required=true acceptance layer checks and injects them into exit-merged.require_checks. Add a built-in check acceptance-layer-audit that reports which layers are required but have no checks declared.",
+  "created_at": "2026-06-26T09:48:51.883Z",
+  "type": "feature",
+  "priority": "high",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T09:49:01.458Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T09:49:01.459Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-26T13:44:28.297Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-26T13:44:51.795Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782467331883-2026-06-26T13-44-51-789Z"
+    }
+  ],
+  "completed_at": "2026-06-26T13:44:28.296Z",
+  "archive": {
+    "archived_at": "2026-06-26T13:44:51.795Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782467331883-2026-06-26T13-44-51-789Z",
+    "final_status": "completed"
+  }
+}

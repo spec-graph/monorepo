@@ -1,0 +1,82 @@
+# bugfix.pack — 变更意图包:缺陷修复
+#
+# 第二条 pack 轴(change-intent)的首个成员。与领域包(frontend/backend/...)正交:
+#   - 领域包按 profile 事实命中,提供 artifact/scope/check/track(造什么)
+#   - 变更意图包按 change.type 命中,提供 pipeline_skeleton + 意图特定门(做哪种改动)
+# Compose:选中 change.type 匹配的骨架 × 叠加所有 active 领域包的 scope/check。
+#
+# 压测点:
+#   1. diagnose —— 12 个 greenfield 动作没有"分析现有系统找根因"这一原子,候选第 13 动作
+#   2. test-first —— 重现测试是入口门,不是出口阶段(与 feature 流顺序相反)
+#   3. 最小化 scope —— 修复只准动爆炸半径内的文件
+
+name: bugfix
+version: "1.0.0"
+kind: change-intent # 标记:本包落在变更意图轴,不是领域轴
+priority: 10
+description: "Bug-fix intent — reproduce-first, root-cause diagnose, minimal-scope fix, regression-guarded."
+
+# 按变更描述符命中(.spec-graph/changes/<id>.yaml 的 type 字段),而非 profile 事实
+applies_when_change:
+  type: bugfix
+
+provides:
+  artifacts:
+    - id: change-record/defect-report
+      kind: change-record
+      schema_ref: templates/defect-report.md # 缺陷:现象 + 期望 + 重现步骤
+    - id: verification/root-cause
+      kind: verification
+      schema_ref: templates/root-cause.md # diagnose 产物:根因 + 受影响 trace 节点
+    - id: verification/regression-test
+      kind: verification
+      schema_ref: null # 重现测试转正为回归测试
+
+  # diagnose 是本包逼出的候选新动作(security/migration 也会复用)
+  actions: [propose, diagnose, implement, review, test, accept, integrate]
+
+  checks:
+    - id: reproduction-failing
+      kind: test
+      command: "<repro-test>" # 入口门用:必须先有一个会失败的重现测试
+      layer: unit
+    - id: regression-green
+      kind: test
+      command: "<repro-test> && npm test" # 出口门用:重现测试转绿 + 全套不破
+      layer: unit
+
+  # 变更意图包贡献自己的 pipeline_skeleton(foundation 只给 feature 那套)
+  pipeline_skeleton:
+    stages: [diagnose, implement, review, test, accept]
+    max_retries: 5
+    on_exhausted: escalate
+
+  gates:
+    # 入口门:不能修复无法重现的缺陷(失败闭合)
+    - id: bugfix-entry
+      on_transition: [propose, diagnose]
+      require_artifacts: [change-record/defect-report]
+      require_checks: [reproduction-failing] # 必须存在一个当前失败的重现测试
+      fail_mode: block
+      enabled: true
+    # 出口门:重现测试转绿 + 零新失败 + 回归测试绑定为新 verifies 边
+    - id: bugfix-exit
+      on_transition: [accept, integrate]
+      require_checks: [regression-green]
+      require_artifacts: [verification/root-cause, verification/regression-test]
+      require_traces:
+        # 回归测试必须 verifies 缺陷对应的 REQ/AC —— 闭合"漏测"回灌
+        - name: regression_to_req
+          from_kind: verification/regression-test
+          to_kind: requirement/prd
+          via: [verifies]
+          cardinality: exists
+      fail_mode: block
+      enabled: true
+
+  # 最小化 scope:修复的 scope_write 应限定在 diagnose 算出的爆炸半径内
+  scope_policy:
+    derive_from: verification/root-cause # 受影响节点 → 允许写的文件 glob
+    forbid_widen: true # 不准超出根因半径(防止"顺手重构")
+
+context_ref: context.md

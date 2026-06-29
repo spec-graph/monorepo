@@ -1,0 +1,39 @@
+{
+  "id": "change-1782554927671",
+  "title": "Project-level config injection (.spec-graph/config.yaml)",
+  "description": "Add .spec-graph/config.yaml with context (injected into pack context during compose) and rules (per-artifact validation guidance). Mirrors OpenSpec's openspec/config.yaml. Lets multiple projects reuse the same pack while injecting project-specific tech stack constraints (e.g. 'We use React 18 + TS') and adding per-artifact rules without forking the pack. Compose engine reads config.yaml and merges context into pack.context_ref content; rules are surfaced to artifact producers via dispatch manifest.",
+  "created_at": "2026-06-27T10:08:47.671Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-27T10:08:52.707Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T10:08:52.708Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T10:16:01.650Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T10:16:22.347Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782554927671-2026-06-27T10-16-22-336Z"
+    }
+  ],
+  "completed_at": "2026-06-27T10:16:01.649Z",
+  "archive": {
+    "archived_at": "2026-06-27T10:16:22.346Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782554927671-2026-06-27T10-16-22-336Z",
+    "final_status": "completed"
+  }
+}

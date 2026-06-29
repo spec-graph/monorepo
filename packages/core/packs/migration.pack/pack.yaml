@@ -1,0 +1,62 @@
+# migration.pack — 变更意图包:迁移(框架/API/schema 大规模机械改动)
+#
+# 灵魂:沿追溯图算爆炸半径,分批增量推进,新旧双跑过渡。
+# diagnose 在此化身 inventory(枚举所有受影响节点)—— diagnose 的第三种形态。
+
+name: migration
+version: "1.0.0"
+kind: change-intent
+priority: 10
+description: "Migration intent — trace-graph inventory, incremental batch apply, dual-run cutover."
+
+applies_when_change:
+  type: migration
+
+provides:
+  artifacts:
+    - id: plan/migration-plan
+      kind: plan
+      schema_ref: templates/migration-plan.md # codemod 策略 + 分批 + 回滚
+    - id: verification/migration-inventory
+      kind: verification
+      schema_ref: templates/migration-inventory.md # diagnose 产物:全部受影响节点清单
+
+  actions: [propose, diagnose, plan, implement, review, test, accept, integrate]
+
+  checks:
+    - id: per-batch-green
+      kind: test
+      command: "npm test"
+      layer: integration
+    - id: no-stale-consumer
+      kind: test
+      command: "<scan-old-path-references>" # 无残留引用旧路径/旧契约版本
+      layer: integration
+
+  # 迁移骨架:diagnose/plan 一次,implement→test 按批迭代,最后 cutover
+  pipeline_skeleton:
+    stages: [diagnose, plan, implement, review, test, accept]
+    max_retries: 5
+    on_exhausted: escalate
+    iterate_over: batches # 新字段:implement→test 段按 plan 的 batch 循环
+
+  gates:
+    - id: migration-entry
+      on_transition: [propose, diagnose]
+      require_artifacts: [verification/migration-inventory, plan/migration-plan]
+      fail_mode: block
+      enabled: true
+    - id: migration-exit
+      on_transition: [accept, integrate]
+      require_checks: [per-batch-green, no-stale-consumer]
+      require_traces:
+        # 所有受影响节点都已迁移(每个 inventory 项都有对应 commit)
+        - name: inventory_to_commit
+          from_kind: verification/migration-inventory
+          to_kind: change-record/changelog
+          via: [records]
+          cardinality: every
+      fail_mode: block
+      enabled: true
+
+context_ref: context.md

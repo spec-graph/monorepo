@@ -1,0 +1,39 @@
+{
+  "id": "change-1782465228275",
+  "title": "Add LLM Sense classifier (CLAUDE.md §Sense: LLM只参与第一段)",
+  "description": "Abstract SenseClassifier interface with two impls: RepoScanClassifier (deterministic, default) and LlmClassifier (injectable, fails-closed to repo scan). runSense accepts description + classifier options. Fix hardcoded llm_classified=true lie. Enforce repo-hard-evidence priority over LLM.",
+  "created_at": "2026-06-26T09:13:48.275Z",
+  "type": "feature",
+  "priority": "high",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T09:14:15.076Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T09:14:15.076Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-26T09:44:51.648Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-26T09:45:07.562Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782465228275-2026-06-26T09-45-07-550Z"
+    }
+  ],
+  "completed_at": "2026-06-26T09:44:51.646Z",
+  "archive": {
+    "archived_at": "2026-06-26T09:45:07.562Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782465228275-2026-06-26T09-45-07-550Z",
+    "final_status": "completed"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "change-1782443137192",
+  "title": "Contract drift as a hard gate",
+  "description": "Add require_contracts_current to Gate type; enforce engine reads contract registry and blocks transitions when any consumer is stale/broken. Add builtin check contract-drift-gate that surfaces drift as a failing check. Wire exit-merged gate to require contracts current.",
+  "created_at": "2026-06-26T03:05:37.192Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "completed_at": "2026-06-26T03:20:18.092Z",
+  "archive": {
+    "archived_at": "2026-06-26T03:20:18.233Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782443137192-2026-06-26T03-20-18-229Z",
+    "final_status": "completed"
+  },
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T03:20:18.233Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782443137192-2026-06-26T03-20-18-229Z"
+    }
+  ]
+}

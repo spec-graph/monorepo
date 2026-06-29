@@ -1,0 +1,39 @@
+{
+  "id": "change-1782530439158",
+  "title": "PostToolUse hook: dispatch manifest auto-injection",
+  "description": "Add PostToolUse hook (hooks/dispatch-watcher.mjs) that intercepts 'spec-graph dispatch --json' Bash invocations, parses the manifest, and injects it as additionalContext (system-reminder) so the main Claude Code agent can automatically dispatch sub-agents via the Agent tool per coordinator-protocol.md. Includes: hook script, hooks.json config registration, 11 tests covering all edge cases (non-Bash, non-dispatch, done manifest, missing actions, meeting injection, chained commands), CLAUDE.md auto-execution protocol section.",
+  "created_at": "2026-06-27T03:20:39.158Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-27T03:20:44.013Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-27T03:20:44.014Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-27T03:20:57.573Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-27T03:20:58.509Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782530439158-2026-06-27T03-20-58-502Z"
+    }
+  ],
+  "completed_at": "2026-06-27T03:20:57.571Z",
+  "archive": {
+    "archived_at": "2026-06-27T03:20:58.509Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782530439158-2026-06-27T03-20-58-502Z",
+    "final_status": "completed"
+  }
+}

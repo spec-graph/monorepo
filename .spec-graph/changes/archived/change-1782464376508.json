@@ -1,0 +1,39 @@
+{
+  "id": "change-1782464376508",
+  "title": "Add clone-detection + reuse-scan checks (governance §6.3 reuse gate)",
+  "description": "Implement the reuse gate from schemas.md §6.3: clone-detection (kind:clone, layer:unit, threshold-based, blocks) + reuse-scan (kind:reuse, layer:integration, finds orphan symbols + trace satisfies edges, warns). Maps to existing Check/Gate primitives, no new primitive needed.",
+  "created_at": "2026-06-26T08:59:36.508Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-26T08:59:44.036Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-26T08:59:44.038Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-26T09:11:21.023Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-26T09:11:30.928Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782464376508-2026-06-26T09-11-30-921Z"
+    }
+  ],
+  "completed_at": "2026-06-26T09:11:21.021Z",
+  "archive": {
+    "archived_at": "2026-06-26T09:11:30.928Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782464376508-2026-06-26T09-11-30-921Z",
+    "final_status": "completed"
+  }
+}

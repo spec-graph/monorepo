@@ -1,0 +1,69 @@
+# requirement-analysis.pack — 需求分析层
+#
+# 灵魂:把所有模糊口头需求变成可验证的机器可读约束。
+# 默认命中所有项目(任何项目都需要分析),但轻量级原型可 skip 可选产物。
+
+name: requirement-analysis
+version: "1.0.0"
+kind: domain
+priority: 20 # 高于 foundation(0),domain 默认 10;planning 骨架优先
+description: "Requirement analysis — elicit, clarify, and freeze requirements before design."
+
+applies_when: always # 任何项目都需要需求分析;原型只保留最简产物
+
+provides:
+  artifacts:
+    # 可选:发散阶段产物(原型可 skip)
+    - id: requirement/impact-map
+      kind: requirement
+      schema_ref: templates/impact-map.md
+      optional: true
+    - id: requirement/product-brief
+      kind: requirement
+      schema_ref: templates/product-brief.md
+      optional: true
+    # 必须:需求冻结产物
+    - id: requirement/story-map
+      kind: requirement
+      schema_ref: templates/story-map.md
+    - id: requirement/prd
+      kind: requirement
+      schema_ref: templates/prd.md # Kano + RICE;可测性 AC
+
+  actions: [propose, specify] # propose=发散(impact-map/product-brief);specify=收敛(PRD)
+
+  checks:
+    # 需求可测性扫描(复用 wdf clarify 能力)
+    - id: clarify-scan
+      kind: lint
+      command: "<clarify-scan>"
+      layer: unit # 纯静态扫描,unit 层即可
+      threshold: { ambiguity: 0, placeholder: 0, non_measurable: 0 }
+
+  # 需求分析完成后进入设计阶段的门
+  gates:
+    - id: requirements-clarified
+      on_transition: [specify, design]
+      require_artifacts: [requirement/prd]
+      require_checks: [clarify-scan]
+      require_traces:
+        - name: story_to_req
+          from_kind: plan/story # task-decomposition.pack 提供
+          to_kind: requirement/prd
+          via: [derives]
+          cardinality: every
+      fail_mode: block
+      enabled: true
+
+  # 把需求产物追加到 entry-phase4 门
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [requirement/prd]
+      add_traces:
+        - name: story_to_req
+          from_kind: plan/story
+          to_kind: requirement/prd
+          via: [derives]
+          cardinality: every
+
+context_ref: context.md

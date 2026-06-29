@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782664813432",
+  "change_title": "Pack optimization: templates, agents, touchfiles, context",
+  "archived_at": "2026-06-28T16:50:18.892Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

@@ -1,0 +1,587 @@
+project: spec-graph
+timestamp: "2026-06-28T15:57:07.140Z"
+git_commit: null
+exports:
+  src/commands/analysis.ts:
+    - AnalysisOptions
+    - AnalysisDocument
+  src/commands/artifact.ts:
+    - ArtifactOptions
+  src/commands/change.ts:
+    - ChangeOptions
+  src/commands/check.ts:
+    - CheckOptions
+  src/commands/checklist.ts:
+    - ChecklistOptions
+  src/commands/compose.ts:
+    - ComposeOptions
+  src/commands/config.ts:
+    - ConfigOptions
+  src/commands/constitution.ts:
+    - ConstitutionOptions
+  src/commands/contract.ts:
+    - ContractOptions
+  src/commands/dispatch.ts:
+    - DispatchOptions
+  src/commands/doctor.ts:
+    - DoctorOptions
+    - DoctorCheck
+    - DoctorReport
+    - CheckSeverity
+  src/commands/gate.ts:
+    - GateOptions
+  src/commands/impact.ts:
+    - ImpactOptions
+  src/commands/init.ts:
+    - InitOptions
+  src/commands/install.ts:
+    - InstallOptions
+  src/commands/machine.ts:
+    - MachineOptions
+  src/commands/meeting.ts:
+    - MeetingOptions
+  src/commands/merge-queue.ts:
+    - MergeQueueOptions
+  src/commands/migrate.ts:
+    - MigrateOptions
+  src/commands/next.ts:
+    - NextOptions
+  src/commands/permissions.ts:
+    - PermissionsOptions
+  src/commands/prime.ts:
+    - PrimeOptions
+  src/commands/profile.ts:
+    - ProfileOptions
+  src/commands/run.ts:
+    - RunOptions
+  src/commands/safety-net.ts:
+    - SafetyNetOptions
+  src/commands/scope.ts:
+    - ScopeOptions
+  src/commands/sense.ts:
+    - SenseOptions
+  src/commands/show.ts:
+    - ShowOptions
+  src/commands/status.ts:
+    - StatusOptions
+  src/commands/trace.ts:
+    - TraceOptions
+  src/commands/worktree.ts:
+    - WorktreeOptions
+  src/engine/check/diff-select.ts:
+    - getChangedFiles
+    - matchesTouchfiles
+    - shouldRunCheck
+  src/engine/check/index.ts:
+    - CheckRunResult
+    - RunCheckOptions
+  src/engine/checks/builtin.test.ts:
+    - processItem
+    - processOther
+    - add
+    - greet
+    - f
+    - g
+    - h
+    - util
+    - foo
+    - orphanFn
+    - Baz
+    - OrderCreatedEvent
+    - bar
+  src/engine/checks/builtin.ts:
+    - isBuiltinCheck
+    - extractBuiltinName
+    - BuiltinCheckContext
+    - BuiltinCheckResult
+    - BuiltinCheckFn
+    - builtinChecks
+  src/engine/compose/index.ts:
+    - ComposeResult
+  src/engine/enforce/index.ts:
+    - collectDriftedConsumers
+    - GateEvaluationResult
+    - EnforceResult
+    - EnforceOptions
+  src/engine/execution-units.ts:
+    - deriveStoryStatus
+    - getUnitStats
+  src/engine/impact/index.ts:
+    - formatImpactAnalysis
+    - ImpactAnalysis
+  src/engine/isolation/merge-queue.ts:
+    - MergeQueueManager
+    - EnqueueOptions
+    - OverlapReport
+  src/engine/isolation/scope-lock.ts:
+    - validateScopeLock
+    - validateActualChangesAgainstScope
+    - summarizeViolations
+    - detectScopeOverlaps
+    - matchGlob
+    - ScopeViolation
+    - ScopeValidationResult
+    - ScopeOverlap
+    - ViolationKind
+  src/engine/isolation/worktree.ts:
+    - parseMergeTreeConflicts
+    - ProcessGitBackend
+    - WorktreeManager
+    - WorktreeManagerOptions
+    - CreateOptions
+    - MergeResult
+  src/engine/machine/index.ts:
+    - StateMachineEngine
+    - MachineState
+    - StageTransition
+    - ArtifactStatus
+    - CheckStatus
+    - GateEvaluationResult
+    - TransitionRequest
+    - TransitionResult
+  src/engine/meeting/index.ts:
+    - meetingRuntimePath
+    - meetingsDir
+    - findRoundTemplate
+    - collectPriorContributions
+    - MeetingRuntimeFile
+  src/engine/migration/index.ts:
+    - formatMigrationPlan
+    - MigrationStep
+    - MigrationPlan
+    - CodebaseAnalysis
+  src/engine/next/index.ts:
+    - NextPlan
+    - SuggestedAction
+  src/engine/permissions/index.ts:
+    - getPermissionsPath
+    - getPreset
+    - isActionAllowed
+    - getAgentConfig
+    - getRoleConfig
+    - roleForAction
+    - resolveFileScope
+    - generateClaudeCodeSettings
+    - generateOpenCodeSettings
+    - AgentPermissions
+    - RolePermissions
+    - PermissionConfig
+    - PermissionLevel
+    - ActionType
+    - AgentRole
+    - DEFAULT_ROLES
+  src/engine/safety-net/index.ts:
+    - formatSafetyNetResult
+    - SafetyNetSnapshot
+    - SafetyNetResult
+  src/engine/sense/classifier.ts:
+    - parseLlmResponse
+    - HttpLlmBackend
+    - RepoScanClassifier
+    - LlmClassifier
+    - ClassifyInput
+    - ClassifyOutput
+    - SenseClassifier
+    - LlmRequest
+    - LlmResponse
+    - LlmBackend
+  src/engine/sense/index.ts:
+    - buildCodebaseSummary
+    - RepoSignals
+    - SenseResult
+    - SenseOptions
+  src/engine/sense/overrides.ts:
+    - parseBuildTargets
+    - parseProfileOverrides
+    - collectOverrides
+    - OverrideParseResult
+    - FACT_DIMENSIONS
+    - BUILD_TARGET_MAP
+  src/engine/sense/repo-rules.ts:
+    - InferenceRule
+    - inferenceRules
+  src/engine/trace/index.ts:
+    - evaluateTraceQuery
+    - traceBackward
+    - traceForward
+    - listTraceNodes
+    - TraceResult
+    - TracePath
+    - TraceIndex
+    - TraceNode
+    - TraceEdge
+    - TraceQueryEvaluation
+  src/engine/workflow/index.ts:
+    - inferStageOrder
+    - findNextStage
+    - isValidTransition
+  src/types/hooks.ts:
+    - HookDecl
+    - HooksConfig
+    - HookWhen
+  src/types/index.ts:
+    - ProfileFact
+    - Profile
+    - ArtifactDecl
+    - CheckDecl
+    - TrackContribution
+    - ScopePolicy
+    - Pack
+    - GatePatch
+    - TraceQuery
+    - GateDecl
+    - PipelineSkeleton
+    - AgentDecl
+    - AgentBinding
+    - AgentDispatch
+    - MeetingParticipant
+    - MeetingContribution
+    - MeetingDecl
+    - MeetingRound
+    - MeetingTranscript
+    - MeetingRoundTranscript
+    - MeetingRuntime
+    - Gate
+    - Graph
+    - ExecutionUnit
+    - ChangeDescriptor
+    - ContextMapEntry
+    - ContractBinding
+    - ContractRegistryEntry
+    - ConstitutionThresholds
+    - ConstitutionTraceRule
+    - ConstitutionArticle
+    - Constitution
+    - GitBackend
+    - IsolationUnit
+    - ScopeLockDecl
+    - MergeQueueItem
+    - MergeQueue
+    - CliContext
+    - ProjectConfig
+    - FactDimension
+    - PackKind
+    - ModelTier
+    - MeetingRole
+    - ContributionType
+    - ContextMapRelation
+    - ArticleRule
+    - IsolationStatus
+    - EnforcementMode
+    - MergeQueueStatus
+function_signatures:
+  - src/commands/analysis.ts:AnalysisDocument
+  - src/commands/analysis.ts:AnalysisOptions
+  - src/commands/artifact.ts:ArtifactOptions
+  - src/commands/change.ts:ChangeOptions
+  - src/commands/check.ts:CheckOptions
+  - src/commands/checklist.ts:ChecklistOptions
+  - src/commands/compose.ts:ComposeOptions
+  - src/commands/config.ts:ConfigOptions
+  - src/commands/constitution.ts:ConstitutionOptions
+  - src/commands/contract.ts:ContractOptions
+  - src/commands/dispatch.ts:DispatchOptions
+  - src/commands/doctor.ts:CheckSeverity
+  - src/commands/doctor.ts:DoctorCheck
+  - src/commands/doctor.ts:DoctorOptions
+  - src/commands/doctor.ts:DoctorReport
+  - src/commands/gate.ts:GateOptions
+  - src/commands/impact.ts:ImpactOptions
+  - src/commands/init.ts:InitOptions
+  - src/commands/install.ts:InstallOptions
+  - src/commands/machine.ts:MachineOptions
+  - src/commands/meeting.ts:MeetingOptions
+  - src/commands/merge-queue.ts:MergeQueueOptions
+  - src/commands/migrate.ts:MigrateOptions
+  - src/commands/next.ts:NextOptions
+  - src/commands/permissions.ts:PermissionsOptions
+  - src/commands/prime.ts:PrimeOptions
+  - src/commands/profile.ts:ProfileOptions
+  - src/commands/run.ts:RunOptions
+  - src/commands/safety-net.ts:SafetyNetOptions
+  - src/commands/scope.ts:ScopeOptions
+  - src/commands/sense.ts:SenseOptions
+  - src/commands/show.ts:ShowOptions
+  - src/commands/status.ts:StatusOptions
+  - src/commands/trace.ts:TraceOptions
+  - src/commands/worktree.ts:WorktreeOptions
+  - src/engine/check/diff-select.ts:getChangedFiles
+  - src/engine/check/diff-select.ts:matchesTouchfiles
+  - src/engine/check/diff-select.ts:shouldRunCheck
+  - src/engine/check/index.ts:CheckRunResult
+  - src/engine/check/index.ts:RunCheckOptions
+  - src/engine/checks/builtin.test.ts:Baz
+  - src/engine/checks/builtin.test.ts:OrderCreatedEvent
+  - src/engine/checks/builtin.test.ts:add
+  - src/engine/checks/builtin.test.ts:bar
+  - src/engine/checks/builtin.test.ts:f
+  - src/engine/checks/builtin.test.ts:foo
+  - src/engine/checks/builtin.test.ts:g
+  - src/engine/checks/builtin.test.ts:greet
+  - src/engine/checks/builtin.test.ts:h
+  - src/engine/checks/builtin.test.ts:orphanFn
+  - src/engine/checks/builtin.test.ts:processItem
+  - src/engine/checks/builtin.test.ts:processOther
+  - src/engine/checks/builtin.test.ts:util
+  - src/engine/checks/builtin.ts:BuiltinCheckContext
+  - src/engine/checks/builtin.ts:BuiltinCheckFn
+  - src/engine/checks/builtin.ts:BuiltinCheckResult
+  - src/engine/checks/builtin.ts:builtinChecks
+  - src/engine/checks/builtin.ts:extractBuiltinName
+  - src/engine/checks/builtin.ts:isBuiltinCheck
+  - src/engine/compose/index.ts:ComposeResult
+  - src/engine/enforce/index.ts:EnforceOptions
+  - src/engine/enforce/index.ts:EnforceResult
+  - src/engine/enforce/index.ts:GateEvaluationResult
+  - src/engine/enforce/index.ts:collectDriftedConsumers
+  - src/engine/execution-units.ts:deriveStoryStatus
+  - src/engine/execution-units.ts:getUnitStats
+  - src/engine/impact/index.ts:ImpactAnalysis
+  - src/engine/impact/index.ts:formatImpactAnalysis
+  - src/engine/isolation/merge-queue.ts:EnqueueOptions
+  - src/engine/isolation/merge-queue.ts:MergeQueueManager
+  - src/engine/isolation/merge-queue.ts:OverlapReport
+  - src/engine/isolation/scope-lock.ts:ScopeOverlap
+  - src/engine/isolation/scope-lock.ts:ScopeValidationResult
+  - src/engine/isolation/scope-lock.ts:ScopeViolation
+  - src/engine/isolation/scope-lock.ts:ViolationKind
+  - src/engine/isolation/scope-lock.ts:detectScopeOverlaps
+  - src/engine/isolation/scope-lock.ts:matchGlob
+  - src/engine/isolation/scope-lock.ts:summarizeViolations
+  - src/engine/isolation/scope-lock.ts:validateActualChangesAgainstScope
+  - src/engine/isolation/scope-lock.ts:validateScopeLock
+  - src/engine/isolation/worktree.ts:CreateOptions
+  - src/engine/isolation/worktree.ts:MergeResult
+  - src/engine/isolation/worktree.ts:ProcessGitBackend
+  - src/engine/isolation/worktree.ts:WorktreeManager
+  - src/engine/isolation/worktree.ts:WorktreeManagerOptions
+  - src/engine/isolation/worktree.ts:parseMergeTreeConflicts
+  - src/engine/machine/index.ts:ArtifactStatus
+  - src/engine/machine/index.ts:CheckStatus
+  - src/engine/machine/index.ts:GateEvaluationResult
+  - src/engine/machine/index.ts:MachineState
+  - src/engine/machine/index.ts:StageTransition
+  - src/engine/machine/index.ts:StateMachineEngine
+  - src/engine/machine/index.ts:TransitionRequest
+  - src/engine/machine/index.ts:TransitionResult
+  - src/engine/meeting/index.ts:MeetingRuntimeFile
+  - src/engine/meeting/index.ts:collectPriorContributions
+  - src/engine/meeting/index.ts:findRoundTemplate
+  - src/engine/meeting/index.ts:meetingRuntimePath
+  - src/engine/meeting/index.ts:meetingsDir
+  - src/engine/migration/index.ts:CodebaseAnalysis
+  - src/engine/migration/index.ts:MigrationPlan
+  - src/engine/migration/index.ts:MigrationStep
+  - src/engine/migration/index.ts:formatMigrationPlan
+  - src/engine/next/index.ts:NextPlan
+  - src/engine/next/index.ts:SuggestedAction
+  - src/engine/permissions/index.ts:ActionType
+  - src/engine/permissions/index.ts:AgentPermissions
+  - src/engine/permissions/index.ts:AgentRole
+  - src/engine/permissions/index.ts:DEFAULT_ROLES
+  - src/engine/permissions/index.ts:PermissionConfig
+  - src/engine/permissions/index.ts:PermissionLevel
+  - src/engine/permissions/index.ts:RolePermissions
+  - src/engine/permissions/index.ts:generateClaudeCodeSettings
+  - src/engine/permissions/index.ts:generateOpenCodeSettings
+  - src/engine/permissions/index.ts:getAgentConfig
+  - src/engine/permissions/index.ts:getPermissionsPath
+  - src/engine/permissions/index.ts:getPreset
+  - src/engine/permissions/index.ts:getRoleConfig
+  - src/engine/permissions/index.ts:isActionAllowed
+  - src/engine/permissions/index.ts:resolveFileScope
+  - src/engine/permissions/index.ts:roleForAction
+  - src/engine/safety-net/index.ts:SafetyNetResult
+  - src/engine/safety-net/index.ts:SafetyNetSnapshot
+  - src/engine/safety-net/index.ts:formatSafetyNetResult
+  - src/engine/sense/classifier.ts:ClassifyInput
+  - src/engine/sense/classifier.ts:ClassifyOutput
+  - src/engine/sense/classifier.ts:HttpLlmBackend
+  - src/engine/sense/classifier.ts:LlmBackend
+  - src/engine/sense/classifier.ts:LlmClassifier
+  - src/engine/sense/classifier.ts:LlmRequest
+  - src/engine/sense/classifier.ts:LlmResponse
+  - src/engine/sense/classifier.ts:RepoScanClassifier
+  - src/engine/sense/classifier.ts:SenseClassifier
+  - src/engine/sense/classifier.ts:parseLlmResponse
+  - src/engine/sense/index.ts:RepoSignals
+  - src/engine/sense/index.ts:SenseOptions
+  - src/engine/sense/index.ts:SenseResult
+  - src/engine/sense/index.ts:buildCodebaseSummary
+  - src/engine/sense/overrides.ts:BUILD_TARGET_MAP
+  - src/engine/sense/overrides.ts:FACT_DIMENSIONS
+  - src/engine/sense/overrides.ts:OverrideParseResult
+  - src/engine/sense/overrides.ts:collectOverrides
+  - src/engine/sense/overrides.ts:parseBuildTargets
+  - src/engine/sense/overrides.ts:parseProfileOverrides
+  - src/engine/sense/repo-rules.ts:InferenceRule
+  - src/engine/sense/repo-rules.ts:inferenceRules
+  - src/engine/trace/index.ts:TraceEdge
+  - src/engine/trace/index.ts:TraceIndex
+  - src/engine/trace/index.ts:TraceNode
+  - src/engine/trace/index.ts:TracePath
+  - src/engine/trace/index.ts:TraceQueryEvaluation
+  - src/engine/trace/index.ts:TraceResult
+  - src/engine/trace/index.ts:evaluateTraceQuery
+  - src/engine/trace/index.ts:listTraceNodes
+  - src/engine/trace/index.ts:traceBackward
+  - src/engine/trace/index.ts:traceForward
+  - src/engine/workflow/index.ts:findNextStage
+  - src/engine/workflow/index.ts:inferStageOrder
+  - src/engine/workflow/index.ts:isValidTransition
+  - src/types/hooks.ts:HookDecl
+  - src/types/hooks.ts:HookWhen
+  - src/types/hooks.ts:HooksConfig
+  - src/types/index.ts:AgentBinding
+  - src/types/index.ts:AgentDecl
+  - src/types/index.ts:AgentDispatch
+  - src/types/index.ts:ArticleRule
+  - src/types/index.ts:ArtifactDecl
+  - src/types/index.ts:ChangeDescriptor
+  - src/types/index.ts:CheckDecl
+  - src/types/index.ts:CliContext
+  - src/types/index.ts:Constitution
+  - src/types/index.ts:ConstitutionArticle
+  - src/types/index.ts:ConstitutionThresholds
+  - src/types/index.ts:ConstitutionTraceRule
+  - src/types/index.ts:ContextMapEntry
+  - src/types/index.ts:ContextMapRelation
+  - src/types/index.ts:ContractBinding
+  - src/types/index.ts:ContractRegistryEntry
+  - src/types/index.ts:ContributionType
+  - src/types/index.ts:EnforcementMode
+  - src/types/index.ts:ExecutionUnit
+  - src/types/index.ts:FactDimension
+  - src/types/index.ts:Gate
+  - src/types/index.ts:GateDecl
+  - src/types/index.ts:GatePatch
+  - src/types/index.ts:GitBackend
+  - src/types/index.ts:Graph
+  - src/types/index.ts:IsolationStatus
+  - src/types/index.ts:IsolationUnit
+  - src/types/index.ts:MeetingContribution
+  - src/types/index.ts:MeetingDecl
+  - src/types/index.ts:MeetingParticipant
+  - src/types/index.ts:MeetingRole
+  - src/types/index.ts:MeetingRound
+  - src/types/index.ts:MeetingRoundTranscript
+  - src/types/index.ts:MeetingRuntime
+  - src/types/index.ts:MeetingTranscript
+  - src/types/index.ts:MergeQueue
+  - src/types/index.ts:MergeQueueItem
+  - src/types/index.ts:MergeQueueStatus
+  - src/types/index.ts:ModelTier
+  - src/types/index.ts:Pack
+  - src/types/index.ts:PackKind
+  - src/types/index.ts:PipelineSkeleton
+  - src/types/index.ts:Profile
+  - src/types/index.ts:ProfileFact
+  - src/types/index.ts:ProjectConfig
+  - src/types/index.ts:ScopeLockDecl
+  - src/types/index.ts:ScopePolicy
+  - src/types/index.ts:TraceQuery
+  - src/types/index.ts:TrackContribution
+test_results:
+  passed: 546
+  failed: 0
+  total: 546
+file_hashes:
+  src/commands/analysis.ts: f79bf1d93b35cd29
+  src/commands/artifact-status.test.ts: e8ea8068fb575aad
+  src/commands/artifact.ts: c50e8a2b6dc69b16
+  src/commands/change.test.ts: 76f348afa72ec9c4
+  src/commands/change.ts: 9d06b38392506d6c
+  src/commands/check.ts: eaab453c2aa6c3bd
+  src/commands/checklist.test.ts: b0e9eca120aa39e8
+  src/commands/checklist.ts: 0bb11ea3921c5f77
+  src/commands/compose.ts: c04aaaa0746394bd
+  src/commands/config.test.ts: 6d06217d54193d9f
+  src/commands/config.ts: 1557af64d079d442
+  src/commands/constitution-version.test.ts: 949089c946aeecbe
+  src/commands/constitution.test.ts: 76010d79dee398d0
+  src/commands/constitution.ts: 5bbe72c8756a3255
+  src/commands/contract.test.ts: 4f843472a2fac702
+  src/commands/contract.ts: c08cba3d28c561a8
+  src/commands/dispatch-doc.test.ts: 8e7c889cbd0eece8
+  src/commands/dispatch.test.ts: 03cbe10996ecf12f
+  src/commands/dispatch.ts: c9812b7ea509ca3e
+  src/commands/doctor.test.ts: e996c00c89a55bef
+  src/commands/doctor.ts: cc07d2499092ee37
+  src/commands/e2e-workflow.test.ts: ab0084b21fd6efd9
+  src/commands/gate.ts: ea641cac02044d73
+  src/commands/impact.test.ts: bb2a065e691d7691
+  src/commands/impact.ts: a303a41df8535492
+  src/commands/init.ts: 1d35699d6f4d2c6b
+  src/commands/install.test.ts: 6f7782622fd1b3a7
+  src/commands/install.ts: 9cf5488743ef3ca1
+  src/commands/machine.ts: 4a1989c63b0bc829
+  src/commands/meeting.ts: 1fffbbda64261cc6
+  src/commands/merge-queue.ts: 4bf4796631334705
+  src/commands/migrate.ts: a75caafd5f740130
+  src/commands/next.ts: 06344e920767f96c
+  src/commands/permissions.ts: 55bdb69571f18c63
+  src/commands/prime.test.ts: 3e79e1bce37e0ca7
+  src/commands/prime.ts: b1ff2a653e2dcce9
+  src/commands/profile.test.ts: 7c7b2a837991c53f
+  src/commands/profile.ts: c7eb075e478406c5
+  src/commands/run.test.ts: 5feab70654cddac2
+  src/commands/run.ts: fbc4d439bd32f343
+  src/commands/safety-net.ts: 3fb074283cd406ac
+  src/commands/scope.ts: 9235d170829160d3
+  src/commands/sense.ts: 15089561ca3fcc71
+  src/commands/show.ts: 6f5c8ffdd38a22b6
+  src/commands/status.test.ts: ff05e552b9b94a68
+  src/commands/status.ts: 1c1a52b5f0a7eaea
+  src/commands/trace.test.ts: fc75143403e3b805
+  src/commands/trace.ts: f522075a4a9f80af
+  src/commands/worktree-lifecycle.test.ts: fafca71a99fea1bd
+  src/commands/worktree.ts: d99617d8a5389876
+  src/engine/check/check.test.ts: bd8ed3d10dc44f7f
+  src/engine/check/diff-select.test.ts: dd6f591bd916d354
+  src/engine/check/diff-select.ts: 61d2356be7fe4ad1
+  src/engine/check/index.ts: a040d0be1172f2f7
+  src/engine/checks/builtin.test.ts: e71d5cea704bbca0
+  src/engine/checks/builtin.ts: 3e642379b0511557
+  src/engine/compose/compose.test.ts: 4b0fa33dc981b5e8
+  src/engine/compose/index.ts: 88ffe5706a0c54f2
+  src/engine/enforce/enforce.test.ts: 69b6a98023c2fd02
+  src/engine/enforce/index.ts: ea97e74e6c4b012f
+  src/engine/execution-units.test.ts: eef6299d21f49abe
+  src/engine/execution-units.ts: 4fd6a47d913699f0
+  src/engine/hooks.test.ts: d2abc8175d1d2145
+  src/engine/hooks.ts: 622ff1f39d4fe6a9
+  src/engine/impact/index.ts: 344f71ec0ec3e08b
+  src/engine/isolation/index.ts: a2f2d1a5a5816a7f
+  src/engine/isolation/merge-queue.test.ts: 4a3dab307b30bfd4
+  src/engine/isolation/merge-queue.ts: 68c6bdc9c3887b2d
+  src/engine/isolation/scope-lock.test.ts: cb2b22da58e5f6a2
+  src/engine/isolation/scope-lock.ts: 645dfe38aa3a8383
+  src/engine/isolation/worktree.test.ts: 6873b01d0bded502
+  src/engine/isolation/worktree.ts: e33d218d26c94f13
+  src/engine/machine/index.ts: 302ad5684624e276
+  src/engine/machine/machine.test.ts: 00fb4ca500055f1a
+  src/engine/meeting/index.ts: 301a6bc2ab91c4ce
+  src/engine/meeting/meeting.test.ts: b91dd89587f4dec1
+  src/engine/migration/index.ts: 4c7eb9b57596457c
+  src/engine/next/index.ts: 5040b2954a936ac5
+  src/engine/next/next.test.ts: 009cf9641e6c80a8
+  src/engine/permissions/index.ts: 6eaa906a23a30802
+  src/engine/permissions/permissions.test.ts: 16567b4301d4e057
+  src/engine/pipeline.test.ts: d39b5672f8c0835d
+  src/engine/safety-net/index.ts: 0ad4c7adba340571
+  src/engine/sense/classifier.test.ts: d69b736f3b0484a7
+  src/engine/sense/classifier.ts: 07168ab451ae8afe
+  src/engine/sense/index.ts: 536b700e56113529
+  src/engine/sense/overrides.test.ts: 9d5fc290e432cb5d
+  src/engine/sense/overrides.ts: dc7809f0db3b2454
+  src/engine/sense/repo-rules.ts: ef4c95077a0b796e
+  src/engine/sense/sense.test.ts: 653f06d08fa991aa
+  src/engine/trace/index.ts: 0278899258e7341b
+  src/engine/trace/trace.test.ts: f6413c54abdfee95
+  src/engine/workflow/index.ts: 5a789ac962d2c4f9
+  src/engine/workflow/workflow.test.ts: 8fd855e48a8bc23d
+  src/index.ts: e513a7b422a4cb53
+  src/integration.test.ts: 5a71ca1ff8cd98ad
+  src/types/hooks.ts: ccb8fa2b2891ba57
+  src/types/index.ts: 780486d4d2d9ef47
+  src/utils/yaml.ts: 4663497447b4b379

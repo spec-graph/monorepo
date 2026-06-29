@@ -1,0 +1,39 @@
+{
+  "id": "change-1782665846316",
+  "title": "Complete pack templates: backend + feature",
+  "description": "Add missing templates to backend.pack (backend-impl.md) and feature.pack (feature-plan.md). All 17 packs now have at least 1 template.",
+  "created_at": "2026-06-28T16:57:26.316Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T16:57:42.774Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T16:57:42.774Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T16:57:43.014Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T16:57:43.225Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782665846316-2026-06-28T16-57-43-220Z"
+    }
+  ],
+  "completed_at": "2026-06-28T16:57:43.013Z",
+  "archive": {
+    "archived_at": "2026-06-28T16:57:43.224Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782665846316-2026-06-28T16-57-43-220Z",
+    "final_status": "completed"
+  }
+}

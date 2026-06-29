@@ -1,0 +1,39 @@
+{
+  "id": "change-1782663904267",
+  "title": "Inject active change context into dispatch manifest",
+  "description": "Add active_change field to dispatch manifest with title, description, type, and recent audit log. Helps AI agents understand the broader context of what they're working on.",
+  "created_at": "2026-06-28T16:25:04.267Z",
+  "type": "feature",
+  "priority": "medium",
+  "scope": {
+    "tracks": []
+  },
+  "impact": {
+    "risk_level": "medium"
+  },
+  "status": "completed",
+  "applied_at": "2026-06-28T16:25:21.779Z",
+  "audit_log": [
+    {
+      "timestamp": "2026-06-28T16:25:21.780Z",
+      "action": "apply",
+      "message": "profile patched, graph recomposed, state primed"
+    },
+    {
+      "timestamp": "2026-06-28T16:30:30.113Z",
+      "action": "complete",
+      "message": "change marked completed"
+    },
+    {
+      "timestamp": "2026-06-28T16:30:30.295Z",
+      "action": "archive",
+      "message": "snapshotted to /Users/wang/study/ai-agent/spec-graph/.spec-graph/snapshots/change-1782663904267-2026-06-28T16-30-30-290Z"
+    }
+  ],
+  "completed_at": "2026-06-28T16:30:30.112Z",
+  "archive": {
+    "archived_at": "2026-06-28T16:30:30.295Z",
+    "snapshot_dir": ".spec-graph/snapshots/change-1782663904267-2026-06-28T16-30-30-290Z",
+    "final_status": "completed"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782657492797",
+  "change_title": "Enhanced codebase scanning for Sense phase (brownfield support)",
+  "archived_at": "2026-06-28T14:41:37.338Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

@@ -1,0 +1,6 @@
+traces:
+  - from: design/aggregates
+    from_kind: design/aggregates
+    to: design/context-map
+    to_kind: design/context-map
+    relation: derives

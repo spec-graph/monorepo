@@ -1,0 +1,11 @@
+{
+  "change_id": "change-1782543028459",
+  "change_title": "Sub-agent dispatch optimization: requires_sub_agent + hook trim + fallback input_artifacts",
+  "archived_at": "2026-06-27T06:50:37.940Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

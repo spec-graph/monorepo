@@ -1,0 +1,234 @@
+# ddd.pack — 领域驱动设计完整流程
+#
+# 灵魂:提供 DDD 战略设计 + 战术设计的全套工件、校验和门控。
+# 战略设计:限界上下文识别、上下文映射、通用语言
+# 战术设计:聚合设计、领域事件、仓储接口
+# 验证:边界审计、聚合不变量、上下文映射一致性
+#
+# 不贡献独立 track —— DDD 是跨切面方法论,
+# 实际的 track(be/fe/...)由领域 pack(backend/frontend/...)贡献。
+# ddd.pack 通过 gate_patches 把 DDD 工件约束注入门控骨架。
+
+name: ddd
+version: "1.0.0"
+kind: domain
+priority: 15
+description: "Domain-Driven Design — strategic + tactical design workflow, boundary validation, context map consistency."
+
+applies_when:
+  $or:
+    - { topology: federated }
+    - { boundary: published-api }
+    - { boundary: published-lib }
+    - { field: brownfield } # DDD 对棕地项目特别有价值
+    - { ddd: enabled } # 用户显式启用(通过 profile override)
+
+provides:
+  artifacts:
+    # ============ 战略设计(Strategic Design) ============
+    # 上下文映射:限界上下文清单 + 关系类型(ACL/OHS/PL/CS/CF)
+    - id: design/context-map
+      kind: design
+      schema_ref: templates/context-map.md
+    # 通用语言:每个限界上下文的术语表 + 定义
+    - id: design/ubiquitous-language
+      kind: design
+      schema_ref: templates/ubiquitous-language.md
+    # 领域愿景:业务目标 + 核心域/支撑域/通用域划分
+    - id: design/domain-vision
+      kind: design
+      schema_ref: templates/domain-vision.md
+      optional: true
+
+    # ============ 战术设计(Tactical Design) ============
+    # 聚合设计:聚合根 + 实体 + 值对象 + 不变量
+    - id: design/aggregates
+      kind: design
+      schema_ref: templates/aggregates.md
+    # 领域事件:事件清单 + schema + 生产者/消费者
+    - id: design/domain-events
+      kind: design
+      schema_ref: templates/domain-events.md
+    # 仓储接口:聚合根的持久化边界
+    - id: design/repositories
+      kind: design
+      schema_ref: templates/repositories.md
+      optional: true
+
+  actions:
+    - propose # 领域愿景 + 核心域识别
+    - specify # 限界上下文识别 + 通用语言
+    - design # 上下文映射 + 聚合设计 + 领域事件
+    - contract # 上下文间契约冻结
+    - plan # 按聚合拆分实现任务
+    - implement # 聚合实现 + 事件处理
+    - review # 边界审计 + 不变量审查
+    - test # 聚合测试 + 集成测试
+
+  checks:
+    # ============ 边界验证 ============
+    # 限界上下文边界审计:扫描源码 import/require,
+    # 检测跨上下文直接依赖(必须通过契约通信)
+    - id: bounded-context-audit
+      kind: lint
+      command: "<bounded-context-audit>"
+      layer: integration
+    # 聚合不变量检查:验证每个聚合至少有文档化的不变量,
+    # 聚合根边界清晰(不跨聚合直接引用实体)
+    - id: aggregate-invariant-check
+      kind: lint
+      command: "<aggregate-invariant-check>"
+      layer: unit
+    # 上下文映射一致性:交叉验证 context-map.md 声明的关系
+    # 与 contract registry 中实际的 producer/consumer 绑定
+    - id: context-map-consistency
+      kind: lint
+      command: "<context-map-consistency>"
+      layer: integration
+    # 领域事件覆盖度:验证 domain-events.md 中声明的事件
+    # 在代码中有对应的实现(handler/producer)
+    - id: domain-event-coverage
+      kind: lint
+      command: "<domain-event-coverage>"
+      layer: integration
+
+  # ============ DDD 专属门 ============
+  gates:
+    # 战略设计完成门:进入战术设计前,上下文映射 + 通用语言必须就绪
+    - id: strategic-design-complete
+      on_transition: [specify, design]
+      require_artifacts: [design/context-map, design/ubiquitous-language]
+      require_checks: []
+      fail_mode: block
+      enabled: true
+    # 战术设计完成门:进入实现前,聚合 + 领域事件必须设计完成
+    - id: tactical-design-complete
+      on_transition: [design, plan]
+      require_artifacts: [design/aggregates, design/domain-events]
+      require_checks: []
+      fail_mode: block
+      enabled: true
+
+  # ============ 门补丁:注入 foundation 骨架门 ============
+  gate_patches:
+    entry-phase4:
+      # 进入实现阶段前,DDD 战术设计工件必须就绪
+      add_artifacts: [design/aggregates, design/domain-events]
+      add_traces:
+        - name: aggregates_to_context_map
+          from_kind: design/aggregates
+          to_kind: design/context-map
+          via: [derives]
+          cardinality: exists
+    exit-merged:
+      # 合并前,DDD 验证必须通过
+      add_checks:
+        [
+          bounded-context-audit,
+          aggregate-invariant-check,
+          context-map-consistency,
+        ]
+
+  # ============ 验收层:DDD 测试挂在 integration 层 ============
+  acceptance_layers:
+    integration:
+      required: true
+      checks: [bounded-context-audit, context-map-consistency]
+
+  # ============ DDD 专属 Agent ============
+  # 当 DDD pack 激活时,这些 agent override foundation 的默认绑定
+  # (priority=15 > foundation 的 priority=0,自动覆盖)
+  agents:
+    # --- Domain Expert:领域建模 ---
+    - id: domain-expert
+      description: "DDD Domain Expert — identifies bounded contexts, defines ubiquitous language, designs context maps and aggregates."
+      prompt_ref: agents/domain-expert-agent.md
+      model_tier: capable
+      input_artifact_kinds: [requirement/*]
+      output_artifact_kinds: [design/*] # context-map, ubiquitous-language, aggregates, domain-events
+      actions: [specify, design] # override foundation: pm → domain-expert for specify
+
+    # --- Domain Reviewer:领域边界审查 ---
+    - id: domain-reviewer
+      description: "DDD Domain Reviewer — audits bounded context boundaries, validates aggregate invariants, checks context map consistency."
+      prompt_ref: agents/domain-reviewer-agent.md
+      model_tier: capable
+      input_artifact_kinds: [design/*, implementation/*, contract/*]
+      output_artifact_kinds: [verification/*] # domain-review-report
+      actions: [review] # supplement foundation reviewer
+      checks:
+        [
+          bounded-context-audit,
+          aggregate-invariant-check,
+          context-map-consistency,
+          domain-event-coverage,
+        ]
+
+  # --- DDD Agent Bindings(override foundation defaults) ---
+  # specify 和 design 由 domain-expert 取代 pm/architect
+  # review 由 foundation reviewer + domain-reviewer 协作
+  agent_bindings:
+    specify: domain-expert # override: pm → domain-expert
+    design: domain-expert # override: architect → domain-expert
+
+  # ============ DDD Meeting(领域建模会议) ============
+  # 当 DDD pack 激活时,此会议 override foundation 的 requirements-meeting
+  # 增加领域专家视角,聚焦限界上下文识别和通用语言建立
+  meetings:
+    - id: domain-modeling-meeting
+      description: "DDD domain modeling roundtable — domain expert leads bounded context identification, ubiquitous language definition, and context map design with cross-perspective challenge."
+      purpose: "Through multi-perspective discussion, identify bounded contexts, define ubiquitous language, and design the context map. Domain expert leads; PM, Architect, QA challenge from their perspectives."
+      on_actions: [specify, design]
+      min_rounds: 3 # DDD 建模通常比纯需求讨论需要更多轮次
+      max_rounds: 15 # 复杂领域可能需要很多轮(识别子域→限界上下文→通用语言→上下文映射→聚合)
+      participants:
+        - agent_id: domain-expert
+          role: core
+          perspective: "domain structure, bounded contexts, ubiquitous language, DDD patterns"
+        - agent_id: pm
+          role: core
+          perspective: "business value, user needs, subdomain priority (core/supporting/generic)"
+        - agent_id: architect
+          role: core
+          perspective: "technical feasibility of context boundaries, integration patterns"
+        - agent_id: qa
+          role: optional
+          perspective: "testability of domain invariants, aggregate boundary verification"
+        # 外部领域专家:按需邀请
+        # 如:金融合规专家、医疗行业专家、安全审计专家等
+        # facilitator 根据讨论中暴露的知识缺口决定是否邀请
+      expert_invite_protocol: ../foundation.pack/agents/expert-invite-protocol.md
+      output_artifacts:
+        - design/domain-vision
+        - design/ubiquitous-language
+        - design/context-map
+      # 轮次模板(DDD 建模通常比通用需求讨论轮次更多)
+      rounds:
+        - number: 1
+          phase: diverge
+          objective: "Domain expert presents initial domain structure; others share business/tech perspectives"
+          prompt: "Domain expert: Share your initial understanding of the domain structure — subdomains, potential bounded contexts, key business concepts. Others: Share what you know about the business domain and any technical constraints."
+          speakers: []
+        - number: 2
+          phase: challenge
+          objective: "Challenge bounded context boundaries, question ubiquitous language terms, surface conflicts"
+          prompt: "Challenge the proposed bounded context boundaries. Are the contexts correctly scoped? Does the ubiquitous language match how the business actually talks? Are there terms that mean different things in different contexts?"
+          speakers: []
+        - number: 3
+          phase: deep_dive
+          objective: "Deep dive into contentious boundaries — where do models conflict?"
+          prompt: "Focus on the boundaries that generated the most disagreement. For each: what are the arguments for and against? What would break if we merged/split these contexts?"
+          speakers: []
+        - number: 4
+          phase: diverge
+          objective: "Revised context map based on deep dive — refine relationships (ACL/OHS/PL/CS/CF)"
+          prompt: "Based on the deep dive, propose revised context boundaries and relationships. For each relationship, specify: which pattern (ACL, OHS, PL, CS, CF, partnership) and why."
+          speakers: []
+        - number: 5
+          phase: converge
+          objective: "Align on final bounded contexts, ubiquitous language, and context map"
+          prompt: "Summarize agreements: What are the final bounded contexts? What terms are in the ubiquitous language? What are the context relationships? Note any remaining open questions."
+          speakers: []
+        # Facilitator may add rounds 6-15 as needed for complex domains
+
+context_ref: context.md

@@ -1,0 +1,11 @@
+{
+  "change_id": "A2-B3-Atomic-merge-Retro-Stale-1782703675628",
+  "change_title": "A2-B3: Atomic merge + Retro + Stale marking + Rollback + Phase restart",
+  "archived_at": "2026-06-29T03:28:05.622Z",
+  "final_status": "completed",
+  "snapshot_files": [
+    "profile.yaml",
+    "graph.yaml",
+    "machine-state.yaml"
+  ]
+}

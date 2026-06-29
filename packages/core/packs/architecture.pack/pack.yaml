@@ -1,0 +1,70 @@
+# architecture.pack — 架构设计层
+#
+# 灵魂:在代码之前定义结构、边界和关键决策。
+# 原型阶段可省略架构产物(直接 spike 验证),故 applies_when 排除 prototype。
+
+name: architecture
+version: "1.0.0"
+kind: domain
+priority: 20
+description: "Architecture — C4 modeling, ADR, and structural readiness before implementation."
+
+applies_when:
+  criticality: "!prototype" # 原型跳过正式架构;标准/合规项目必须有
+
+provides:
+  artifacts:
+    - id: design/c4
+      kind: design
+      schema_ref: templates/c4-architecture.md # L1 Context → L2 Container → L3 Component
+    - id: design/adr
+      kind: design
+      schema_ref: templates/adr.md
+      optional: true # 小项目无重大决策可省
+    - id: design/readiness
+      kind: design
+      schema_ref: templates/readiness-check.md # 架构就绪检查清单
+
+  actions: [design] # design 阶段在此产出 C4 + ADR
+
+  checks:
+    # 架构评审:组件与需求追溯
+    - id: architecture-review
+      kind: lint
+      command: "<architecture-review>" # 查 C4 每个 Component 有 derives→req
+      layer: unit
+    # 复杂度门:圈复杂度/耦合度扫描(仅当 code 存在后)
+    # 阈值 25:命令处理函数天然复杂(CLI 入口 + 多分支参数处理),
+    # 15 过严会导致正常 CLI 命令持续失败;25 允许合理复杂度同时仍能
+    # 捕获极端超阈值函数(>30 的几乎肯定需要拆分)。
+    - id: complexity-budget
+      kind: lint
+      command: "<complexity-scan>"
+      layer: unit
+      threshold: { cyclomatic: 25 }
+
+  gates:
+    - id: architecture-ready
+      on_transition: [design, plan] # 设计完成→进入任务分解
+      require_artifacts: [design/c4, design/readiness]
+      require_checks: [architecture-review]
+      require_traces:
+        - name: c4_to_req
+          from_kind: design/c4
+          to_kind: requirement/prd # requirement-analysis.pack 提供
+          via: [derives]
+          cardinality: every
+      fail_mode: block
+      enabled: true
+
+  gate_patches:
+    entry-phase4:
+      add_artifacts: [design/readiness]
+      add_traces:
+        - name: c4_to_req
+          from_kind: design/c4
+          to_kind: requirement/prd
+          via: [derives]
+          cardinality: every
+
+context_ref: context.md

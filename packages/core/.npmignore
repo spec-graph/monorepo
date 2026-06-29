@@ -1,0 +1,38 @@
+# Source code (dist/ is published, not src/)
+src/
+*.ts
+!*.d.ts
+
+# Tests
+*.test.ts
+*.test.js
+test/
+tests/
+coverage/
+.nyc_output/
+
+# Dev config
+.editorconfig
+.eslintrc*
+.prettierrc*
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# Spec-graph project artifacts (these are project-specific, not package content)
+.spec-graph/
+
+# Build artifacts
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Docs (internal)
+docs/
+examples/
+
+# Misc
+*.tgz
+node_modules/
