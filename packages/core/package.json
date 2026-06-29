@@ -1,5 +1,5 @@
 {
-  "name": "spec-graph",
+  "name": "@spec-graph/core",
   "version": "1.0.0",
   "description": "Domain-neutral spec-driven workflow orchestration kernel. 6 primitives (Work-unit, Artifact, Contract, Check, Gate, Trace-edge) + 8-stage FSM + 38 CLI commands. Automatically analyzes your project and composes customized governance workflows.",
   "type": "commonjs",
