@@ -1,6 +1,0 @@
-traces:
-  - from: plan/story
-    from_kind: plan/story
-    to: verification/test-report
-    to_kind: verification/test-report
-    relation: verifies

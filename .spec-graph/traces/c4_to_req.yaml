@@ -1,6 +1,0 @@
-traces:
-  - from: design/c4
-    from_kind: design/c4
-    to: requirement/prd
-    to_kind: requirement/prd
-    relation: derives
