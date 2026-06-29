@@ -1,0 +1,6 @@
+[submodule "packages/server"]
+	path = packages/server
+	url = git@github.com:spec-graph/server.git
+[submodule "packages/ui"]
+	path = packages/ui
+	url = git@github.com:spec-graph/ui.git
