@@ -252,7 +252,8 @@ spec-graph dispatch --json
 ```bash
 $ spec-graph dispatch
 ✗ Graph not found. Run `spec-graph compose` first.
-# 修复: 先 init → sense → compose → prime
+# 修复: spec-graph init --stack X (init 内含 compose + prime)
+# 或如果 .spec-graph/ 已存在: spec-graph compose && spec-graph prime
 ```
 
 ### Scenario 6: 失败 — gate blocked 无法自动修复

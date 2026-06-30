@@ -18,7 +18,6 @@ import Table from "cli-table3";
 export interface InstallOptions {
   ide?: string;
   target?: string;
-  quick?: boolean;
   force?: boolean;
   json?: boolean;
   description?: string;
@@ -33,7 +32,6 @@ interface InstallResult {
   target_dir: string;
   ide: string;
   spec_graph_dir: string;
-  quick_bootstrap: boolean;
 }
 
 // IDE configurations — mirrors BMAD's platform-codes.yaml
@@ -84,7 +82,6 @@ export async function installCommand(
     target_dir: path.join(targetRoot, config.skillDir),
     ide: config.name,
     spec_graph_dir: path.join(targetRoot, ".spec-graph"),
-    quick_bootstrap: false,
   };
 
   // Step 1: Find skills source directory
@@ -135,24 +132,7 @@ export async function installCommand(
     renderInstallResult(result);
   }
 
-  // Step 5: Quick bootstrap if requested
-  if (options.quick) {
-    console.log(chalk.cyan("\n  ⚡ Quick mode: running init..."));
-    try {
-      // Dynamic import to avoid circular dependency
-      const { initCommand } = await import("./init");
-      await initCommand(targetRoot, {
-        force: options.force,
-        description: options.description,
-        permissionLevel: options.permissionLevel || "semi-auto",
-        quick: true,
-      });
-    } catch (e: any) {
-      console.log(chalk.yellow(`  Quick bootstrap skipped: ${e.message}`));
-    }
-  }
-
-  // Step 6: Git hooks installation
+  // Step 5: Git hooks installation if requested
   if (options.gitHooks) {
     console.log(chalk.cyan("\n  🔗 Installing git hooks..."));
     try {
@@ -286,7 +266,7 @@ function renderInstallResult(result: InstallResult): void {
     console.log(chalk.gray(`    ${cmdName}`));
   }
 
-  console.log(chalk.bold("\n  Next: spec-graph init --quick"));
+  console.log(chalk.bold("\n  Next: spec-graph init"));
   console.log("");
 }
 

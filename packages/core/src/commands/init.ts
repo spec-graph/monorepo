@@ -55,7 +55,7 @@ export async function initCommand(
     const permConfig = getPreset(permLevel);
     await savePermissions(projectRoot, permConfig);
 
-    auto-generate agent config files (.claude/settings.json, .opencode.json)
+    // Auto-generate agent config files (.claude/settings.json, .opencode.json)
     const { created, skipped } = await writeAgentConfigs(
       projectRoot,
       permConfig,
@@ -84,7 +84,7 @@ export async function initCommand(
       },
     };
     if (options.profileOverride) {
-      profile.overrides = parseOverride(options.profileOverride);
+      (profile as any).overrides = parseOverride(options.profileOverride);
     }
     await writeYaml(path.join(specGraphDir, "profile.yaml"), profile);
 
@@ -188,6 +188,22 @@ function parseOverride(profileOverride?: string): Record<string, string> | undef
   }
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
+
+async function injectAgentConstraints(
+  projectRoot: string,
+  specGraphDir: string,
+): Promise<void> {
+  const destPath = path.join(specGraphDir, "agent-constraints.md");
+
+  // Try to find template
+  const templatePaths = [
+    path.resolve(__dirname, "../../packs/foundation.pack/templates/agent-constraints.md"),
+    path.resolve(__dirname, "../../../packs/foundation.pack/templates/agent-constraints.md"),
+  ];
+
+  let templateContent: string | null = null;
+  for (const p of templatePaths) {
+    try {
       templateContent = await fs.readFile(p, "utf-8");
       break;
     } catch {
@@ -195,13 +211,11 @@ function parseOverride(profileOverride?: string): Record<string, string> | undef
     }
   }
 
-  if (!templateContent) return; // Template not found, skip
+  if (!templateContent) return;
 
-  // Copy to .spec-graph/
-  const destPath = path.join(specGraphDir, "agent-constraints.md");
   await fs.writeFile(destPath, templateContent, "utf-8");
 
-  // Try to inject reference into CLAUDE.md
+  // Inject reference into CLAUDE.md
   const claudeMdPath = path.join(projectRoot, "CLAUDE.md");
   try {
     const existing = await fs.readFile(claudeMdPath, "utf-8");
@@ -210,6 +224,6 @@ function parseOverride(profileOverride?: string): Record<string, string> | undef
       await fs.writeFile(claudeMdPath, existing + injection, "utf-8");
     }
   } catch {
-    // CLAUDE.md doesn't exist, skip injection
+    // CLAUDE.md doesn't exist
   }
 }
