@@ -218,11 +218,54 @@ function buildSuggestedActions(
   const actions: SuggestedAction[] = [];
 
   // Sort artifacts by plan-stage priority (dependencies first)
+  // AND filter out artifacts whose prerequisite kind is not yet completed.
   const planOrder: Record<string, number> = {
     requirement: 1, design: 2, plan: 3, contract: 4,
     implementation: 5, verification: 6, "change-record": 7, meta: 8,
   };
-  const sortedArtifacts = [...missingArtifacts].sort((a, b) => {
+
+  // Prerequisite kind: a kind cannot be suggested until this kind is fully completed
+  const prerequisiteFor: Record<string, string> = {
+    design: "requirement",
+    plan: "design",
+    contract: "design",
+    implementation: "plan",
+    verification: "implementation",
+  };
+
+  // Determine which prerequisite kinds have at least one completed artifact
+  const allArtifacts = graph.artifacts || [];
+  const startedKinds = new Set<string>();
+  const completedKinds = new Set<string>();
+  for (const kind of Object.keys(prerequisiteFor)) {
+    const artifactsOfKind = allArtifacts.filter((a: any) => a.kind === kind);
+    if (artifactsOfKind.length > 0) {
+      const anyStarted = artifactsOfKind.some((a: any) => {
+        const s = state.artifacts[a.id];
+        return s && (s.status === "completed" || s.status === "in_progress");
+      });
+      if (anyStarted) startedKinds.add(kind);
+      const allDone = artifactsOfKind.every((a: any) => {
+        const s = state.artifacts[a.id];
+        return s && s.status === "completed";
+      });
+      if (allDone) completedKinds.add(kind);
+    }
+  }
+
+  // Filter: only suggest artifacts whose prerequisite kind is at least partially done.
+  // If prereq kind has NO artifacts at all, skip the check (let gates handle it).
+  const eligibleArtifacts = missingArtifacts.filter((id) => {
+    const kind = id.split("/")[0] || "";
+    const prereq = prerequisiteFor[kind];
+    if (!prereq) return true;
+    // Find artifacts of the prerequisite kind
+    const prereqArtifacts = allArtifacts.filter((a: any) => a.kind === prereq);
+    if (prereqArtifacts.length === 0) return true; // no prereq artifacts to check
+    return startedKinds.has(prereq);
+  });
+
+  const sortedArtifacts = [...eligibleArtifacts].sort((a, b) => {
     const kindA = a.split("/")[0] || "";
     const kindB = b.split("/")[0] || "";
     return (planOrder[kindA] || 99) - (planOrder[kindB] || 99);
