@@ -150,136 +150,26 @@ spec-graph change   # Manage changes (create/list/...)
     console.log("   3. Run `spec-graph compose` to generate workflow graph");
     console.log("   4. Run `spec-graph gate` to evaluate entry gates");
 
-    // --quick: full bootstrap (init + compose + prime + plan)
-    if (options.quick) {
-      console.log(
-        chalk.cyan("\n  ⚡ Quick mode: running compose + prime + plan...\n"),
-      );
+    // Both --quick and normal: compose + prime, then guide to plan
+    console.log(chalk.cyan("\n  Running compose + prime...\n"));
 
-      const { composeCommand } = await import("./compose");
-      const { primeCommand } = await import("./prime");
+    const { composeCommand } = await import("./compose");
+    const { primeCommand } = await import("./prime");
 
-      await composeCommand(projectRoot, { changeType: "feature" });
-      console.log("");
-      await primeCommand(projectRoot, { bootstrap: true });
+    await composeCommand(projectRoot, { changeType: "feature" });
+    console.log("");
+    await primeCommand(projectRoot, { bootstrap: true });
 
-      console.log(chalk.green("\n  ✓ Infrastructure ready."));
+    console.log(chalk.green("\n  ✓ Infrastructure ready."));
 
-      // Auto-complete plan stage via dispatch loop
-      await autoCompletePlanStage(projectRoot);
-    } else {
-      // Non-quick mode: compose + prime + auto plan
-      console.log(chalk.cyan("\n  Running compose + prime...\n"));
-
-      const { composeCommand } = await import("./compose");
-      const { primeCommand } = await import("./prime");
-
-      await composeCommand(projectRoot, { changeType: "feature" });
-      console.log("");
-      await primeCommand(projectRoot, { bootstrap: true });
-
-      // Auto-complete plan stage via dispatch loop
-      await autoCompletePlanStage(projectRoot);
-    }
+    // Auto-run plan to guide agent
+    console.log(chalk.cyan("\n  Starting plan stage...\n"));
+    const { planCommand } = await import("./plan");
+    await planCommand(projectRoot, {});
   } catch (e: any) {
     spinner.fail(`Initialization failed: ${e.message}`);
     if (e.stack) console.log(e.stack);
     process.exit(1);
-  }
-}
-
-/**
- * Auto-complete plan stage by running dispatch loop.
- *
- * This function:
- *   1. Checks if plan stage is already complete
- *   2. If not, runs dispatch loop to produce plan artifacts
- *   3. Each dispatch produces one artifact (PRD, epics, story, etc.)
- *   4. Loops until plan gate passes
- */
-async function autoCompletePlanStage(projectRoot: string): Promise<void> {
-  const { readYaml } = await import("../utils/yaml");
-  const graphPath = path.join(projectRoot, ".spec-graph", "graph.yaml");
-  const statePath = path.join(projectRoot, ".spec-graph", "machine-state.yaml");
-
-  try {
-    const graph = await readYaml<any>(graphPath);
-    const state = await readYaml<any>(statePath);
-
-    const currentStage = state.current_stage || "plan";
-    if (currentStage !== "plan") {
-      console.log(chalk.gray("  (Plan stage already completed)"));
-      return;
-    }
-
-    // Check if plan artifacts are already produced
-    const allArtifacts = graph.artifacts || [];
-    const artifactStates = state.artifacts || {};
-    const pendingPlanArtifacts = allArtifacts.filter((a: any) => {
-      const s = artifactStates[a.id];
-      return a.kind === "requirement" && (!s || s.status !== "completed");
-    });
-
-    if (pendingPlanArtifacts.length === 0) {
-      console.log(chalk.gray("  (Plan artifacts already produced)"));
-      return;
-    }
-
-    console.log(chalk.cyan(`\n  📋 Completing plan stage (${pendingPlanArtifacts.length} artifacts)...\n`));
-
-    // Run dispatch loop to produce plan artifacts
-    const { dispatchCommand } = await import("./dispatch");
-    const maxIterations = pendingPlanArtifacts.length + 2;
-    let iteration = 0;
-
-    while (iteration < maxIterations) {
-      iteration++;
-
-      // Check current state
-      const currentState = await readYaml<any>(statePath);
-      const currentStageNow = currentState.current_stage;
-
-      if (currentStageNow !== "plan") {
-        console.log(chalk.green(`\n  ✓ Plan stage complete. Current stage: ${currentStageNow}`));
-        return;
-      }
-
-      // Run dispatch
-      console.log(chalk.gray(`  Dispatch iteration ${iteration}...`));
-      try {
-        await dispatchCommand(projectRoot, { json: true });
-      } catch (e: any) {
-        console.log(chalk.yellow(`  (Dispatch skipped: ${e.message})`));
-        break;
-      }
-
-      // Check if any artifacts were produced
-      const newState = await readYaml<any>(statePath);
-      const completedCount = allArtifacts.filter((a: any) => {
-        const s = newState.artifacts[a.id];
-        return s && s.status === "completed";
-      }).length;
-
-      console.log(chalk.gray(`  Artifacts: ${completedCount}/${allArtifacts.length} completed`));
-
-      // If no progress, break to avoid infinite loop
-      if (iteration > 1 && completedCount === 0) {
-        console.log(chalk.yellow("  (No artifacts produced, manual intervention needed)"));
-        break;
-      }
-    }
-
-    // Final status
-    const finalState = await readYaml<any>(statePath);
-    if (finalState.current_stage !== "plan") {
-      console.log(chalk.green(`\n  ✓ Plan complete. Ready for development.`));
-      console.log(chalk.gray(`  Next: spec-graph change create`));
-    } else {
-      console.log(chalk.yellow(`\n  ⚠ Plan stage incomplete.`));
-      console.log(chalk.gray(`  Manual: spec-graph dispatch`));
-    }
-  } catch (e: any) {
-    console.log(chalk.yellow(`  (Plan auto-completion skipped: ${e.message})`));
   }
 }
 

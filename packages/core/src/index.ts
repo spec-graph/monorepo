@@ -260,6 +260,22 @@ program
     await runWithHooks("change", root, async () => await changeCommand(root, { subcommand, id, ...options }));
   });
 
+// ============ plan ============
+program
+  .command("plan")
+  .description(
+    "Plan stage completion: dispatch loop to produce PRD, epics, story, design docs",
+  )
+  .option("--dry-run", "Show what would be produced without producing")
+  .option("--max-iterations <n>", "Max dispatch iterations (default: 20)")
+  .action(async (options) => {
+    const root = program.opts().cwd || projectRoot;
+    await runWithHooks("plan", root, async () => {
+      const { planCommand } = await import("./commands/plan");
+      await planCommand(root, options);
+    });
+  });
+
 // ============ dev ============
 program
   .command("dev")
