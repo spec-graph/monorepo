@@ -217,7 +217,18 @@ function buildSuggestedActions(
 ): SuggestedAction[] {
   const actions: SuggestedAction[] = [];
 
-  for (const artifactId of missingArtifacts) {
+  // Sort artifacts by plan-stage priority (dependencies first)
+  const planOrder: Record<string, number> = {
+    requirement: 1, design: 2, plan: 3, contract: 4,
+    implementation: 5, verification: 6, "change-record": 7, meta: 8,
+  };
+  const sortedArtifacts = [...missingArtifacts].sort((a, b) => {
+    const kindA = a.split("/")[0] || "";
+    const kindB = b.split("/")[0] || "";
+    return (planOrder[kindA] || 99) - (planOrder[kindB] || 99);
+  });
+
+  for (const artifactId of sortedArtifacts) {
     actions.push({
       type: "produce_artifact",
       id: artifactId,
@@ -225,7 +236,6 @@ function buildSuggestedActions(
       description: `Produce and mark artifact '${artifactId}' as completed`,
     });
   }
-
   for (const checkId of failedChecks) {
     const check = graph.checks.find((candidate) => candidate.id === checkId);
     actions.push({
