@@ -68,6 +68,16 @@ export async function devCommand(
       process.exit(1);
     }
 
+    // Gate check: refuse dev if plan stage is not complete
+    const planComplete = await checkPlanComplete(projectRoot);
+    if (!planComplete) {
+      console.log("Plan stage not complete. Complete planning before development.");
+      console.log("  Run: spec-graph plan (see pending artifacts)");
+      console.log("  Run: spec-graph dispatch --json (produce artifacts)");
+      console.log("  Repeat until all plan artifacts are done.");
+      process.exit(1);
+    }
+
     // Load dev state or start from coding
     const devState = await loadDevState(projectRoot);
     const phase = devState?.phase || "coding";
@@ -208,4 +218,25 @@ async function runCheckLayer(projectRoot: string, layer: string): Promise<{ pass
     }
     return { passed, failed };
   } catch { return { passed: true, failed: [] }; }
+}
+
+/** Check if plan stage gate is satisfied before allowing dev */
+async function checkPlanComplete(projectRoot: string): Promise<boolean> {
+  try {
+    const { readYaml } = await import("../utils/yaml");
+    const statePath = path.join(projectRoot, ".spec-graph", "machine-state.yaml");
+    const state = await readYaml<any>(statePath);
+    // Plan is complete if current stage is past plan
+    if (state.current_stage !== "plan") return true;
+    // Check if any requirement/design/plan artifacts are pending
+    const artifacts = state.artifacts || {};
+    const planKinds = ["requirement", "design", "plan"];
+    for (const [id, info] of Object.entries(artifacts)) {
+      const kind = id.split("/")[0] || "";
+      if (planKinds.includes(kind) && (info as any).status !== "completed") {
+        return false;
+      }
+    }
+    return true;
+  } catch { return true; }
 }
