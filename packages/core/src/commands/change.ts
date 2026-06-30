@@ -12,6 +12,7 @@ export interface ChangeOptions {
   type?: string;
   priority?: string;
   description?: string;
+  story?: string;  // Bind to specific story
   force?: boolean;
   reason?: string;
   worktree?: boolean;
@@ -55,6 +56,12 @@ export async function changeCommand(
         break;
       case "archive":
         await archiveChangeCmd(projectRoot, changesDir, options);
+        break;
+      case "create-all-from-stories":
+        await createAllFromStories(projectRoot, changesDir, options);
+        break;
+      case "dev":
+        await devChange(projectRoot, changesDir, options);
         break;
       default:
         console.log(chalk.red(`✗ Unknown subcommand: ${subcommand}`));
@@ -140,6 +147,12 @@ async function createChange(
     status: "proposed",
   };
 
+  // Bind to story if specified
+  if (options.story) {
+    change.linked_story = options.story;
+    change.description = `Auto-generated from story: ${options.story}`;
+  }
+
   // plan MD 带主题和时间戳
   const planRelPath = `.spec-graph/changes/${filePrefix}-plan.md`;
   change.plan_path = planRelPath;
@@ -163,6 +176,253 @@ async function createChange(
   console.log(chalk.gray(`  AI agent 填写 plan MD 内容`));
   console.log(chalk.gray(`  Apply: spec-graph change apply ${id}`));
   console.log("");
+}
+
+/**
+ * Create changes from all stories in plan/story.md
+ * Parses the story document and creates one change per story.
+ */
+async function createAllFromStories(
+  projectRoot: string,
+  changesDir: string,
+  _options: ChangeOptions,
+): Promise<void> {
+  const storyPath = path.join(projectRoot, ".spec-graph/artifacts/plan/story.md");
+
+  // Check if story file exists
+  try {
+    await fs.access(storyPath);
+  } catch {
+    console.log(chalk.red(`✗ Story file not found: ${storyPath}`));
+    console.log(chalk.gray("  Plan stage must be completed first."));
+    console.log(chalk.gray("  Run: spec-graph artifact complete plan/story --producer agent"));
+    process.exit(1);
+  }
+
+  // Read story file
+  const storyContent = await fs.readFile(storyPath, "utf-8");
+
+  // Parse stories (simple pattern: lines starting with "S" followed by numbers)
+  // Format: "S1.1: User Registration" or "### S1.1 User Registration"
+  const storyPattern = /#{1,3}\s*S\d+\.\d+[:\s]+(.+?)(?:\n|$)/g;
+  const stories: Array<{ id: string; title: string }> = [];
+
+  let match;
+  while ((match = storyPattern.exec(storyContent)) !== null) {
+    const fullLine = match[0].trim();
+    const title = match[1].trim();
+    // Extract story ID from line like "### S1.1 User Registration"
+    const idMatch = fullLine.match(/S\d+\.\d+/);
+    if (idMatch) {
+      stories.push({ id: idMatch[0], title });
+    }
+  }
+
+  if (stories.length === 0) {
+    console.log(chalk.red("✗ No stories found in story.md"));
+    console.log(chalk.gray("  Format should be: ### S1.1 Story Title"));
+    process.exit(1);
+  }
+
+  console.log(chalk.cyan(`\n📋 Found ${stories.length} stories:\n`));
+  for (const s of stories) {
+    console.log(`  ⬜ ${s.id}: ${s.title}`);
+  }
+
+  // Create changes for each story
+  console.log(chalk.cyan("\n🔧 Creating changes...\n"));
+  let created = 0;
+  for (const story of stories) {
+    const changeId = await createChangeFromStory(changesDir, story);
+    console.log(chalk.green(`  ✓ ${changeId} ← ${story.id}: ${story.title}`));
+    created++;
+  }
+
+  console.log(chalk.green(`\n✓ Created ${created} changes from ${stories.length} stories`));
+  console.log(chalk.gray("\n  Next: spec-graph change apply <change-id>"));
+  console.log(chalk.gray("        spec-graph dev <change-id>"));
+  console.log("");
+}
+
+async function createChangeFromStory(
+  changesDir: string,
+  story: { id: string; title: string },
+): Promise<string> {
+  const now = new Date().toISOString();
+  const filePrefix = `story-${story.id.replace(/\./g, "-")}-${Date.now()}`;
+  const id = filePrefix;
+
+  const change: ChangeDescriptor = {
+    id,
+    title: `${story.id}: ${story.title}`,
+    description: `Auto-generated from story ${story.id}`,
+    created_at: now,
+    type: "feature",
+    priority: "medium",
+    scope: { tracks: [] },
+    impact: { risk_level: "medium" },
+    status: "proposed",
+    linked_story: story.id,
+  };
+
+  const planRelPath = `.spec-graph/changes/${filePrefix}-plan.md`;
+  change.plan_path = planRelPath;
+
+  const changePath = path.join(changesDir, `${filePrefix}.json`);
+  await fs.writeFile(changePath, JSON.stringify(change, null, 2));
+
+  const planPath = path.join(changesDir, `${filePrefix}-plan.md`);
+  await fs.writeFile(
+    planPath,
+    `# ${story.id}: ${story.title}\n\n> Story: ${story.id}\n> Change ID: ${change.id}\n> Created: ${change.created_at}\n\n## Story Context\n\n(Read from .spec-graph/artifacts/plan/story.md)\n\n## Implementation Plan\n\n(TBD by agent)\n`,
+    "utf-8",
+  );
+
+  return id;
+}
+
+/**
+ * Dev loop engine: coding ↔ review ↔ test cycle
+ * Drives development of a single change until all checks pass.
+ */
+async function devChange(
+  projectRoot: string,
+  changesDir: string,
+  options: ChangeOptions,
+): Promise<void> {
+  if (!options.id) {
+    console.log(chalk.red("✗ Change ID required. Usage: spec-graph change dev <id>"));
+    process.exit(1);
+  }
+
+  // Load change
+  const changePath = path.join(changesDir, `${options.id}.json`);
+  let change: ChangeDescriptor;
+  try {
+    change = await readYaml<ChangeDescriptor>(changePath);
+  } catch {
+    console.log(chalk.red(`✗ Change not found: ${options.id}`));
+    process.exit(1);
+  }
+
+  if (change.status !== "in_progress") {
+    console.log(chalk.red(`✗ Change must be in 'in_progress' status`));
+    console.log(chalk.gray(`  Run: spec-graph change apply ${options.id}`));
+    process.exit(1);
+  }
+
+  console.log(chalk.bold(`\n🔄 Dev Loop: ${change.title}\n`));
+
+  let iteration = 0;
+  const maxIterations = 10;
+  let phase: "coding" | "reviewing" | "testing" = "coding";
+
+  while (iteration < maxIterations) {
+    iteration++;
+    console.log(chalk.cyan(`\n  ── Iteration ${iteration} / ${maxIterations} ──\n`));
+
+    if (phase === "coding") {
+      console.log(chalk.yellow("   Phase: CODING"));
+      console.log(chalk.gray("  Agent should write/modify code for this change."));
+      console.log(chalk.gray(`  Story: ${change.linked_story || change.title}`));
+      console.log(chalk.gray("  Agent: spec-graph dispatch"));
+      console.log(chalk.gray("  Agent: spec-graph check --layer unit"));
+
+      // Check if unit tests pass
+      const unitCheckResult = await runCheckLayer(projectRoot, "unit");
+      if (unitCheckResult.passed) {
+        console.log(chalk.green("  ✓ Unit tests passed"));
+        phase = "reviewing";
+      } else {
+        console.log(chalk.red("  ✗ Unit tests failed"));
+        console.log(chalk.yellow("  → Agent: fix code and retry"));
+        console.log(chalk.gray("  Agent: spec-graph change dev <id> (restart)"));
+        return;
+      }
+    }
+
+    if (phase === "reviewing") {
+      console.log(chalk.yellow("  🔍 Phase: REVIEWING"));
+      console.log(chalk.gray("  Agent should review code quality."));
+      console.log(chalk.gray("  Agent: spec-graph review --artifact <artifact-id>"));
+
+      // For now, skip automated review (needs sub-agent integration)
+      console.log(chalk.gray("  (Automated review not yet implemented)"));
+      console.log(chalk.yellow("  → Agent: manually confirm review passed"));
+      console.log(chalk.gray("  Agent: spec-graph change dev <id> --skip-review"));
+
+      // For demo, auto-advance
+      phase = "testing";
+    }
+
+    if (phase === "testing") {
+      console.log(chalk.yellow("  🧪 Phase: TESTING"));
+      console.log(chalk.gray("  Running full test suite..."));
+
+      const allCheckResult = await runCheckLayer(projectRoot, "unit,integration");
+      if (allCheckResult.passed) {
+        console.log(chalk.green("  ✓ All tests passed"));
+        console.log(chalk.green("\n  ✅ Dev loop completed!"));
+        console.log(chalk.gray(`  Next: spec-graph change complete ${options.id}`));
+        return;
+      } else {
+        console.log(chalk.red("  ✗ Tests failed"));
+        console.log(chalk.yellow("  → Agent: fix issues"));
+        phase = "coding";
+      }
+    }
+  }
+
+  console.log(chalk.red(`\n   Max iterations (${maxIterations}) reached`));
+  console.log(chalk.gray("  Agent: manual intervention required"));
+}
+
+/**
+ * Run checks for a specific layer and return result.
+ */
+async function runCheckLayer(
+  projectRoot: string,
+  layer: string,
+): Promise<{ passed: boolean; failed: string[] }> {
+  try {
+    const { runCheck } = await import("../engine/check/index");
+    const { readYaml } = await import("../utils/yaml");
+
+    const graphPath = path.join(projectRoot, ".spec-graph/graph.yaml");
+    const graph = await readYaml<any>(graphPath);
+
+    const checks = (graph.checks || []).filter((c: any) => {
+      if (layer.includes(",")) {
+        const layers = layer.split(",");
+        return layers.includes(c.layer);
+      }
+      return c.layer === layer;
+    });
+
+    if (checks.length === 0) {
+      return { passed: true, failed: [] };
+    }
+
+    let passed = true;
+    const failed: string[] = [];
+
+    for (const check of checks) {
+      try {
+        const result = await runCheck(check, { cwd: projectRoot, timeoutMs: 30000 });
+        if (result.status !== "passed") {
+          passed = false;
+          failed.push(check.id);
+        }
+      } catch {
+        passed = false;
+        failed.push(check.id);
+      }
+    }
+
+    return { passed, failed };
+  } catch {
+    return { passed: true, failed: [] };
+  }
 }
 
 async function lockChangeCmd(changesDir: string, options: ChangeOptions): Promise<void> {

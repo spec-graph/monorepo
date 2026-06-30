@@ -235,11 +235,11 @@ program
 program
   .command("change")
   .description(
-    "Manage changes (OpenSpec-style lifecycle: create → apply → complete → archive)",
+    "Manage changes (OpenSpec-style lifecycle: create → apply → dev → complete → archive)",
   )
   .argument(
     "[subcommand]",
-    "Subcommand: list, create, show, apply, complete, discard, sync, archive",
+    "Subcommand: list, create, create-all-from-stories, dev, show, apply, complete, discard, sync, archive",
   )
   .argument("[id]", "Change ID (for show/apply/complete/discard/sync/archive)")
   .option("--title <title>", "Change title")
@@ -249,6 +249,7 @@ program
   )
   .option("--priority <priority>", "Priority: low, medium, high, critical")
   .option("--description <desc>", "Change description")
+  .option("--story <story-id>", "Bind change to story ID (for create)")
   .option("--reason <text>", "Discard reason (for discard)")
   .option("--force", "Ignore blocking gates (for complete)")
   .option("--plan-path <path>", "Path to plan MD written by AI agent (for create)")

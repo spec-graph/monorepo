@@ -516,6 +516,8 @@ export interface ChangeDescriptor {
   discard_reason?: string;
   /** Path to the plan markdown document (relative to project root). */
   plan_path?: string;
+  /** Story ID from plan/stage that this change implements. */
+  linked_story?: string;
   audit_log?: Array<{
     timestamp: string;
     action: string;
