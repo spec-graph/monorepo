@@ -155,11 +155,45 @@ async function createChange(
   const changePath = path.join(changesDir, `${filePrefix}.json`);
   await fs.writeFile(changePath, JSON.stringify(change, null, 2));
 
-  // 创建空的 plan MD（agent 填写实际内容）
+  // 创建 plan MD 带 story 模板（agent 填写实际内容）
   const planPath = path.join(changesDir, `${filePrefix}-plan.md`);
+  const storySection = change.linked_story
+    ? `\n## Story\n> ${change.linked_story}\n\n(Agent: fill from .spec-graph/artifacts/plan/story.md)\n`
+    : "";
   await fs.writeFile(
     planPath,
-    `# ${change.title}\n\n> Change ID: ${change.id}\n> Type: ${change.type} | Priority: ${change.priority}\n> Created: ${change.created_at}\n\n`,
+    `# ${change.title}
+
+> Change ID: ${change.id}\n> Type: ${change.type} | Priority: ${change.priority}\n> Created: ${change.created_at}
+${storySection}
+## Background
+(Agent: describe why this change is needed)
+
+## Scope
+### In Scope
+- (Agent: list what's included)
+
+### Out of Scope
+- (Agent: list what's explicitly excluded)
+
+## Acceptance Criteria
+- [ ] (Agent: define measurable acceptance criteria)
+
+## Implementation Plan
+1. (Agent: break down implementation steps)
+
+## Risks & Mitigations
+- Risk: (Agent: identify risks)
+  - Mitigation: (Agent: describe mitigation)
+
+## Dependencies
+- (Agent: list prerequisites)
+
+## Progress
+- [ ] Coding
+- [ ] Review
+- [ ] Testing
+`,
     "utf-8",
   );
 
