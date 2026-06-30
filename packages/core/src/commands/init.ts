@@ -149,31 +149,9 @@ async function printInitPlanStatus(projectRoot: string): Promise<void> {
     });
 
     console.log(chalk.green("\n  ✓ Infrastructure ready."));
-    console.log(chalk.bold(`\n  Plan Stage: ${pending.length} artifacts to produce\n`));
-
-    if (pending.length === 0) {
-      console.log(chalk.green("  All artifacts completed."));
-      return;
-    }
-
-    // Show by priority kind
-    const kindOrder = ["requirement", "design", "plan", "contract", "verification", "implementation", "meta"];
-    for (const kind of kindOrder) {
-      const items = pending.filter((a: any) => a.kind === kind);
-      if (items.length === 0) continue;
-      console.log(chalk.gray(`  ${kind}:`));
-      for (const a of items) {
-        console.log(chalk.yellow(`    ⬜ ${a.id}`));
-      }
-    }
-
-    console.log(chalk.gray("\n  ─────────────────────────────────────────"));
-    console.log(chalk.bold("\n  Agent — produce these artifacts:"));
-    console.log(chalk.gray("\n    For each artifact:"));
-    console.log(chalk.gray("      1. spec-graph dispatch --json  (get context)"));
-    console.log(chalk.gray("      2. Produce document at suggested path"));
-    console.log(chalk.gray("      3. spec-graph artifact complete <id> --producer agent"));
-    console.log(chalk.gray("      4. spec-graph plan              (check progress)"));
+    console.log(chalk.cyan(`\n  ${pending.length} artifacts need production.`));
+    console.log(chalk.gray("  Run: spec-graph plan"));
+    console.log(chalk.gray("  Then: spec-graph dispatch --json (loop until plan complete)"));
   } catch {
     // Skip on error
   }
