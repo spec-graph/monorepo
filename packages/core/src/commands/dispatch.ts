@@ -486,14 +486,30 @@ async function buildDispatchAction(
   const role = roleForAction(action.type);
   const fileScope = resolveFileScope(role, permissions);
 
-  // New: look up agent binding for this action's stage
+  // Look up agent for this action:
+  // 1. If produce_artifact: match by artifact kind via agent output_artifact_kinds
+  // 2. Otherwise: match by action/stage name via agent_bindings
   const stageName = inferStageFromAction(action, plan);
-  const agentBinding = graph.agent_bindings?.find(
+  let agentBinding = graph.agent_bindings?.find(
     (b) => b.action === stageName,
   );
-  const agentDecl = agentBinding
+  let agentDecl = agentBinding
     ? graph.agents?.find((a) => a.id === agentBinding.agent_id)
     : undefined;
+
+  // For produce_artifact: override agent by artifact kind
+  if (action.type === "produce_artifact" && graph.agents?.length) {
+    const artifact = graph.artifacts?.find((a) => a.id === action.id);
+    if (artifact) {
+      // Find agent whose output_artifact_kinds matches this artifact's kind
+      const matchingAgent = graph.agents.find((a) =>
+        a.output_artifact_kinds?.some((k) => matchesAnyKind(artifact.kind, [k])),
+      );
+      if (matchingAgent) {
+        agentDecl = matchingAgent;
+      }
+    }
+  }
 
   // New: check if this action triggers a meeting
   const meeting = await findMeetingForAction(
@@ -1420,17 +1436,43 @@ function inferTemplateForArtifact(
   const artifactDecl = graph.artifacts?.find((a) => a.id === artifactId);
   if (!artifactDecl) return undefined;
 
-  // Map artifact kind to template name
-  const kindToTemplate: Record<string, string> = {
-    "requirement/prd": "prd",
+  // Try exact ID match, then kind prefix match (e.g., "requirement/prd" from "requirement/prd/PRD-001")
+  const lookupKey = lookupBaseKind(artifactDecl.id);
+
+  // Map artifact ID to template name, using both id and kind patterns
+  const idToTemplate: Record<string, string> = {
+    // backward compat aliases
     "design/architecture": "architecture",
-    "plan/story": "story",
     "plan/epic": "epic",
     "plan/task": "task",
+    // current IDs
+    "requirement/prd": "prd",
+    "requirement/product-brief": "product-brief",
+    "requirement/impact-map": "impact-map",
+    "requirement/story-map": "story-map",
+    "design/c4": "c4-architecture",
     "design/adr": "adr",
+    "design/readiness": "readiness-check",
+    "design/domain-vision": "domain-vision",
+    "design/aggregates": "aggregates",
+    "design/domain-events": "domain-events",
+    "design/repositories": "repositories",
+    "design/ubiquitous-language": "ubiquitous-language",
+    "plan/epics": "epics",
+    "plan/story": "story",
+    "contract/openapi": "openapi",
+    "contract/grpc-idl": "grpc-idl",
+    "contract/graphql-schema": "graphql-schema",
+    "verification/review-report": "review-report",
+    "verification/test-report": "test-report",
+    "verification/acceptance-report": "acceptance-report",
+    "implementation/backend": "backend-impl",
+    "implementation/frontend": "frontend-impl",
+    "change-record/constitution": "constitution",
+    "change-record/changelog": "changelog",
   };
 
-  return kindToTemplate[artifactDecl.kind] || artifactDecl.kind.split("/")[1];
+  return idToTemplate[artifactDecl.id] || idToTemplate[lookupBaseKind(artifactDecl.id)] || artifactDecl.id.split("/").pop();
 }
 
 /**
@@ -1481,22 +1523,70 @@ function inferDocumentGuidance(artifactId: string, graph: Graph): string {
   }
 
   const guidanceMap: Record<string, string> = {
+    // backward compat aliases
+    "design/architecture":
+      "Architecture Document: system context, container diagram, component design, data model",
+    "plan/epic":
+      "Epic: epic statement, list of user stories, success criteria, timeline",
+    "plan/task":
+      "Task: task description, story reference, acceptance criteria, implementation steps",
+    // current IDs
     "requirement/prd":
       "Product Requirements Document: problem statement, user stories, acceptance criteria, functional and non-functional requirements",
-    "design/architecture":
-      "Architecture Document: system context, container diagram, component design, data model, technology decisions",
+    "requirement/product-brief":
+      "Product Brief: market analysis, target users, core value proposition, success metrics",
+    "requirement/impact-map":
+      "Impact Map: goals → actors → impacts → deliverables, traceability chain",
+    "requirement/story-map":
+      "Story Map: user journey backbone, user tasks, stories organized by workflow priority",
+    "design/c4":
+      "C4 Architecture: system context diagram, container diagram, component diagram, code-level design",
+    "design/adr":
+      "Architecture Decision Record: context, decision, consequences, alternatives considered",
+    "design/readiness":
+      "Design Readiness Checklist: pre-implementation design review, all C4 levels complete, ADRs filed",
+    "design/domain-vision":
+      "Domain Vision: business context, bounded contexts map, strategic design patterns",
+    "design/aggregates":
+      "Aggregate Design: aggregate roots, entity/value objects, invariants, transaction boundaries",
+    "design/domain-events":
+      "Domain Events: event types, payload schemas, producers/consumers, ordering guarantees",
+    "design/repositories":
+      "Repository Interfaces: persistence contracts, query methods, transaction scopes",
+    "design/ubiquitous-language":
+      "Ubiquitous Language Glossary: domain terms, definitions, examples, cross-bounded-context usage",
+    "plan/epics":
+      "Epic: epic statement, list of user stories, success criteria, timeline, risks and mitigations",
     "plan/story":
       "User Story: story statement, acceptance criteria, technical notes, dependencies, testing approach",
-    "plan/epic":
-      "Epic: epic statement, list of user stories, success criteria, timeline, risks and mitigations",
-    "plan/task":
-      "Task: task description, story reference, acceptance criteria, implementation steps, dependencies",
-    "design/adr":
-      "Architecture Decision Record: context, decision, consequences, alternatives considered, implementation notes",
+    "contract/openapi":
+      "OpenAPI Specification: REST API endpoints, request/response schemas, authentication, error codes",
+    "contract/grpc-idl":
+      "gRPC IDL: service definitions, RPC methods, protobuf message schemas",
+    "contract/graphql-schema":
+      "GraphQL Schema: types, queries, mutations, subscriptions, resolvers contract",
+    "verification/review-report":
+      "Review Report: review findings, severity classification, action items, reviewer sign-off",
+    "verification/test-report":
+      "Test Report: test suite results, coverage metrics, failed tests analysis, performance benchmarks",
+    "verification/acceptance-report":
+      "Acceptance Report: acceptance criteria verification, stakeholder sign-off, deployment readiness",
+    "implementation/backend":
+      "Backend Implementation: server code, API handlers, business logic, database integration",
+    "implementation/frontend":
+      "Frontend Implementation: UI components, state management, API client, responsive design",
+    "change-record/constitution":
+      "Project Constitution: coding standards, quality thresholds, governance rules",
+    "change-record/changelog":
+      "Changelog: version history, changes summary, migration notes, breaking changes",
   };
 
   return (
-    guidanceMap[artifactDecl.kind] ||
-    `Create a document for ${artifactDecl.kind} artifact`
+    guidanceMap[artifactDecl.id] || guidanceMap[lookupBaseKind(artifactDecl.id)] ||
+    `Create a document for '${artifactId}' (kind: ${artifactDecl.kind})`
   );
+}
+
+function lookupBaseKind(artifactId: string): string {
+  return artifactId.includes("/") ? artifactId.split("/").slice(0, 2).join("/") : artifactId;
 }
