@@ -113,8 +113,8 @@ program
     "Dimension overrides: criticality=compliance,team=multi,...",
   )
   .option(
-    "--llm-classify",
-    "Use LLM classifier to fill dimensions not established by repo scan (requires ANTHROPIC_API_KEY)",
+    "--stack <name>",
+    "Tech stack: typescript, python, go, rust, java, kotlin, cpp-cmake, dotnet, ruby, php, swift, generic",
   )
   .action(async (options) => {
     const root = program.opts().cwd || projectRoot;
@@ -156,7 +156,6 @@ program
   .command("sense")
   .description("Analyze project and generate profile")
   .option("-o, --output <file>", "Output file path")
-  .option("--show-signals", "Show raw repo signals")
   .option(
     "--build <list>",
     "Build target(s): spa,api,lib,embedded,... (comma-separated)",
@@ -167,11 +166,7 @@ program
   )
   .option(
     "--description <text>",
-    "Project description (passed to LLM classifier when --llm-classify is set)",
-  )
-  .option(
-    "--llm-classify",
-    "Use LLM classifier to fill dimensions not established by repo scan (requires ANTHROPIC_API_KEY)",
+    "Project description (stored in profile for agent reference)",
   )
   .action(async (options) => {
     const root = program.opts().cwd || projectRoot;

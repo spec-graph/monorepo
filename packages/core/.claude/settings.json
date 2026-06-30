@@ -1,0 +1,56 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(/src/**)",
+      "Write(/.spec-graph/**)",
+      "Edit(/src/**)",
+      "Edit(/.spec-graph/**)",
+      "Glob(*)",
+      "Grep(*)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(cd *)",
+      "Bash(curl *)",
+      "Bash(which *)",
+      "Bash(wc *)"
+    ],
+    "deny": [
+      "Write(//*)",
+      "Edit(//*)",
+      "Write(~/*)",
+      "Edit(~/*)",
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod *)",
+      "Read(.env)",
+      "Read(**/*.pem)",
+      "Read(**/*-key)",
+      "Read(**/credentials*)",
+      "Read(**/secrets*)"
+    ],
+    "ask": [
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "Bash(rm *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(chmod *)",
+      "Bash(docker *)",
+      "Bash(gh *)"
+    ]
+  }
+}

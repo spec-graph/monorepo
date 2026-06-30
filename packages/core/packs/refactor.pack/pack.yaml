@@ -31,11 +31,11 @@ provides:
   checks:
     - id: characterization-green-before
       kind: test
-      command: "npm test -- <target>" # 入口:目标已被测试覆盖
+      command: "<test-command> -- <target>" # 入口:目标已被测试覆盖
       layer: unit
     - id: equivalence-after
       kind: test
-      command: "npm test -- <target>" # 出口:逐条结果与重构前一致
+      command: "<test-command> -- <target>" # 出口:逐条结果与重构前一致
       layer: unit
     - id: complexity-not-worse
       kind: lint

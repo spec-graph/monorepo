@@ -53,26 +53,26 @@ provides:
     # L1 unit:嵌入式静态分析 + 单元测试
     - id: static-analysis
       kind: lint
-      command: "cppcheck --error-exitcode=1 src/"
+      command: "<static-analysis-command>"
       layer: unit
     - id: unit-test-embedded
       kind: test
-      command: "make test"
+      command: "<build-test-command>"
       layer: unit
     # L2 integration:simulator 上模块联调
     - id: simulator-test
       kind: test
-      command: "make sim-test"
+      command: "<simulator-test-command>"
       layer: integration
     # L3 system:emulator 跑全固件
     - id: emulator-full
       kind: test
-      command: "make emu-run"
+      command: "<emulator-run-command>"
       layer: system
     # L4 deployment:HIL 硬件在环(不是浏览器!)
     - id: hil-test
       kind: hil
-      command: "make hil-test" # 真硬件烧录 + 在环测试
+      command: "<hil-test-command>" # 真硬件烧录 + 在环测试
       layer: deployment
       threshold: { binary_size_max_kb: 256, power_budget_mw: 50 }
 

@@ -27,11 +27,11 @@ provides:
     # L2 integration(wdf FEATURE acceptance)
     - id: contract-test
       kind: test
-      command: "npm run test:contract" # 契约两端对齐(pact 等)
+      command: "<test-contract-command>" # 契约两端对齐(pact 等)
       layer: integration
     - id: feature-test
       kind: test
-      command: "npm run test:integration"
+      command: "<test-integration-command>"
       layer: integration
 
   acceptance_layers:

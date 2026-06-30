@@ -1,0 +1,24 @@
+{
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "ask",
+      "npm *": "allow",
+      "npx *": "allow",
+      "node *": "allow",
+      "ls *": "allow",
+      "cat *": "allow",
+      "find *": "allow",
+      "grep *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git commit*": "ask",
+      "git push*": "ask",
+      "rm *": "ask",
+      "rm -rf*": "deny",
+      "sudo *": "deny"
+    },
+    "webfetch": "ask"
+  }
+}

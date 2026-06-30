@@ -1,20 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { runSense } from "./index";
 import path from "node:path";
-import fs from "node:fs/promises";
 
-describe("Sense Engine", () => {
-  it("should analyze the spec-graph project itself", async () => {
+describe("Sense Engine (minimal — no scanning)", () => {
+  it("should return a profile skeleton with all dimensions = unknown", async () => {
     const projectRoot = path.resolve(__dirname, "../../..");
     const result = await runSense(projectRoot);
 
     expect(result.profile).toBeDefined();
     expect(result.profile.version).toBe("1");
     expect(result.profile.facts).toBeDefined();
-    expect(result.signals).toBeDefined();
   });
 
-  it("should detect all 9 dimensions", async () => {
+  it("should not scan repo or return signals", async () => {
+    const projectRoot = path.resolve(__dirname, "../../..");
+    const result = await runSense(projectRoot);
+
+    // signals field no longer exists — spec-graph does not scan
+    expect((result as any).signals).toBeUndefined();
+  });
+
+  it("should mark all 9 dimensions as unknown (agent fills via overrides)", async () => {
     const projectRoot = path.resolve(__dirname, "../../..");
     const result = await runSense(projectRoot);
 
@@ -31,23 +37,19 @@ describe("Sense Engine", () => {
     ];
 
     for (const dim of dimensions) {
-      expect(
-        result.profile.facts[dim as keyof typeof result.profile.facts],
-      ).toBeDefined();
+      const fact = result.profile.facts[dim as keyof typeof result.profile.facts];
+      expect(fact).toBeDefined();
+      expect(fact.value).toBe("unknown");
+      expect(fact.source).toBe("fallback");
     }
   });
 
-  it("should detect source files", async () => {
+  it("should store description for agent reference", async () => {
     const projectRoot = path.resolve(__dirname, "../../..");
-    const result = await runSense(projectRoot);
+    const result = await runSense(projectRoot, {
+      description: "Test project description",
+    });
 
-    expect(result.signals.srcFileCount).toBeGreaterThan(0);
-  });
-
-  it("should detect package.json", async () => {
-    const projectRoot = path.resolve(__dirname, "../../..");
-    const result = await runSense(projectRoot);
-
-    expect(result.signals.hasPackageJson).toBe(true);
+    expect((result.profile as any).description).toBe("Test project description");
   });
 });

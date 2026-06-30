@@ -72,7 +72,7 @@ follow-up commands, and loops back to spec-graph for the next step.
 │                                                              │
 │   5. If NOT requires_sub_agent (deterministic):             │
 │      a. Run actions[0].recommended_command via Bash          │
-│         (e.g. `npm run lint`, `spec-graph machine           │
+│         (e.g. the project's lint command, spec-graph machine           │
 │          transition --from A --to B`)                       │
 │      b. No sub-agent, no status-report — just check exit    │
 │         code                                                │
@@ -103,11 +103,11 @@ follow-up commands, and loops back to spec-graph for the next step.
 | `produce_artifact`  | true                 | Dispatch sub-agent (LLM produces artifact)                              |
 | `perform_stage`     | true                 | Dispatch sub-agent (LLM does stage work)                                |
 | `resolve_violation` | true                 | Dispatch sub-agent (LLM resolves governance violation)                  |
-| `run_check`         | false                | Run `check_command` directly via Bash (e.g. `npm run lint`) — see below |
+| `run_check`         | false                | Run `check_command` directly via Bash (e.g. lint/test commands) — see below |
 | `verify_trace`      | false                | Run `recommended_command` directly via Bash (deterministic trace query) |
 | `transition`        | false                | Run `recommended_command` directly via Bash (state machine update)      |
 
-Spawning a sub-agent to run `npm test` is pure context waste — the sub-agent
+Spawning a sub-agent to run tests is pure context waste — the sub-agent
 would load a system prompt + task prompt just to execute a shell command.
 The `requires_sub_agent` field tells the coordinator when to skip the
 sub-agent and just run the command.
@@ -189,7 +189,7 @@ The coordinator runs `spec-graph dispatch --json` and parses:
 | `agent_id`            | Which sub-agent to dispatch (from Agent Registry)                                                                                                                                                                                                       |
 | `agent_prompt_ref`    | Path to load system prompt template (relative to pack dir)                                                                                                                                                                                              |
 | `model_tier`          | Which model class to use: `fast` / `standard` / `capable`                                                                                                                                                                                               |
-| `check_command`       | For `run_check` actions: the actual shell command from CheckDecl (e.g. `npm test`). Run this directly when `requires_sub_agent === false` — do NOT consult graph.yaml.                                                                                  |
+| `check_command`       | For `run_check` actions: the actual shell command from CheckDecl (e.g. test/lint commands). Run this directly when `requires_sub_agent === false` — do NOT consult graph.yaml.                                                                                  |
 | `trace_query`         | For `verify_trace` actions: the trace query that's missing (`from_kind`, `to_kind`, `via`, `cardinality`). Coordinator uses this to either create the trace manually (`spec-graph trace add`) or identify which artifact completion would auto-wire it. |
 | `meeting`             | If present, run meeting protocol instead of single-agent dispatch                                                                                                                                                                                       |
 | `prompt`              | The task-specific prompt (paste into sub-agent dispatch)                                                                                                                                                                                                |
@@ -525,7 +525,7 @@ while True:
         if not action.requires_sub_agent:
             # Deterministic — run shell command directly via Bash, no sub-agent
             cmd = action.check_command or action.recommended_command
-            run_shell(cmd)  # e.g. 'npm run lint'
+            run_shell(cmd)  # e.g. lint/test commands
             continue
 
         if action.meeting:

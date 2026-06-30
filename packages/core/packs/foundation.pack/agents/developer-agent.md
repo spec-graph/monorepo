@@ -38,7 +38,7 @@ End EVERY response with a `status-report` block (see `agents/status-report-proto
 ```status-report
 {
   "status": "DONE",
-  "artifacts_produced": ["implementation/src/foo.ts", "implementation/test/foo.test.ts"],
+  "artifacts_produced": ["implementation/src/example", "implementation/test/example.test"],
   "concerns": [],
   "missing_context": null,
   "blocker": null,

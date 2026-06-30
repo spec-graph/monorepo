@@ -23,7 +23,7 @@ created_at: {{created_at}}
 
 ## Environment
 - OS: [e.g., macOS 14.0]
-- Runtime: [e.g., Node.js 20.0]
+- Runtime: [e.g., project-specific runtime]
 - Version: [e.g., v1.2.3]
 
 ## Severity

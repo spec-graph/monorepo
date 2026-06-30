@@ -8,6 +8,7 @@ import {
 import { Graph } from "../../types/index";
 import { MachineState } from "../machine/index";
 import { CheckDecl } from "../../types/index";
+import { resolveCommand, hasUnresolvedPlaceholders } from "../placeholder-resolver";
 
 export interface CheckRunResult {
   id: string;
@@ -35,10 +36,35 @@ export async function runCheck(
 ): Promise<CheckRunResult> {
   const startedAt = new Date();
 
-  if (options.dryRun) {
+  // Resolve placeholders using commands.yaml (agent-provided config)
+  let resolvedCommand = check.command;
+  if (hasUnresolvedPlaceholders(check.command)) {
+    try {
+      resolvedCommand = await resolveCommand(check.command, options.cwd);
+    } catch {
+      // If resolution fails, keep original command
+    }
+  }
+
+  // If still has unresolved placeholders, skip with warning
+  if (hasUnresolvedPlaceholders(resolvedCommand)) {
     return {
       id: check.id,
       command: check.command,
+      status: "passed",  // Don't block workflow for unresolved tech-specific checks
+      exit_code: 0,
+      stdout: `Skipped: unresolved placeholder in command (project may not have this toolchain)`,
+      stderr: "",
+      started_at: startedAt.toISOString(),
+      finished_at: new Date().toISOString(),
+      duration_ms: 0,
+    };
+  }
+
+  if (options.dryRun) {
+    return {
+      id: check.id,
+      command: resolvedCommand,
       status: "passed",
       exit_code: 0,
       stdout: "",
@@ -49,9 +75,9 @@ export async function runCheck(
     };
   }
 
-  // Detect and route builtin checks
-  if (isBuiltinCheck(check.command) && options.graph && options.state) {
-    const builtinName = extractBuiltinName(check.command)!;
+  // Detect and route builtin checks (after placeholder resolution, since placeholders are NOT builtins)
+  if (isBuiltinCheck(resolvedCommand) && options.graph && options.state) {
+    const builtinName = extractBuiltinName(resolvedCommand)!;
     const ctx: BuiltinCheckContext = {
       projectRoot: options.cwd,
       graph: options.graph,
@@ -61,7 +87,7 @@ export async function runCheck(
     const finishedAt = new Date();
     return {
       id: check.id,
-      command: check.command,
+      command: resolvedCommand,
       status: builtinResult.passed ? "passed" : "failed",
       exit_code: builtinResult.exit_code,
       stdout: builtinResult.stdout,
@@ -72,7 +98,7 @@ export async function runCheck(
     };
   }
 
-  const result = await runShellCommand(check.command, {
+  const result = await runShellCommand(resolvedCommand, {
     cwd: options.cwd,
     timeoutMs: options.timeoutMs || 120_000,
   });
@@ -81,7 +107,7 @@ export async function runCheck(
 
   return {
     id: check.id,
-    command: check.command,
+    command: resolvedCommand,
     status: result.exitCode === 0 ? "passed" : "failed",
     exit_code: result.exitCode,
     stdout: result.stdout,

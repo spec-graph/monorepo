@@ -31,7 +31,6 @@ import {
 } from "../engine/permissions/index";
 import { appendToActiveChangeAudit, findActiveChange } from "./change";
 import { executeHooks } from "../engine/hooks";
-import { buildCodebaseSummary, RepoSignals } from "../engine/sense/index";
 import { tryReadYaml } from "../utils/yaml";
 import { Constitution } from "../types/index";
 import { distillContext, DistilledContext } from "../engine/context-distiller";
@@ -388,16 +387,15 @@ async function buildDispatchManifest(
     artifact_statuses[id] = artifact.status;
   }
 
-  // Generate codebase summary from profile.yaml repo_signals
+  // Codebase summary now comes from profile.meta.description (agent-provided)
+  // spec-graph no longer scans the repo — agent does analysis
   let codebaseSummary: string | undefined;
   try {
     const profile = await readYaml<any>(
       path.join(projectRoot, ".spec-graph", "profile.yaml"),
     );
-    if (profile?.repo_signals) {
-      codebaseSummary = buildCodebaseSummary(
-        profile.repo_signals as RepoSignals,
-      );
+    if (profile?.meta?.description) {
+      codebaseSummary = profile.meta.description;
     }
   } catch {
     // Skip if profile not found

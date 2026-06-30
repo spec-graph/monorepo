@@ -55,15 +55,15 @@ provides:
     # 用户应在 .spec-graph/config.yaml 中按实际结构配置 touchfiles
     - id: lint
       kind: lint
-      command: "npm run lint"
+      command: "<lint-command>"
       layer: unit
     - id: typecheck
       kind: lint
-      command: "npx tsc --noEmit"
+      command: "<typecheck-command>"
       layer: unit
     - id: unit-test
       kind: test
-      command: "npm test"
+      command: "<test-command>"
       layer: unit
       threshold: { coverage: 0.80 }
     # 宪法自检:存在性 + 内部一致 + 与 pack 阈值漂移检测

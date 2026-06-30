@@ -42,7 +42,7 @@ provides:
       layer: unit
     - id: regression-green
       kind: test
-      command: "<repro-test> && npm test" # 出口门用:重现测试转绿 + 全套不破
+      command: "<repro-test> && <test-command>" # 出口门用:重现测试转绿 + 全套不破
       layer: unit
 
   # 变更意图包贡献自己的 pipeline_skeleton(foundation 只给 feature 那套)

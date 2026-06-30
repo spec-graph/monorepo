@@ -26,7 +26,7 @@ provides:
   checks:
     - id: per-batch-green
       kind: test
-      command: "npm test"
+      command: "<test-command>"
       layer: integration
     - id: no-stale-consumer
       kind: test

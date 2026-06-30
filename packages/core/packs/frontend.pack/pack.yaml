@@ -33,17 +33,17 @@ provides:
     # L3 system(wdf UI acceptance)
     - id: lighthouse
       kind: lighthouse
-      command: "npx lighthouse-ci assert"
+      command: "<perf-audit-command>"
       layer: system
       threshold: { performance: 90, accessibility: 90 }
     - id: a11y
       kind: a11y
-      command: "npx axe-ci"
+      command: "<a11y-audit-command>"
       layer: system
     # L4 deployment(wdf E2E BROWSER acceptance)
     - id: e2e-browser
       kind: test
-      command: "npx playwright test"
+      command: "<e2e-test-command>"
       layer: deployment
 
   # 往 foundation 的验收层追加 check(merge,不覆盖)

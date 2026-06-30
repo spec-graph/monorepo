@@ -30,7 +30,6 @@ export interface Profile {
     };
   };
   facts: Record<FactDimension, ProfileFact>;
-  repo_signals: Record<string, any>;
   overrides?: Partial<Record<FactDimension, string>>;
 }
 

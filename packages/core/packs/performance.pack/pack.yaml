@@ -31,7 +31,7 @@ provides:
       threshold: { meets_target: true } # 达成 baseline 里声明的目标
     - id: correctness-green
       kind: test
-      command: "npm test" # 功能不退化
+      command: "<test-command>" # 功能不退化
       layer: unit
 
   pipeline_skeleton:

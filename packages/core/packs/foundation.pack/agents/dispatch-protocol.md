@@ -200,7 +200,7 @@ Every dispatch is recorded for audit:
   "dispatched_at": "2026-06-27T10:00:00Z",
   "completed_at": "2026-06-27T10:15:00Z",
   "input_artifacts": ["plan/tasks.md", "contract/api.yaml", "design/c4.md"],
-  "output_artifacts": ["src/api/handler.ts", "src/api/handler.test.ts"],
+  "output_artifacts": ["src/api/handler", "src/api/handler.test"],
   "status": "completed",
   "model_tier": "standard",
   "retry_count": 0

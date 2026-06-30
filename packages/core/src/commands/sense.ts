@@ -5,10 +5,6 @@ import ora from "ora";
 import Table from "cli-table3";
 import {
   runSense,
-  RepoSignals,
-  SenseClassifier,
-  LlmClassifier,
-  HttpLlmBackend,
 } from "../engine/sense/index";
 import { collectOverrides } from "../engine/sense/overrides";
 import { Profile, FactDimension } from "../types/index";
@@ -16,11 +12,9 @@ import { writeYaml } from "../utils/yaml";
 
 export interface SenseOptions {
   output?: string;
-  showSignals?: boolean;
   build?: string;
   profileOverride?: string;
   description?: string;
-  llmClassify?: boolean;
 }
 
 export async function senseCommand(
@@ -30,16 +24,8 @@ export async function senseCommand(
   const spinner = ora("Analyzing project...").start();
 
   try {
-    // Construct classifier if --llm-classify is set
-    let classifier: SenseClassifier | undefined;
-    if (options.llmClassify) {
-      const backend = new HttpLlmBackend();
-      classifier = new LlmClassifier(backend);
-    }
-
-    const { profile, signals, warnings } = await runSense(projectRoot, {
+    const { profile, warnings } = await runSense(projectRoot, {
       description: options.description,
-      classifier,
     });
 
     // Apply user overrides on top of sensed facts
@@ -94,14 +80,6 @@ export async function senseCommand(
 
     console.log(table.toString());
 
-    // Show repo signals if requested
-    if (options.showSignals) {
-      console.log("");
-      console.log(chalk.bold("  🔍 Repo Signals Detected:"));
-      console.log("");
-      printSignals(signals);
-    }
-
     if (warnings.length > 0) {
       console.log("");
       console.log(chalk.yellow("  ⚠️  Warnings:"));
@@ -131,37 +109,5 @@ export async function senseCommand(
     spinner.fail(`Sense failed: ${e.message}`);
     if (e.stack) console.log(e.stack);
     process.exit(1);
-  }
-}
-
-function printSignals(signals: RepoSignals): void {
-  const items = [
-    ["package.json", signals.hasPackageJson],
-    ["exports field", signals.hasExportsField],
-    ["React", signals.hasReact],
-    ["Vue", signals.hasVue],
-    ["Next.js", signals.hasNextConfig],
-    ["Tailwind", signals.hasTailwind],
-    ["OpenAPI", signals.hasOpenApiYaml],
-    ["Prisma", signals.hasPrismaSchema],
-    ["Docker", signals.hasDockerfile],
-    ["GraphQL", signals.hasGraphqlSchema],
-    ["gRPC", signals.hasGrpcProtos],
-    ["PlatformIO", signals.hasPlatformioIni],
-    ["CI Config", signals.hasCiConfig],
-    [`src files`, signals.srcFileCount],
-    [`test files`, signals.testFileCount],
-  ];
-
-  for (let i = 0; i < items.length; i += 3) {
-    const row = items.slice(i, i + 3);
-    const line = row
-      .map(([name, val]) => {
-        const icon = val ? chalk.green("✓") : chalk.gray("○");
-        const count = typeof val === "boolean" ? "" : chalk.gray(`(${val})`);
-        return `  ${icon} ${name} ${count}`;
-      })
-      .join("  ");
-    console.log(line);
   }
 }

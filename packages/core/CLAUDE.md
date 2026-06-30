@@ -91,3 +91,51 @@ spec-graph meeting init <id> --purpose "..." --participants "agent1:perspective1
 - Hooks: `hooks/dispatch-watcher.mjs`
 - 配置: `.spec-graph/hooks.yaml`, `.spec-graph/config.yaml`, `.spec-graph/pack-overrides.yaml`
 
+
+## ⛔ 禁止绕过工作流
+
+**以下行为严格禁止**：
+
+1. **禁止直接创建文档到 `.spec-graph/artifacts/`**
+   - ❌ 错误：直接 `Write` 文件到 `.spec-graph/artifacts/meta/xxx.md`
+   - ✅ 正确：先 `spec-graph change create`，再通过 dispatch manifest 生产 artifact
+
+2. **禁止跳过 change 流程**
+   - ❌ 错误：用户说"分析 X"，agent 直接写分析报告
+   - ✅ 正确：先创建 change → apply → dispatch → agent 生产文档 → complete
+
+3. **禁止直接回答问题而不检查状态**
+   - ❌ 错误：用户问"当前进度"，agent 凭记忆回答
+   - ✅ 正确：先运行 `spec-graph status`，基于实际状态回答
+
+4. **禁止绕过 dispatch manifest**
+   - ❌ 错误：agent 自行决定下一步做什么
+   - ✅ 正确：运行 `spec-graph dispatch --json`，按 manifest 的 `actions` 执行
+
+**违规后果**：产出的文档不受工作流管理，无法追溯、无法归档、无法审计。
+
+## 文档生产流程（强制）
+
+```
+用户请求 → 判断是否新需求
+    ↓
+是 → spec-graph change create
+    ↓
+spec-graph change apply <id>
+    ↓
+spec-graph dispatch --json
+    ↓
+读取 manifest.actions[0]
+    ↓
+Agent 生产文档 → 写入 manifest.suggested_doc_path
+    ↓
+spec-graph machine update --artifact <id> --status completed
+    ↓
+spec-graph dispatch --json (循环直到 done)
+    ↓
+spec-graph change complete <id>
+    ↓
+spec-graph change archive <id>
+```
+
+**关键**：文档必须通过 dispatch manifest 的 `suggested_doc_path` 指定路径，不能随意放置。

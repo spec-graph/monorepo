@@ -45,7 +45,7 @@ describe("End-to-end integration", () => {
 
   it("full workflow: init → sense → compose → dispatch → run → transition → complete", async () => {
     // Step 1: init
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await fs.access(path.join(projectRoot, ".spec-graph"));
 
     // Step 2: sense (analyze project)
@@ -135,7 +135,7 @@ describe("End-to-end integration", () => {
   });
 
   it("init creates correct directory structure", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
 
     // Verify directory structure
     await fs.access(path.join(projectRoot, ".spec-graph"));
@@ -149,7 +149,7 @@ describe("End-to-end integration", () => {
   });
 
   it("sense analyzes project structure correctly", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
 
     const profile = await readYaml<any>(path.join(projectRoot, ".spec-graph", "profile.yaml"));
@@ -166,7 +166,7 @@ describe("End-to-end integration", () => {
   });
 
   it("compose generates valid graph from profile", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
@@ -187,7 +187,7 @@ describe("End-to-end integration", () => {
   });
 
   it("dispatch returns correct manifest for current state", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
@@ -213,7 +213,7 @@ describe("End-to-end integration", () => {
   });
 
   it("run executes deterministic actions and stops at sub-agent actions", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
@@ -245,7 +245,7 @@ describe("End-to-end integration", () => {
   });
 
   it("machine state transitions work correctly", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
@@ -288,7 +288,7 @@ describe("End-to-end integration", () => {
   });
 
   it("checks run and update state correctly", async () => {
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
@@ -311,7 +311,7 @@ describe("End-to-end integration", () => {
 
   it("full workflow completes end-to-end", { timeout: 30000 }, async () => {
     // This test verifies the entire workflow from start to finish
-    await initCommand(projectRoot, { force: true });
+    await initCommand(projectRoot, { force: true, stack: "typescript" });
     await senseCommand(projectRoot, {});
     await composeCommand(projectRoot, { changeType: "feature" });
     await primeCommand(projectRoot, {});
