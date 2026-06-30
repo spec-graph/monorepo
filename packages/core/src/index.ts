@@ -235,11 +235,11 @@ program
 program
   .command("change")
   .description(
-    "Manage changes (OpenSpec-style lifecycle: create → apply → dev → complete → archive)",
+    "Manage changes (lifecycle: create → apply → complete → archive)",
   )
   .argument(
     "[subcommand]",
-    "Subcommand: list, create, create-all-from-stories, dev, show, apply, complete, discard, sync, archive",
+    "Subcommand: list, create, show, apply, complete, discard, sync, archive",
   )
   .argument("[id]", "Change ID (for show/apply/complete/discard/sync/archive)")
   .option("--title <title>", "Change title")
@@ -258,6 +258,23 @@ program
   .action(async (subcommand, id, options) => {
     const root = program.opts().cwd || projectRoot;
     await runWithHooks("change", root, async () => await changeCommand(root, { subcommand, id, ...options }));
+  });
+
+// ============ dev ============
+program
+  .command("dev")
+  .description(
+    "Development loop engine: codingreviewingtesting iterative cycle. Independent command with its own state tracking.",
+  )
+  .option("--change <id>", "Change ID to develop (default: find active change)")
+  .option("--skip-review", "Skip reviewing phase")
+  .option("--max-iterations <n>", "Max dev iterations (default: 10)")
+  .action(async (options) => {
+    const root = program.opts().cwd || projectRoot;
+    await runWithHooks("dev", root, async () => {
+      const { devCommand } = await import("./commands/dev");
+      await devCommand(root, options);
+    });
   });
 
 // ============ contract ============

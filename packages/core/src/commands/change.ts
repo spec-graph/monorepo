@@ -57,12 +57,6 @@ export async function changeCommand(
       case "archive":
         await archiveChangeCmd(projectRoot, changesDir, options);
         break;
-      case "create-all-from-stories":
-        await createAllFromStories(projectRoot, changesDir, options);
-        break;
-      case "dev":
-        await devChange(projectRoot, changesDir, options);
-        break;
       default:
         console.log(chalk.red(`✗ Unknown subcommand: ${subcommand}`));
         console.log(
