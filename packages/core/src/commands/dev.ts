@@ -111,13 +111,51 @@ export async function devCommand(
           continue;
         }
 
-        console.log(chalk.yellow("   Phase: REVIEWING"));
-        console.log(chalk.gray("  Agent: Review code quality"));
-        console.log(chalk.gray("  Agent: spec-graph review --artifact <id>"));
+        // Start review phase
+        console.log(chalk.yellow("   🔍 Phase: REVIEWING"));
+        console.log(chalk.gray("  Starting code review for change: " + changeId));
 
-        // For now, auto-advance (sub-agent review not yet integrated)
-        console.log(chalk.gray("  (Automated review pending sub-agent integration)"));
-        phase = "testing";
+        // Generate review prompts for the code artifacts
+        const reviewResult = await startReview(projectRoot, changeId, change);
+        if (!reviewResult) {
+          console.log(chalk.red("  ✗ Review setup failed — no artifacts to review"));
+          console.log(chalk.yellow("  → Agent: produce implementation artifacts first"));
+          return;
+        }
+
+        console.log(chalk.cyan(`  Review prompts generated for ${reviewResult.models.length} models`));
+        console.log(chalk.gray("  ─────────────────────────────────────────"));
+        console.log(chalk.bold("\n  Agent — dispatch reviewer sub-agent:\n"));
+        console.log(chalk.gray("    spec-graph review --artifact <id> --models claude,codex --save"));
+        console.log(chalk.gray("    Then send each review file to the model for review.\n"));
+
+        for (const rp of reviewResult.reviewPrompts) {
+          console.log(chalk.cyan(`  Reviewer: ${rp.model.toUpperCase()}`));
+          console.log(chalk.gray(`    Focus: correctness, completeness, security, performance`));
+          console.log(chalk.gray(`    Output: APPROVE / REQUEST_CHANGES / REJECT`));
+        }
+
+        // Save review state
+        await saveDevState(projectRoot, {
+          change_id: changeId,
+          phase: "reviewing",
+          iteration,
+          review_started_at: new Date().toISOString(),
+          review_models: reviewResult.models,
+        });
+
+        console.log(chalk.gray("\n  ─────────────────────────────────────────"));
+        console.log(chalk.bold("\n  After all reviewers respond:"));
+        console.log(chalk.gray("    1. Collect review feedback"));
+        console.log(chalk.gray("    2. If APPROVE (all) → proceed to testing"));
+        console.log(chalk.gray("       spec-graph dev --skip-review  (if already approved)"));
+        console.log(chalk.gray("    3. If REQUEST_CHANGES → fix issues → back to coding"));
+        console.log(chalk.gray("       spec-graph dev  (re-run from coding)"));
+        console.log(chalk.gray("    4. If REJECT → escalate to user"));
+
+        console.log(chalk.yellow("\n  → Waiting for review completion..."));
+        console.log(chalk.gray("  Agent: re-run spec-graph dev after review"));
+        break; // Stop here — agent re-runs dev after review
       }
 
       if (phase === "testing") {
@@ -237,4 +275,85 @@ async function runCheckLayer(
   } catch {
     return { passed: true, failed: [] };
   }
+}
+
+/**
+ * Start the review process for a change.
+ * Generates review prompts for the code artifacts.
+ */
+async function startReview(
+  projectRoot: string,
+  changeId: string,
+  change: any,
+): Promise<{ models: string[]; reviewPrompts: any[] } | null> {
+  try {
+    const { generateReviewPrompts } = await import("../engine/review/index");
+
+    // Find artifacts produced during coding
+    const artifactsDir = path.join(projectRoot, ".spec-graph", "artifacts");
+    const reviewableKinds = ["implementation", "design", "plan"];
+
+    // Try to find reviewable artifacts
+    for (const kind of reviewableKinds) {
+      try {
+        const kindDir = path.join(artifactsDir, kind);
+        const files = await fs.readdir(kindDir);
+        const mdFiles = files.filter((f) => f.endsWith(".md"));
+
+        if (mdFiles.length > 0) {
+          const artifactId = `${kind}/${mdFiles[0].replace(".md", "")}`;
+          const result = await generateReviewPrompts(projectRoot, artifactId, {
+            models: ["claude", "codex"],
+            includeFull: true,
+            focusAreas: ["correctness", "completeness", "security", "performance"],
+            format: "prompts",
+          });
+
+          return {
+            models: result.reviews.map((r: any) => r.model),
+            reviewPrompts: result.reviews,
+          };
+        }
+      } catch {
+        // try next kind
+      }
+    }
+
+    // No artifacts found — generate review prompt directly from change
+    const result = await generateReviewPrompts(projectRoot, change.linked_story || changeId, {
+      models: ["claude", "codex"],
+      includeFull: true,
+      focusAreas: ["correctness", "completeness", "security"],
+      format: "prompts",
+    });
+
+    return {
+      models: result.reviews.map((r: any) => r.model),
+      reviewPrompts: result.reviews,
+    };
+  } catch {
+    return null;
+  }
+}
+
+interface DevState {
+  change_id: string;
+  phase: string;
+  iteration: number;
+  review_started_at?: string;
+  review_models?: string[];
+  review_outcome?: string;
+  completed_at?: string;
+}
+
+async function saveDevState(projectRoot: string, state: DevState): Promise<void> {
+  const devStatePath = path.join(projectRoot, ".spec-graph", "dev-state.json");
+  let existing: any = {};
+  try {
+    existing = JSON.parse(await fs.readFile(devStatePath, "utf-8"));
+  } catch {
+    // no existing state
+  }
+  const merged = { ...existing, ...state, updated_at: new Date().toISOString() };
+  await fs.writeFile(devStatePath, JSON.stringify(merged, null, 2), "utf-8");
 }
