@@ -2,10 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import ora from "ora";
-import {
-  runSense,
-} from "../engine/sense/index";
-import { collectOverrides } from "../engine/sense/overrides";
 import { writeYaml } from "../utils/yaml";
 import {
   getPreset,
@@ -17,7 +13,6 @@ export interface InitOptions {
   force?: boolean;
   description?: string;
   permissionLevel?: string;
-  quick?: boolean;
   build?: string;
   profileOverride?: string;
   stack?: string;
@@ -60,136 +55,139 @@ export async function initCommand(
     const permConfig = getPreset(permLevel);
     await savePermissions(projectRoot, permConfig);
 
-    // Auto-generate agent config files (.claude/settings.json, .opencode.json)
+    auto-generate agent config files (.claude/settings.json, .opencode.json)
     const { created, skipped } = await writeAgentConfigs(
       projectRoot,
       permConfig,
     );
 
-    // Run initial sense (scan only — no inference)
-    spinner.text = "Scanning project structure...";
-    const { profile, warnings } = await runSense(projectRoot, {
-      description: options.description,
-    });
-
-    // Apply user overrides (--build / --profile-override) on top of sensed facts
-    const { overrides, warnings: overrideWarnings } = collectOverrides(
-      options.build,
-      options.profileOverride,
-    );
-    if (Object.keys(overrides).length > 0) {
-      profile.overrides = { ...profile.overrides, ...overrides };
+    // Write simple profile skeleton (all dimensions = unknown)
+    // Agent fills dimensions later via --profile-override or spec-graph profile
+    spinner.text = "Writing profile...";
+    const profile = {
+      version: "1",
+      meta: {
+        created_at: new Date().toISOString(),
+        description: options.description || "",
+        build: options.build || "",
+      },
+      facts: {
+        has_ui: { value: "unknown", confidence: "low", source: "fallback" },
+        boundary: { value: "unknown", confidence: "low", source: "fallback" },
+        topology: { value: "unknown", confidence: "low", source: "fallback" },
+        deployment: { value: "unknown", confidence: "low", source: "fallback" },
+        consumers: { value: "unknown", confidence: "low", source: "fallback" },
+        field: { value: "unknown", confidence: "low", source: "fallback" },
+        criticality: { value: "unknown", confidence: "low", source: "fallback" },
+        team: { value: "unknown", confidence: "low", source: "fallback" },
+        persistence: { value: "unknown", confidence: "low", source: "fallback" },
+      },
+    };
+    if (options.profileOverride) {
+      profile.overrides = parseOverride(options.profileOverride);
     }
-    warnings.push(...overrideWarnings);
-
-    // Determine tech stack: must be provided by agent via --stack
-    const { generateCommandsFromStack } =
-      await import("../engine/project-commands");
-
-    if (!options.stack) {
-      // No stack provided - this is a configuration error.
-      // The AI agent (not spec-graph) should analyze the project and pass --stack.
-      spinner.fail("No tech stack provided");
-      console.log(chalk.yellow("\n  Provide --stack <name> to specify."));
-      console.log(chalk.gray("  Common options: typescript, python, go, rust, java, kotlin, cpp-cmake, dotnet, ruby, php, swift, generic"));
-      console.log(chalk.gray("\n  AI agents should analyze the project (read files, spawn sub-agents) and pass --stack explicitly."));
-      console.log(chalk.gray("  spec-graph does not scan or infer tech stack — that is the agent's responsibility."));
-      process.exit(1);
-    }
-
-    // Generate commands.yaml based on provided stack
-    await generateCommandsFromStack(projectRoot, options.stack);
-    spinner.text = `Tech stack: ${options.stack}`;
-
-    // Write profile
-    spinner.text = "Writing profile.yaml...";
     await writeYaml(path.join(specGraphDir, "profile.yaml"), profile);
 
-    // Write initial graph
-    spinner.text = "Composing initial graph...";
+    // Generate commands.yaml from --stack
+    if (!options.stack) {
+      spinner.fail("No tech stack provided");
+      console.log(chalk.yellow("\n  Provide --stack <name>."));
+      console.log(chalk.gray("  Options: typescript, python, go, rust, java, kotlin, cpp-cmake, dotnet, ruby, php, swift, generic"));
+      console.log(chalk.gray("  AI agent should analyze the project and pass --stack."));
+      process.exit(1);
+    }
+    const { generateCommandsFromStack } = await import("../engine/project-commands");
+    await generateCommandsFromStack(projectRoot, options.stack);
+
+    // Compose workflow graph
+    spinner.text = "Composing workflow graph...";
+    const { composeCommand } = await import("./compose");
+    await composeCommand(projectRoot, { changeType: "feature" });
+
+    // Prime machine state
+    spinner.text = "Priming machine state...";
+    const { primeCommand } = await import("./prime");
+    await primeCommand(projectRoot, { bootstrap: true });
 
     // Write README
-    const readme = `# ${options.description || "Spec-Graph Project"}
-
-Initialized at ${new Date().toISOString()}
-
-## Commands
-
-\`\`\`bash
-spec-graph sense    # Re-analyze project, update profile
-spec-graph compose  # Compose workflow graph
-spec-graph gate     # Evaluate gates, show blocking items
-spec-graph show     # Display current graph summary
-spec-graph change   # Manage changes (create/list/...)
-\`\`\`
-`;
-    await fs.writeFile(path.join(specGraphDir, "README.md"), readme);
+    await fs.writeFile(
+      path.join(specGraphDir, "README.md"),
+      `# ${options.description || "Spec-Graph Project"}\n\nInitialized at ${new Date().toISOString()}\n`,
+    );
 
     spinner.succeed("Project initialized successfully!");
 
-    // Report created agent configs
-    for (const c of created) {
-      console.log(chalk.green(`  ✓ ${c}`));
-    }
-    for (const s of skipped) {
-      console.log(chalk.gray(`  - ${s}`));
-    }
+    for (const c of created) console.log(chalk.green(`  ✓ ${c}`));
+    for (const s of skipped) console.log(chalk.gray(`  - ${s}`));
 
-    if (warnings.length > 0) {
-      console.log(chalk.yellow("\n  Warnings:"));
-      for (const w of warnings) {
-        console.log(chalk.yellow(`   • ${w}`));
-      }
-    }
-
-    console.log(chalk.green("\n  Next steps:"));
-    console.log("   1. Review .spec-graph/profile.yaml");
-    console.log(
-      "   2. Review .spec-graph/permissions.yaml (level: " + permLevel + ")",
-    );
-    console.log("   3. Run `spec-graph compose` to generate workflow graph");
-    console.log("   4. Run `spec-graph gate` to evaluate entry gates");
-
-    // Both --quick and normal: compose + prime, then guide to plan
-    console.log(chalk.cyan("\n  Running compose + prime...\n"));
-
-    const { composeCommand } = await import("./compose");
-    const { primeCommand } = await import("./prime");
-
-    await composeCommand(projectRoot, { changeType: "feature" });
-    console.log("");
-    await primeCommand(projectRoot, { bootstrap: true });
-
-    console.log(chalk.green("\n  ✓ Infrastructure ready."));
-
-    // Auto-run plan to guide agent
-    console.log(chalk.cyan("\n  Starting plan stage...\n"));
-    const { planCommand } = await import("./plan");
-    await planCommand(projectRoot, {});
+    // Inline plan status (no nested dispatch call)
+    await printInitPlanStatus(projectRoot);
   } catch (e: any) {
     spinner.fail(`Initialization failed: ${e.message}`);
-    if (e.stack) console.log(e.stack);
     process.exit(1);
   }
 }
 
 /**
- * Inject agent constraints to prevent workflow bypass.
- * Copies agent-constraints.md template and injects reference into CLAUDE.md.
+ * Print plan status from the just-created graph + state.
+ * No nested command calls — reads files directly.
  */
-async function injectAgentConstraints(
-  projectRoot: string,
-  specGraphDir: string,
-): Promise<void> {
-  // Find the template (search in packs/foundation.pack/templates/)
-  const templatePaths = [
-    path.resolve(__dirname, "../../packs/foundation.pack/templates/agent-constraints.md"),
-    path.resolve(__dirname, "../../../packs/foundation.pack/templates/agent-constraints.md"),
-  ];
+async function printInitPlanStatus(projectRoot: string): Promise<void> {
+  try {
+    const { readYaml } = await import("../utils/yaml");
+    const graphPath = path.join(projectRoot, ".spec-graph", "graph.yaml");
+    const statePath = path.join(projectRoot, ".spec-graph", "machine-state.yaml");
 
-  let templateContent: string | null = null;
-  for (const p of templatePaths) {
-    try {
+    const graph = await readYaml<any>(graphPath);
+    const state = await readYaml<any>(statePath);
+
+    const allArtifacts = graph.artifacts || [];
+    const artifactStates = state.artifacts || {};
+    const pending = allArtifacts.filter((a: any) => {
+      const s = artifactStates[a.id];
+      return !s || s.status !== "completed";
+    });
+
+    console.log(chalk.green("\n  ✓ Infrastructure ready."));
+    console.log(chalk.bold(`\n  Plan Stage: ${pending.length} artifacts to produce\n`));
+
+    if (pending.length === 0) {
+      console.log(chalk.green("  All artifacts completed."));
+      return;
+    }
+
+    // Show by priority kind
+    const kindOrder = ["requirement", "design", "plan", "contract", "verification", "implementation", "meta"];
+    for (const kind of kindOrder) {
+      const items = pending.filter((a: any) => a.kind === kind);
+      if (items.length === 0) continue;
+      console.log(chalk.gray(`  ${kind}:`));
+      for (const a of items) {
+        console.log(chalk.yellow(`    ⬜ ${a.id}`));
+      }
+    }
+
+    console.log(chalk.gray("\n  ─────────────────────────────────────────"));
+    console.log(chalk.bold("\n  Agent — produce these artifacts:"));
+    console.log(chalk.gray("\n    For each artifact:"));
+    console.log(chalk.gray("      1. spec-graph dispatch --json  (get context)"));
+    console.log(chalk.gray("      2. Produce document at suggested path"));
+    console.log(chalk.gray("      3. spec-graph artifact complete <id> --producer agent"));
+    console.log(chalk.gray("      4. spec-graph plan              (check progress)"));
+  } catch {
+    // Skip on error
+  }
+}
+
+function parseOverride(profileOverride?: string): Record<string, string> | undefined {
+  if (!profileOverride) return undefined;
+  const overrides: Record<string, string> = {};
+  for (const pair of profileOverride.split(",")) {
+    const [k, v] = pair.split("=");
+    if (k && v) overrides[k.trim()] = v.trim();
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
       templateContent = await fs.readFile(p, "utf-8");
       break;
     } catch {
