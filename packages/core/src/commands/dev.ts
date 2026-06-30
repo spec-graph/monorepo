@@ -155,7 +155,7 @@ async function findActiveChange(changesDir: string): Promise<string | null> {
     const jsonFiles = files.filter((f) => f.endsWith(".json") && !f.includes("-plan"));
 
     for (const file of jsonFiles) {
-      const change = await readYaml(path.join(changesDir, file));
+      const change: any = await readYaml(path.join(changesDir, file));
       if (change.status === "in_progress") {
         return change.id;
       }

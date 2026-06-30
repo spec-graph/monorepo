@@ -150,10 +150,10 @@ spec-graph change   # Manage changes (create/list/...)
     console.log("   3. Run `spec-graph compose` to generate workflow graph");
     console.log("   4. Run `spec-graph gate` to evaluate entry gates");
 
-    // --quick: full bootstrap (init + compose + prime)
+    // --quick: full bootstrap (init + compose + prime + plan)
     if (options.quick) {
       console.log(
-        chalk.cyan("\n  ⚡ Quick mode: running compose + prime...\n"),
+        chalk.cyan("\n  ⚡ Quick mode: running compose + prime + plan...\n"),
       );
 
       const { composeCommand } = await import("./compose");
@@ -164,13 +164,22 @@ spec-graph change   # Manage changes (create/list/...)
       await primeCommand(projectRoot, { bootstrap: true });
 
       console.log(chalk.green("\n  ✓ Infrastructure ready."));
-      await printPlanStageGuidance(projectRoot);
+
+      // Auto-complete plan stage via dispatch loop
+      await autoCompletePlanStage(projectRoot);
     } else {
-      // Non-quick mode: still guide toward compose + prime + plan
-      console.log(chalk.cyan("\n  📋 To start development, complete the setup:"));
-      console.log(chalk.gray("\n    spec-graph compose && spec-graph prime"));
-      console.log(chalk.gray("    # Then produce plan-stage artifacts (PRD, epics, story)"));
-      console.log(chalk.gray("    # Use: spec-graph dispatch (auto-loop guided production)"));
+      // Non-quick mode: compose + prime + auto plan
+      console.log(chalk.cyan("\n  Running compose + prime...\n"));
+
+      const { composeCommand } = await import("./compose");
+      const { primeCommand } = await import("./prime");
+
+      await composeCommand(projectRoot, { changeType: "feature" });
+      console.log("");
+      await primeCommand(projectRoot, { bootstrap: true });
+
+      // Auto-complete plan stage via dispatch loop
+      await autoCompletePlanStage(projectRoot);
     }
   } catch (e: any) {
     spinner.fail(`Initialization failed: ${e.message}`);
@@ -180,78 +189,97 @@ spec-graph change   # Manage changes (create/list/...)
 }
 
 /**
- * Detect plan-stage status and print clear guidance for the agent.
+ * Auto-complete plan stage by running dispatch loop.
  *
- * After init --quick, the infrastructure is ready but all plan-stage artifacts
- * are still pending. This function:
- *   1. Reads graph.yaml + machine-state.yaml
- *   2. Finds the current stage's blocking gate
- *   3. Lists pending plan-stage artifacts that must be produced
- *   4. Gives the exact dispatch command to start production
+ * This function:
+ *   1. Checks if plan stage is already complete
+ *   2. If not, runs dispatch loop to produce plan artifacts
+ *   3. Each dispatch produces one artifact (PRD, epics, story, etc.)
+ *   4. Loops until plan gate passes
  */
-async function printPlanStageGuidance(projectRoot: string): Promise<void> {
-  try {
-    const { readYaml } = await import("../utils/yaml");
-    const graphPath = path.join(projectRoot, ".spec-graph", "graph.yaml");
-    const statePath = path.join(projectRoot, ".spec-graph", "machine-state.yaml");
+async function autoCompletePlanStage(projectRoot: string): Promise<void> {
+  const { readYaml } = await import("../utils/yaml");
+  const graphPath = path.join(projectRoot, ".spec-graph", "graph.yaml");
+  const statePath = path.join(projectRoot, ".spec-graph", "machine-state.yaml");
 
-    let graph: any;
-    let state: any;
-    try {
-      graph = await readYaml<any>(graphPath);
-      state = await readYaml<any>(statePath);
-    } catch {
-      return; // graph or state not ready, skip guidance
-    }
+  try {
+    const graph = await readYaml<any>(graphPath);
+    const state = await readYaml<any>(statePath);
 
     const currentStage = state.current_stage || "plan";
-    const allArtifacts = graph.artifacts || [];
-    const artifactStates = state.artifacts || {};
-
-    // Find pending artifacts
-    const pendingArtifacts = allArtifacts.filter((a: any) => {
-      const s = artifactStates[a.id];
-      return !s || s.status !== "completed";
-    });
-
-    if (pendingArtifacts.length === 0) {
-      console.log(chalk.green("\n  ✓ All artifacts completed."));
-      console.log(chalk.gray("  Next: spec-graph dispatch (to advance to next stage)"));
+    if (currentStage !== "plan") {
+      console.log(chalk.gray("  (Plan stage already completed)"));
       return;
     }
 
-    // Group by kind for readability
-    const byKind: Record<string, string[]> = {};
-    for (const a of pendingArtifacts) {
-      const kind = a.kind || "unknown";
-      if (!byKind[kind]) byKind[kind] = [];
-      byKind[kind].push(a.id);
+    // Check if plan artifacts are already produced
+    const allArtifacts = graph.artifacts || [];
+    const artifactStates = state.artifacts || {};
+    const pendingPlanArtifacts = allArtifacts.filter((a: any) => {
+      const s = artifactStates[a.id];
+      return a.kind === "requirement" && (!s || s.status !== "completed");
+    });
+
+    if (pendingPlanArtifacts.length === 0) {
+      console.log(chalk.gray("  (Plan artifacts already produced)"));
+      return;
     }
 
-    console.log(chalk.cyan("\n  📋 Plan stage incomplete — artifacts needed before development:\n"));
+    console.log(chalk.cyan(`\n  📋 Completing plan stage (${pendingPlanArtifacts.length} artifacts)...\n`));
 
-    const kindOrder = ["requirement", "design", "plan", "contract", "verification", "implementation", "meta"];
-    for (const kind of kindOrder) {
-      if (!byKind[kind]) continue;
-      for (const id of byKind[kind]) {
-        console.log(chalk.yellow(`    ⬜ ${id}`));
+    // Run dispatch loop to produce plan artifacts
+    const { dispatchCommand } = await import("./dispatch");
+    const maxIterations = pendingPlanArtifacts.length + 2;
+    let iteration = 0;
+
+    while (iteration < maxIterations) {
+      iteration++;
+
+      // Check current state
+      const currentState = await readYaml<any>(statePath);
+      const currentStageNow = currentState.current_stage;
+
+      if (currentStageNow !== "plan") {
+        console.log(chalk.green(`\n  ✓ Plan stage complete. Current stage: ${currentStageNow}`));
+        return;
+      }
+
+      // Run dispatch
+      console.log(chalk.gray(`  Dispatch iteration ${iteration}...`));
+      try {
+        await dispatchCommand(projectRoot, { json: true });
+      } catch (e: any) {
+        console.log(chalk.yellow(`  (Dispatch skipped: ${e.message})`));
+        break;
+      }
+
+      // Check if any artifacts were produced
+      const newState = await readYaml<any>(statePath);
+      const completedCount = allArtifacts.filter((a: any) => {
+        const s = newState.artifacts[a.id];
+        return s && s.status === "completed";
+      }).length;
+
+      console.log(chalk.gray(`  Artifacts: ${completedCount}/${allArtifacts.length} completed`));
+
+      // If no progress, break to avoid infinite loop
+      if (iteration > 1 && completedCount === 0) {
+        console.log(chalk.yellow("  (No artifacts produced, manual intervention needed)"));
+        break;
       }
     }
 
-    console.log(chalk.gray("\n  ─────────────────────────────────────────"));
-    console.log(chalk.bold("\n  🤖 Agent — your job now:"));
-    console.log(chalk.gray("\n    Produce these artifacts by analyzing project requirements."));
-    console.log(chalk.gray("    For each artifact:"));
-    console.log(chalk.gray("      1. Read existing context (README, user conversation, prior artifacts)"));
-    console.log(chalk.gray("      2. Produce the document at the suggested path"));
-    console.log(chalk.gray("      3. Mark complete: spec-graph artifact complete <id> --producer agent"));
-    console.log(chalk.gray("      4. Re-dispatch: spec-graph dispatch --json"));
-    console.log(chalk.gray("\n    Or run the auto-loop:"));
-    console.log(chalk.green("      spec-graph dispatch"));
-    console.log(chalk.gray("\n    Gates will block plan→implement until required artifacts are done."));
-    console.log(chalk.gray("    Use spec-graph next to see what's blocking."));
-  } catch {
-    // Silently skip guidance on error
+    // Final status
+    const finalState = await readYaml<any>(statePath);
+    if (finalState.current_stage !== "plan") {
+      console.log(chalk.green(`\n  ✓ Plan complete. Ready for development.`));
+      console.log(chalk.gray(`  Next: spec-graph change create`));
+    } else {
+      console.log(chalk.yellow(`\n  ⚠ Plan stage incomplete.`));
+      console.log(chalk.gray(`  Manual: spec-graph dispatch`));
+    }
+  } catch (e: any) {
+    console.log(chalk.yellow(`  (Plan auto-completion skipped: ${e.message})`));
   }
 }
 
