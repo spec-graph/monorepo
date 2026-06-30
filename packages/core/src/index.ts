@@ -100,11 +100,6 @@ program
     "semi-auto",
   )
   .option(
-    "--sync-agent-config",
-    "Also overwrite existing .claude/settings.json and .opencode.json",
-  )
-  .option("--quick", "Full bootstrap: init + compose + prime --bootstrap")
-  .option(
     "--build <list>",
     "Build target(s): spa,api,lib,embedded,... (comma-separated)",
   )
@@ -136,14 +131,12 @@ program
     "Target project directory (default: current directory)",
   )
   .option("-f, --force", "Overwrite existing skills")
-  .option("--quick", "Install + init --quick (full bootstrap)")
-  .option("--description <text>", "Project description (for --quick)")
+  .option("--description <text>", "Project description")
   .option(
     "--permission-level <level>",
-    "Automation level for --quick",
+    "Automation level: full-auto, semi-auto (default), manual",
     "semi-auto",
   )
-  .option("--sync-agent-config", "Sync agent config for --quick")
   .option("--git-hooks", "Install pre-commit/post-commit git hooks")
   .option("--json", "Output as JSON")
   .action(async (options) => {
