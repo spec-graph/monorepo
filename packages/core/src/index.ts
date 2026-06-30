@@ -4,7 +4,6 @@ import { Command } from "commander";
 import path from "node:path";
 import chalk from "chalk";
 import { initCommand } from "./commands/init";
-import { senseCommand } from "./commands/sense";
 import { composeCommand } from "./commands/compose";
 import { gateCommand } from "./commands/gate";
 import { showCommand } from "./commands/show";
@@ -144,28 +143,6 @@ program
     await runWithHooks("install", root, async () => await installCommand(root, options));
   });
 
-// ============ sense ============
-program
-  .command("sense")
-  .description("Analyze project and generate profile")
-  .option("-o, --output <file>", "Output file path")
-  .option(
-    "--build <list>",
-    "Build target(s): spa,api,lib,embedded,... (comma-separated)",
-  )
-  .option(
-    "--profile-override <pairs>",
-    "Dimension overrides: criticality=compliance,team=multi,...",
-  )
-  .option(
-    "--description <text>",
-    "Project description (stored in profile for agent reference)",
-  )
-  .action(async (options) => {
-    const root = program.opts().cwd || projectRoot;
-    await runWithHooks("sense", root, async () => await senseCommand(root, options));
-  });
-
 // ============ compose ============
 program
   .command("compose")
@@ -257,10 +234,9 @@ program
 program
   .command("plan")
   .description(
-    "Plan stage completion: dispatch loop to produce PRD, epics, story, design docs",
+    "Plan stage status: show which artifacts still need to be produced",
   )
-  .option("--dry-run", "Show what would be produced without producing")
-  .option("--max-iterations <n>", "Max dispatch iterations (default: 20)")
+  .option("--json", "Output as JSON")
   .action(async (options) => {
     const root = program.opts().cwd || projectRoot;
     await runWithHooks("plan", root, async () => {

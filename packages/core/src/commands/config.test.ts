@@ -123,7 +123,7 @@ describe("Project Config", () => {
 
       expect(config.version).toBe("1");
       expect(config.context).toBeDefined();
-      expect(config.context.tech_stack).toContain("TODO");
+      expect(config.context.tech_stack).toContain("Specify");
       expect(config.rules).toEqual({});
       expect(config.references).toEqual({});
       expect(logs.some((l) => l.includes("initialized"))).toBe(true);

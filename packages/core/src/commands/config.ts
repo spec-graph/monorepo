@@ -107,8 +107,8 @@ async function initConfig(
   const config: ProjectConfig = {
     version: "1",
     context: {
-      tech_stack: "TODO: e.g. React 18 + TypeScript + Vite",
-      conventions: "TODO: e.g. use kebab-case for file names",
+      tech_stack: "Specify your tech stack here (e.g., React + TypeScript + Vite)",
+      conventions: "Specify project conventions here (e.g., kebab-case for file names)",
     },
     rules: {},
     references: {},

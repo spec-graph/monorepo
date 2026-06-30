@@ -1,18 +1,12 @@
 #!/usr/bin/env node
 /**
- * spec-graph plan — Plan Stage Orchestrator
+ * spec-graph plan — Plan Stage Status
  *
- * Single-shot command that shows plan status and outputs clear agent instructions.
+ * Single-shot command that reads graph.yaml + machine-state.yaml
+ * and shows which artifacts still need to be produced.
  *
- * Usage pattern (agent-driven):
- *   1. spec-graph plan          → show what needs to be produced
- *   2. Agent reads instructions → produces documents
- *   3. Agent calls: spec-graph artifact complete <id>
- *   4. spec-graph plan          → check progress
- *   5. Repeat until plan complete
- *
- * This is NOT a loop — it's a single-shot status + instruction command.
- * The agent re-runs it after each artifact to drive the plan forward.
+ * Does NOT call dispatch — reads files directly.
+ * The agent uses dispatch to get detailed production context.
  */
 
 import fs from "node:fs/promises";
@@ -36,7 +30,7 @@ export async function planCommand(
     await fs.access(graphPath);
     await fs.access(statePath);
   } catch {
-    console.log(chalk.red("✗ Project not initialized. Run `spec-graph init` first."));
+    console.log("Project not initialized. Run: spec-graph init");
     process.exit(1);
   }
 
@@ -45,29 +39,10 @@ export async function planCommand(
 
   const currentStage = state.current_stage || "plan";
   if (currentStage !== "plan") {
-    console.log(chalk.green(`✓ Plan complete. Current: ${currentStage}`));
+    console.log(`✓ Plan complete. Current stage: ${currentStage}`);
     return;
   }
 
-  // Dispatches won't progress without an agent — just run one dispatch
-  const { dispatchCommand } = await import("./dispatch");
-  let manifest: any = null;
-
-  // Capture dispatch output
-  const originalLog = console.log;
-  console.log = (data: string) => {
-    try { manifest = JSON.parse(data); } catch {}
-  };
-
-  try {
-    await dispatchCommand(projectRoot, { json: true });
-  } catch (e: any) {
-    console.log = originalLog;
-    console.log(chalk.yellow(`(Dispatch: ${e.message})`));
-  }
-  console.log = originalLog;
-
-  // Show current status
   const allArtifacts = graph.artifacts || [];
   const artifactStates = state.artifacts || {};
 
@@ -84,63 +59,82 @@ export async function planCommand(
   if (options.json) {
     console.log(JSON.stringify({
       stage: currentStage,
-      gate: manifest?.blocking_gate,
-      gate_passed: manifest?.gate_passed,
       artifacts_total: allArtifacts.length,
       artifacts_completed: completed.length,
-      artifacts_pending: pending.map((a: any) => ({ id: a.id, kind: a.kind })),
-      actions: manifest?.actions,
+      artifacts_pending: pending.map((a: any) => ({
+        id: a.id,
+        kind: a.kind,
+        agent_role: inferRoleByKind(a.kind),
+        suggested_path: `.spec-graph/artifacts/${getKindDir(a.kind)}/${a.id.split("/").pop()}.md`,
+      })),
     }, null, 2));
     return;
   }
 
-  console.log(chalk.bold(`\n Plan Stage Status`));
-  console.log(chalk.gray(`  Stage: ${currentStage}`));
-  console.log(chalk.gray(`  Artifacts: ${completed.length}/${allArtifacts.length} completed`));
+  console.log(`\n Plan Stage Status`);
+  console.log(`  Stage: ${currentStage}`);
+  console.log(`  Artifacts: ${completed.length}/${allArtifacts.length} completed`);
 
   if (pending.length === 0) {
-    console.log(chalk.green("\n✓ All plan artifacts completed."));
-    console.log(chalk.gray("  Run: spec-graph next"));
+    console.log("\n✓ All artifacts completed. Ready for development.");
     return;
   }
 
-  // Show pending by kind with priority
+  // Group by kind
   const byKind: Record<string, string[]> = {};
   for (const a of pending) {
-    const kind = a.kind || "unknown";
-    if (!byKind[kind]) byKind[kind] = [];
-    byKind[kind].push(a.id);
+    const k = a.kind || "unknown";
+    if (!byKind[k]) byKind[k] = [];
+    byKind[k].push(a.id);
   }
 
-  const kindOrder = ["requirement", "design", "plan", "contract", "verification", "implementation", "meta"];
+  const kindOrder = ["requirement", "design", "plan", "contract", "verification", "implementation", "change-record", "meta"];
 
-  console.log(chalk.cyan(`\n  Pending artifacts (${pending.length}):\n`));
+  console.log(`\n  Pending (${pending.length}):\n`);
   for (const kind of kindOrder) {
     if (!byKind[kind]) continue;
+    const role = inferRoleByKind(kind);
+    console.log(`  ${kind}:`);
     for (const id of byKind[kind]) {
-      const action = manifest?.actions?.find((a: any) => a.id === id);
-      const agentRole = action?.agent_role || "agent";
-      const templateRef = action?.template_ref || "";
-      const docPath = action?.suggested_doc_path || `.spec-graph/artifacts/${kind}/`;
-      console.log(chalk.yellow(`  ⬜ ${id}`));
-      console.log(chalk.gray(`      Role: ${agentRole}  →  ${docPath}`));
+      console.log(`    ⬜ ${id}`);
     }
   }
 
-  // Gate status
-  if (manifest && !manifest.gate_passed) {
-    console.log(chalk.red(`\n  Gate blocked: ${manifest.blocking_gate}`));
-  }
+  console.log(`\n  ───────────────────────────────────────────`);
+  console.log(`\n  Agent — produce these artifacts:`);
+  console.log(`\n  For each artifact:`);
+  console.log(`    1. spec-graph dispatch --json  (get full context)`);
+  console.log(`    2. Produce document at suggested path`);
+  console.log(`    3. spec-graph artifact complete <id> --producer agent`);
+  console.log(`    4. spec-graph plan              (re-check progress)`);
+}
 
-  // Agent instructions
-  console.log(chalk.gray("\n  ─────────────────────────────────────────"));
-  console.log(chalk.bold("\n  Agent — execute this:"));
-  console.log(chalk.gray("\n  For each pending artifact above:"));
-  console.log(chalk.gray("    1. Produce document at the suggested path"));
-  console.log(chalk.gray("    2. Mark complete:"));
-  console.log(chalk.green("       spec-graph artifact complete <id> --producer agent"));
-  console.log(chalk.gray("    3. Re-check progress:"));
-  console.log(chalk.green("       spec-graph plan"));
-  console.log(chalk.gray("\n  Or run dispatch for detailed context:"));
-  console.log(chalk.green("       spec-graph dispatch --json"));
+/** Map artifact kind to responsible agent role */
+function inferRoleByKind(kind: string): string {
+  const map: Record<string, string> = {
+    requirement: "pm-agent",
+    design: "architect-agent",
+    plan: "developer-agent",
+    contract: "architect-agent",
+    verification: "qa-agent",
+    implementation: "developer-agent",
+    "change-record": "developer-agent",
+    meta: "developer-agent",
+  };
+  return map[kind] || "developer-agent";
+}
+
+/** Map artifact kind to directory */
+function getKindDir(kind: string): string {
+  const map: Record<string, string> = {
+    requirement: "requirements",
+    design: "design",
+    plan: "plan",
+    contract: "contract",
+    verification: "verification",
+    implementation: "implementation",
+    "change-record": "change-record",
+    meta: "meta",
+  };
+  return map[kind] || kind;
 }
