@@ -275,4 +275,4 @@ Agent must initialize the project before plan can be used.
 - **循环搭配 (loop pair)**: `spec-graph dispatch --json` — run dispatch to get detailed context before producing each artifact
 - **artifact 生产闭环**: `plan` → read pending → `dispatch --json` → produce doc → `artifact complete` → `plan` (re-check) → ... → `next`
 - **gate 检查**: `spec-graph gate <name>` — diagnose blocked gates that plan reveals
-- **快速路径**: in `spec-graph init --quick`, prime bootstraps directly into plan stage
+- **快速路径**: in `spec-graph init`, prime bootstraps directly into plan stage

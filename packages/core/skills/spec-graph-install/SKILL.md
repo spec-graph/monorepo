@@ -47,7 +47,7 @@ description: "Install spec-graph skills into IDE project (Claude Code / Cursor /
 
 ### Step 4: 可选 bootstrap(`--quick`)
 
-调 `init --quick`,内部跑: init → compose → prime --bootstrap。
+调 `init`,内部跑: init → compose → prime --bootstrap。
 
 ### Step 5: 可选 git hooks(`--git-hooks`)
 
@@ -81,7 +81,7 @@ spec-graph install --ide github-copilot
 spec-graph install --target ~/projects/my-app
 
 # 一键 bootstrap(install + init + compose + prime)
-spec-graph install --quick \
+spec-graph install \
   --description "My app" \
   --permission-level semi-auto
 
@@ -89,7 +89,7 @@ spec-graph install --quick \
 spec-graph install --git-hooks
 
 # 全量(装 skills + bootstrap + hooks)
-spec-graph install --quick --git-hooks --description "..."
+spec-graph install --git-hooks --description "..."
 
 # 覆盖已存在的 skills
 spec-graph install --force
@@ -118,7 +118,7 @@ spec-graph install --json
 
 | 场景 | 操作 |
 |------|------|
-| 新项目首次接入 spec-graph | `install --quick --git-hooks` |
+| 新项目首次接入 spec-graph | `install --git-hooks` |
 | 团队成员 onboard | `install`(pull 仓库后跑) |
 | 切换 IDE(从 Claude 到 Cursor) | `install --ide cursor --force` |
 | 升级 spec-graph 后更新 skills | `install --force` |
@@ -140,13 +140,13 @@ spec-graph install --json
 ```
 1. cd /path/to/new-project
    ↓
-2. spec-graph install --quick --git-hooks \
+2. spec-graph install --git-hooks \
      --description "项目描述" \
      --permission-level semi-auto
    ↓
    - 检测/选择 IDE
    - 复制 skills/* 到 .claude/skills/
-   - 跑 init --quick(compose + prime)
+   - 跑 init(compose + prime)
    - 装 .git/hooks/pre-commit + post-commit
    ↓
 3. 验证:
@@ -175,7 +175,7 @@ spec-graph install --json
 mkdir my-app && cd my-app
 git init
 
-spec-graph install --quick --git-hooks \
+spec-graph install --git-hooks \
   --description "E-commerce platform" \
   --permission-level semi-auto
 
@@ -250,12 +250,12 @@ spec-graph install --force
 ### Scenario 8: 失败 — quick bootstrap 失败
 
 ```bash
-$ spec-graph install --quick
+$ spec-graph install
   ✓ skills installed
   ⚡ Quick mode: running init...
   Quick bootstrap skipped: Missing required parameter: --stack
 # 修复:init 需要 stack,补上
-spec-graph install --quick --description "..." # 还不够
+spec-graph install --description "..." # 还不够
 # 或分开跑:
 spec-graph install
 spec-graph init --stack typescript --build spa --quick
@@ -324,4 +324,4 @@ echo "✓ Commit $COMMIT_SHA: $COMMIT_MSG"
 - **与 hooks**: `--git-hooks` 装 `.git/hooks/`,但 `.spec-graph/hooks.yaml`(spec-graph 内部 hooks)是另一回事
 - **更新 skills**: spec-graph 版本升级后,跑 `install --force` 更新 SKILL.md
 - **团队共享**: 把 `.claude/skills/` commit 到 repo,新成员 pull 后即可用(也可选择不 commit,每人自跑 install)
-- **典型链路**: install --quick --git-hooks → change create → dispatch loop → complete → archive
+- **典型链路**: install --git-hooks → change create → dispatch loop → complete → archive

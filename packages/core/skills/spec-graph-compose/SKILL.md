@@ -199,4 +199,4 @@ $ spec-graph compose
 - **修改 profile 后**: 必须 re-compose + re-prime
 - **change-type 切换后**: 必须 re-compose
 - **dispatch 依赖**: dispatch 从 graph 读取 agents / meetings / tracks,所以 compose 是 dispatch 的前提
-- **快速路径**: `spec-graph init --quick` 自动跑 `init → compose → prime --bootstrap`
+- **快速路径**: `spec-graph init` 自动跑 `init → compose → prime --bootstrap`

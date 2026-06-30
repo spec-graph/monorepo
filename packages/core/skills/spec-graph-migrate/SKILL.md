@@ -97,7 +97,7 @@ Low Priority:
 
 | 情况 | 替代做法 |
 |------|---------|
-| 全新项目 | `spec-graph init --quick` |
+| 全新项目 | `spec-graph init` |
 | 想检查 spec-graph 自身健康度 | `spec-graph doctor` |
 | 想检查当前 change 进度 | `spec-graph status` |
 | 想看 graph 状态 | `spec-graph compose` |

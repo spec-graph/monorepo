@@ -155,10 +155,10 @@ spec-graph prime              # 所有 check pending
 spec-graph next               # 查看下一步
 ```
 
-### Scenario 2: 快速 bootstrap(init --quick 内部就是这样)
+### Scenario 2: 快速 bootstrap(init 内部就是这样)
 
 ```bash
-spec-graph init --stack typescript --build spa --quick
+spec-graph init --stack typescript --build spa
 # 内部执行: init → compose → prime --bootstrap
 # 占位 check 自动 pass,工作流可直接 dispatch
 ```
@@ -212,5 +212,5 @@ spec-graph prime
 - **前置**: `spec-graph compose`(必须有 graph)
 - **后续**: `spec-graph next` / `spec-graph dispatch`(查看下一步)
 - **change apply 内部**: `spec-graph change apply` 会自动调用 prime --bootstrap,无需手动跑
-- **快速路径**: `spec-graph init --quick` 自动跑 `init → compose → prime --bootstrap`
+- **快速路径**: `spec-graph init` 自动跑 `init → compose → prime --bootstrap`
 - **机器状态损坏恢复**: `rm machine-state.yaml && spec-graph prime`
