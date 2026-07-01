@@ -1,245 +1,271 @@
-# Tasks: Parallel Agent Workflow (Sub-Agent 架构)
+# Tasks: Parallel Agent Workflow (可靠性优先)
 
 ## Estimation
 
-基于 sub-agent 架构，spec-graph 自己只需要做**决策和方法论**，不需要实现执行逻辑。工作量大幅减少。
+基于可靠性优先的 sub-agent 架构，spec-graph V3 的核心工作：
+- 2 个决策类模块（dependency-analyzer, file-conflict-analyzer）
+- 2 个可靠性模块（integration-gate, parallel-recovery）
+- 1 个上下文模块（context-sharing）
+- 9 个新 skills（方法论）
 
-Total: ~16 tasks across 7 phases. Estimated effort: 3-4 weeks for a single developer.
+Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
-**Total estimate:** ~40 story points
+**Total estimate:** ~50 story points
 
 ## Milestones
 
 | Milestone | Tasks | Points | Deliverable |
 |-----------|-------|--------|-------------|
-| M1: Core modules | 1.1-1.2 | 10 | dependency-analyzer + file-conflict-analyzer |
-| M2: Pipeline stages | 2.1-2.5 | 12 | 4 new pipeline stages + task-decomp update |
-| M3: Skills | 3.1-3.5 | 10 | 5 new skills (parallel/worktree/merge/requirement/ui/etc.) |
-| M4: Automator integration | 4.1-4.2 | 3 | --mode parallel/auto support |
-| M5: CLI integration | 5.1-5.2 | 2 | New CLI commands |
-| M6: Tests | 6.1-6.2 | 2 | Unit + integration tests |
-| M7: E2E validation | 7.1-7.2 | 3 | Run on Express starter |
-
-## Dependencies
-
-```
-M1 (Core) ──────► M3 (Skills) ──────► M4 (Automator) ─► M7 (E2E)
-M2 (Stages) ────► M3 ─────────────► M5 (CLI) ──────► M6 (Tests)
-```
+| M1: Decision modules | 1.1-1.2 | 10 | dependency + conflict analyzer |
+| M2: Reliability modules | 2.1-2.2 | 10 | integration-gate + parallel-recovery |
+| M3: Context sharing | 3.1 | 5 | context-sharing module |
+| M4: Pipeline stages | 4.1-4.5 | 12 | 4 new pipeline stages |
+| M5: Skills | 5.1-5.7 | 14 | 7 new skills |
+| M6: Automator + CLI | 6.1-6.2 | 4 | --mode support + new commands |
+| M7: Tests | 7.1-7.2 | 3 | Unit + integration tests |
+| M8: E2E validation | 8.1-8.2 | 4 | Reliability validation |
 
 ---
 
-## 1. Core Modules (M1)
+## 1. Decision Modules (M1)
 
-### Task 1.1: Implement dependency-analyzer module
+### Task 1.1: Implement dependency-analyzer (conservative)
 - **Points**: 5
 - **Blocked by**: —
 - **Acceptance criteria**:
   - [ ] `packages/core/src/dependency-analyzer/index.ts` created
   - [ ] `analyzeTasks(tasks)` returns ExecutionPlan with waves
-  - [ ] Uses Kahn's algorithm for topological sort
+  - [ ] Kahn's algorithm for topological sort
   - [ ] Cycle detection
-  - [ ] Wave grouping: tasks in same wave have no dependencies
-  - [ ] JSON output for visualization: `{waves: [[A, B], [C]], edges: [...]}`
-  - [ ] ≥10 unit tests in `dependency-analyzer/index.test.ts`
-  - [ ] Tests cover: parallel tasks, chain, cycles, empty input
+  - [ ] **Conservative strategy**: if dependency is uncertain → serial
+  - [ ] JSON output: `{waves: [...], edges: [...], serialTasks: [...]}`
+  - [ ] ≥10 unit tests
 
-### Task 1.2: Implement file-conflict-analyzer module
+### Task 1.2: Implement file-conflict-analyzer (conservative)
 - **Points**: 5
-- **Blocked by**: — (parallel with 1.1)
+- **Blocked by**: —
 - **Acceptance criteria**:
   - [ ] `packages/core/src/file-conflict-analyzer/index.ts` created
-  - [ ] `analyzeConflicts(tasks)` returns ConflictMatrix (N×N boolean)
-  - [ ] Static analyzer based on task description + design references
-  - [ ] Pre-dispatch agent query function: `queryAgentForFiles(agent)`
-  - [ ] Conservative fallback: serialize tasks with "unknown impact"
-  - [ ] ≥10 unit tests in `file-conflict-analyzer/index.test.ts`
-  - [ ] Tests cover: no conflicts, full conflicts, read-only, unknown
+  - [ ] `analyzeConflicts(tasks)` returns ConflictMatrix
+  - [ ] Static analyzer + agent pre-query
+  - [ ] **Conservative strategy**: if impact uncertain → serial
+  - [ ] Risk classification per task (low/medium/high conflict risk)
+  - [ ] ≥10 unit tests
 
 ---
 
-## 2. Pipeline Stages (M2)
+## 2. Reliability Modules (M2)
 
-### Task 2.1: Add requirement-analysis stage with auto-depth
-- **Points**: 3
-- **Blocked by**: 1.1
-- **Acceptance criteria**:
-  - [ ] `knowledge/stages/requirement-analysis/` created
-  - [ ] `skills/requirement-analysis/instruction.md` with 3 depth templates
-  - [ ] Auto-depth selection based on intent complexity
-  - [ ] `gate.yaml` with entry/exit criteria
-  - [ ] `STAGES` array includes 'requirement-analysis' as first stage
-
-### Task 2.2: Add ui-design stage
-- **Points**: 2
-- **Blocked by**: 2.1
-- **Acceptance criteria**:
-  - [ ] `knowledge/stages/ui-design/` created
-  - [ ] `skills/ui-design/instruction.md` covers wireframes, component tree, accessibility
-  - [ ] `gate.yaml` with UI-specific criteria
-  - [ ] `STAGES` includes 'ui-design' (after design)
-
-### Task 2.3: Add user-stories stage
-- **Points**: 2
-- **Blocked by**: 2.2
-- **Acceptance criteria**:
-  - [ ] `knowledge/stages/user-stories/` created
-  - [ ] Instruction covers AS-A / I-WANT / SO-THAT format
-  - [ ] Output: user stories with acceptance criteria
-  - [ ] `gate.yaml` with user story criteria
-  - [ ] `STAGES` includes 'user-stories'
-
-### Task 2.4: Add dev-stories stage
-- **Points**: 2
-- **Blocked by**: 2.3
-- **Acceptance criteria**:
-  - [ ] `knowledge/stages/dev-stories/` created
-  - [ ] Instruction covers technical story decomposition from user stories
-  - [ ] Output: dev stories with implementation approach + file impact
-  - [ ] `gate.yaml` with dev story criteria
-  - [ ] `STAGES` includes 'dev-stories'
-
-### Task 2.5: Update task-decomposition stage
-- **Points**: 3
-- **Blocked by**: 2.4
-- **Acceptance criteria**:
-  - [ ] `knowledge/stages/task-decomposition/instruction.md` updated
-  - [ ] Mentions dependency analysis for parallelism
-  - [ ] Mentions file-conflict analysis
-  - [ ] `gate.yaml` includes "dependencies-analyzed" criterion
-  - [ ] `STAGES` array now has 12 stages (total)
-
----
-
-## 3. Skills (M3)
-
-### Task 3.1: Create spec-graph-parallel skill
-- **Points**: 3
-- **Blocked by**: 1.1, 1.2, 2.5
-- **Acceptance criteria**:
-  - [ ] `packages/skills/spec-graph-parallel/SKILL.md` created
-  - [ ] Stance: "Use host agent's sub-agent tool for parallel execution"
-  - [ ] Steps: analyze dependencies → create worktrees → dispatch sub-agents → merge
-  - [ ] Mentions: Claude Code Agent tool, Codex Subagents, Cursor parallel agents
-  - [ ] Edge cases: sub-agent failure, worktree conflict, merge conflict
-  - [ ] ≥200 lines
-
-### Task 3.2: Create spec-graph-worktree skill
-- **Points**: 2
-- **Blocked by**: 3.1
-- **Acceptance criteria**:
-  - [ ] `packages/skills/spec-graph-worktree/SKILL.md` created
-  - [ ] Covers git worktree creation/cleanup
-  - [ ] Branch naming convention: `spec-graph/<session>/<task>`
-  - [ ] Worktree directory: `.spec-graph/worktrees/<task>/`
-  - [ ] Cleanup options: keep-on-failure
-
-### Task 3.3: Create spec-graph-merge skill
-- **Points**: 2
-- **Blocked by**: 3.1
-- **Acceptance criteria**:
-  - [ ] `packages/skills/spec-graph-merge/SKILL.md` created
-  - [ ] Covers sequential merge to main
-  - [ ] Auto-rebase before merge
-  - [ ] Conflict handling strategies: abort, skip, force-ours
-  - [ ] Merge queue logic
-
-### Task 3.4: Create spec-graph-requirement-analysis skill
-- **Points**: 2
-- **Blocked by**: 2.1
-- **Acceptance criteria**:
-  - [ ] `packages/skills/spec-graph-requirement-analysis/SKILL.md` created
-  - [ ] Auto-depth selection logic
-  - [ ] 3 depth templates included
-  - [ ] Output format per depth level
-
-### Task 3.5: Create spec-graph-ui-design skill
-- **Points**: 1
-- **Blocked by**: 2.2
-- **Acceptance criteria**:
-  - [ ] `packages/skills/spec-graph-ui-design/SKILL.md` created
-  - [ ] Covers wireframes, component tree, design system
-  - [ ] Output: UI design document
-
----
-
-## 4. Automator Integration (M4)
-
-### Task 4.1: Add --mode flag to automator
-- **Points**: 2
-- **Blocked by**: 4.1
-- **Acceptance criteria**:
-  - [ ] `autoRun()` accepts `mode: 'serial' | 'parallel' | 'auto'`
-  - [ ] Serial mode: V2 behavior (unchanged)
-  - [ ] Parallel mode: invokes spec-graph-parallel skill
-  - [ ] Auto mode: run dependency-analyzer, choose parallel if possible
-
-### Task 4.2: Wire dependency-analyzer into planning
-- **Points**: 1
-- **Blocked by**: 4.1
-- **Acceptance criteria**:
-  - [ ] After task-decomposition, dependency-analyzer runs
-  - [ ] Output: `waves.json` in session dir
-  - [ ] `spec-graph status --json` includes waves
-
----
-
-## 5. CLI Integration (M5)
-
-### Task 5.1: Update `auto` command for --mode
-- **Points**: 1
-- **Blocked by**: 4.1
-- **Acceptance criteria**:
-  - [ ] `spec-graph auto <intent> --mode parallel` works
-  - [ ] `spec-graph auto <intent> --mode serial` works (default)
-  - [ ] `spec-graph auto <intent> --mode auto` works (auto-detect)
-
-### Task 5.2: Add `waves` subcommand
-- **Points**: 1
-- **Blocked by**: 4.2
-- **Acceptance criteria**:
-  - [ ] `spec-graph waves [--json]` shows execution plan
-  - [ ] Output: wave list, task assignments
-
----
-
-## 6. Tests (M6)
-
-### Task 6.1: Unit tests for core modules
-- **Points**: 1
+### Task 2.1: Implement integration-gate
+- **Points**: 5
 - **Blocked by**: 1.1, 1.2
 - **Acceptance criteria**:
-  - [ ] dependency-analyzer: 10+ tests (already in task 1.1)
-  - [ ] file-conflict-analyzer: 10+ tests (already in task 1.2)
+  - [ ] `packages/core/src/integration-gate/index.ts` created
+  - [ ] Three-level gate: individualGate, mergeGate, systemGate
+  - [ ] Individual gate uses same criteria as serial gate
+  - [ ] Merge gate analyzes conflicts
+  - [ ] System gate checks style consistency + integration tests
+  - [ ] Returns structured result: `{level: 1|2|3, passed: boolean, failures: [...]}`
+  - [ ] ≥10 unit tests
 
-### Task 6.2: Integration tests for parallel workflow
-- **Points**: 1
-- **Blocked by**: 4.2
+### Task 2.2: Implement parallel-recovery
+- **Points**: 5
+- **Blocked by**: 2.1
 - **Acceptance criteria**:
-  - [ ] Test: task → dependency analysis → waves output
-  - [ ] Test: task → conflict analysis → matrix output
-  - [ ] Test: mode flag properly selects parallel/serial
+  - [ ] `packages/core/src/parallel-recovery/index.ts` created
+  - [ ] `analyzeFailure(failureInfo)` returns attribution result
+  - [ ] Attribution: identify which sub-agent caused failure
+  - [ ] Targeted recovery: retry specific sub-agent
+  - [ ] Auto-degrade to serial if attribution fails
+  - [ ] Failure logging with full trace
+  - [ ] ≥10 unit tests
 
 ---
 
-## 7. E2E Validation (M7)
+## 3. Context Sharing (M3)
 
-### Task 7.1: Run parallel workflow on Express starter
-- **Points**: 2
-- **Blocked by**: all M1-M6
+### Task 3.1: Implement context-sharing module
+- **Points**: 5
+- **Blocked by**: 1.1, 1.2
 - **Acceptance criteria**:
-  - [ ] spec-graph auto --mode parallel on Express starter
-  - [ ] At least 2 tasks run in parallel (via host agent sub-agent)
-  - [ ] All worktrees merged to main successfully
-  - [ ] End-to-end feature is functional
+  - [ ] `packages/core/src/context-sharing/index.ts` created
+  - [ ] Generates shared context per wave
+  - [ ] Each sub-agent receives:
+    - Project profile (from sense)
+    - Project overview (from plan)
+    - Other sub-agents' planned changes (read-only)
+    - Shared methodology (naming, structure, etc.)
+  - [ ] Shared context is JSON or markdown
+  - [ ] Context is minimal (avoid overwhelming sub-agents)
+  - [ ] ≥5 unit tests
 
-### Task 7.2: Cross-tool validation
+---
+
+## 4. Pipeline Stages (M4)
+
+### Task 4.1: Add requirement-analysis stage
+- **Points**: 3
+- **Blocked by**: M1
+- **Acceptance criteria**:
+  - [ ] `knowledge/stages/requirement-analysis/` created
+  - [ ] 3 depth templates (light/medium/heavy)
+  - [ ] Auto-depth selection based on intent complexity
+  - [ ] `STAGES` includes 'requirement-analysis'
+
+### Task 4.2: Add ui-design stage
+- **Points**: 2
+- **Blocked by**: 4.1
+- **Acceptance criteria**:
+  - [ ] `knowledge/stages/ui-design/` created
+  - [ ] Covers wireframes, component tree, accessibility
+  - [ ] `STAGES` includes 'ui-design'
+
+### Task 4.3: Add user-stories stage
+- **Points**: 2
+- **Blocked by**: 4.2
+- **Acceptance criteria**:
+  - [ ] `knowledge/stages/user-stories/` created
+  - [ ] Covers AS-A / I-WANT / SO-THAT format
+  - [ ] `STAGES` includes 'user-stories'
+
+### Task 4.4: Add dev-stories stage
+- **Points**: 2
+- **Blocked by**: 4.3
+- **Acceptance criteria**:
+  - [ ] `knowledge/stages/dev-stories/` created
+  - [ ] Covers technical story decomposition
+  - [ ] `STAGES` includes 'dev-stories'
+
+### Task 4.5: Update task-decomposition stage
+- **Points**: 3
+- **Blocked by**: 4.4
+- **Acceptance criteria**:
+  - [ ] `knowledge/stages/task-decomposition/instruction.md` updated
+  - [ ] Mentions dependency analysis + parallelism
+  - [ ] `STAGES` now has 12 stages
+
+---
+
+## 5. Skills (M5)
+
+### Task 5.1: Create spec-graph-parallel skill (with 3-level gate guidance)
+- **Points**: 3
+- **Blocked by**: M1-M3
+- **Acceptance criteria**:
+  - [ ] Covers sub-agent dispatch + three-level gate
+  - [ ] Includes recovery strategy guidance
+  - [ ] Mentions Claude Code Agent tool, Codex Subagents, etc.
+
+### Task 5.2: Create spec-graph-worktree skill
+- **Points**: 2
+- **Blocked by**: 5.1
+- **Acceptance criteria**:
+  - [ ] Covers worktree creation/cleanup
+  - [ ] Branch naming convention
+  - [ ] Cleanup options
+
+### Task 5.3: Create spec-graph-merge skill
+- **Points**: 2
+- **Blocked by**: 5.1
+- **Acceptance criteria**:
+  - [ ] Sequential merge to main
+  - [ ] Rebase before merge
+  - [ ] Conflict resolution strategies
+
+### Task 5.4: Create spec-graph-integration-gate skill
+- **Points**: 2
+- **Blocked by**: 5.1
+- **Acceptance criteria**:
+  - [ ] Explains three-level gate
+  - [ ] When each level applies
+  - [ ] How to interpret gate results
+
+### Task 5.5: Create spec-graph-parallel-recovery skill
+- **Points**: 2
+- **Blocked by**: 5.4
+- **Acceptance criteria**:
+  - [ ] Explains failure attribution
+  - [ ] Targeted recovery strategies
+  - [ ] Degradation to serial
+
+### Task 5.6: Create spec-graph-requirement-analysis skill
+- **Points**: 1
+- **Blocked by**: 4.1
+- **Acceptance criteria**:
+  - [ ] Auto-depth selection
+  - [ ] 3 depth templates
+
+### Task 5.7: Create spec-graph-ui-design skill
+- **Points**: 2
+- **Blocked by**: 4.2
+- **Acceptance criteria**:
+  - [ ] UI design methodology
+  - [ ] Output format
+
+---
+
+## 6. Automator + CLI (M6)
+
+### Task 6.1: Add --mode flag + context sharing
+- **Points**: 2
+- **Blocked by**: M1-M5
+- **Acceptance criteria**:
+  - [ ] `autoRun()` accepts mode: 'serial' | 'parallel' | 'auto'
+  - [ ] Context-sharing module integrated
+  - [ ] Each sub-agent receives shared context
+
+### Task 6.2: Add new CLI commands
+- **Points**: 2
+- **Blocked by**: 6.1
+- **Acceptance criteria**:
+  - [ ] `spec-graph auto --mode parallel/serial/auto`
+  - [ ] `spec-graph waves [--json]` shows execution plan
+  - [ ] `spec-graph integration-status [--json]` shows gate status
+
+---
+
+## 7. Tests (M7)
+
+### Task 7.1: Unit tests for all new modules
+- **Points**: 2
+- **Blocked by**: M1-M5
+- **Acceptance criteria**:
+  - [ ] dependency-analyzer: 10+ tests
+  - [ ] file-conflict-analyzer: 10+ tests
+  - [ ] integration-gate: 10+ tests
+  - [ ] parallel-recovery: 10+ tests
+  - [ ] context-sharing: 5+ tests
+
+### Task 7.2: Integration tests for parallel workflow
 - **Points**: 1
 - **Blocked by**: 7.1
 - **Acceptance criteria**:
+  - [ ] Parallel execution with 3-level gate
+  - [ ] Failure recovery scenarios
+  - [ ] Auto-degradation to serial
+  - [ ] Context sharing across sub-agents
+
+---
+
+## 8. E2E Validation (M8)
+
+### Task 8.1: Reliability validation on Express starter
+- **Points**: 2
+- **Blocked by**: all M1-M7
+- **Acceptance criteria**:
+  - [ ] Run parallel workflow on Express starter
+  - [ ] Measure parallel success rate ≥ 90%
+  - [ ] Measure speedup ≥ 2x vs serial
+  - [ ] Test failure recovery scenarios
+  - [ ] Test auto-degradation to serial
+
+### Task 8.2: Cross-tool validation
+- **Points**: 2
+- **Blocked by**: 8.1
+- **Acceptance criteria**:
   - [ ] Tested on Claude Code (Agent tool)
   - [ ] Tested on Codex CLI (Subagents)
-  - [ ] Results documented in docs/agent-integration-guide.md
+  - [ ] Results documented in docs/
 
 ---
 
@@ -247,15 +273,14 @@ M2 (Stages) ────► M3 ─────────────► M5 (CL
 
 | Phase | Tasks | Points | Status |
 |-------|-------|--------|--------|
-| 1. Core Modules | 1.1-1.2 | 10 | ✗ |
-| 2. Pipeline Stages | 2.1-2.5 | 12 | ✗ |
-| 3. Skills | 3.1-3.5 | 10 | ✗ |
-| 4. Automator Integration | 4.1-4.2 | 3 | ✗ |
-| 5. CLI Integration | 5.1-5.2 | 2 | ✗ |
-| 6. Tests | 6.1-6.2 | 2 | ✗ |
-| 7. E2E Validation | 7.1-7.2 | 3 | ✗ |
-| **TOTAL** | | **42** | |
+| 1. Decision Modules | 1.1-1.2 | 10 | ✗ |
+| 2. Reliability Modules | 2.1-2.2 | 10 | ✗ |
+| 3. Context Sharing | 3.1 | 5 | ✗ |
+| 4. Pipeline Stages | 4.1-4.5 | 12 | ✗ |
+| 5. Skills | 5.1-5.7 | 14 | ✗ |
+| 6. Automator + CLI | 6.1-6.2 | 4 | ✗ |
+| 7. Tests | 7.1-7.2 | 3 | ✗ |
+| 8. E2E Validation | 8.1-8.2 | 4 | ✗ |
+| **TOTAL** | | **62** | |
 
-**Current completion: 0/42 points (0%)**
-
-Compared to original proposal (80 points): **~50% reduction** due to sub-agent architecture simplification.
+**Current completion: 0/62 points (0%)**

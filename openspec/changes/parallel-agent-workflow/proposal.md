@@ -1,131 +1,228 @@
 ## Why
 
-spec-graph V2 是单 agent 串行执行。虽然 2026 年所有主流 AI agent 工具（Claude Code、Codex、Trae、Cursor、Windsurf 等）都已支持 sub-agent 并行执行，但 spec-graph V2 没有利用这个能力。
+spec-graph V2 是单 agent 串行执行，可靠性高但速度慢。2026 年所有主流 AI agent 工具都已支持 sub-agent 并行执行，spec-graph V3 要利用这个能力，但**必须保持 V2 级别的可靠性**。
 
-**核心机会：**
-- Sub-agent 并行是行业标准（Claude Code Agent tool, Codex subagents, Cursor parallel agents, Trae vertical topology）
-- 所有主流工具都支持隔离的 git worktree
-- spec-graph 可以专注决策（dependency analysis, conflict detection, methodology），让宿主 agent 专注执行（sub-agent 并行、worktree 管理、merge queue）
+**核心问题：**
+并行开发的可靠性天然低于串行。上下文分散、产物部分、合并冲突、失败归因复杂等问题必须解决，否则并行开发不可用。
 
-**设计哲学：**
-- spec-graph 是**大脑**，宿主 agent 是**手**
-- spec-graph 提供方法论，宿主 agent 执行
+**设计目标：**
+- 并行开发的可靠性达到 90%+（接近串行）
+- 同时享受并行带来的速度优势
+- 不破坏 V2 串行模式
 - 跨所有支持 sub-agent 的工具兼容
 
 ## What Changes
 
-### 新架构：spec-graph 作为 skill 提供方法论
+### 新架构：可靠性优先的并行开发
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                  │
-│   宿主 Agent (Claude Code / Codex / Trae / Cursor / etc.)        │
-│   └── 加载 spec-graph skills                                    │
-│   └── 按 spec-graph 方法论执行                                   │
-│       ├── 用 sub-agent tool 并行执行（宿主原生能力）             │
-│       ├── 用 bash 管理 worktrees（宿主原生能力）                 │
-│       └── 用 bash 顺序合并（宿主原生能力）                       │
+│   Stage 执行模式：serial / parallel / auto                        │
+│   ─────────────────────────────────────                          │
 │                                                                  │
-│   spec-graph V3 (作为 skill 运行)                                │
-│   └── spec-graph-parallel: 并行方法论指导                        │
-│   └── spec-graph-worktree: worktree 操作指导                    │
-│   └── spec-graph-merge: merge queue 方法论                      │
-│   └── spec-graph-dependency-analyzer: 任务依赖分析              │
-│   └── spec-graph-file-conflict-analyzer: 文件冲突检测          │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Serial Mode (V2 兼容，默认)                              │  │
+│   │  ─────────────────────────────────────                    │  │
+│   │  单 agent 串行执行                                        │  │
+│   │  每个 stage 有 gate                                      │  │
+│   │  失败 → 诊断 → 重试（同一 agent）                         │  │
+│   │  可靠性: 95%+                                              │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Parallel Mode (V3 新增)                                  │  │
+│   │  ─────────────────────────────────────                    │  │
+│   │  多 sub-agent 并行 + 整合门禁                             │  │
+│   │  整合门禁：individual gate + merge gate + system gate     │  │
+│   │  失败 → 精准归因 → 针对性恢复                              │  │
+│   │  可靠性: 90%+ (与串行持平)                                  │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Auto Mode (默认)                                         │  │
+│   │  ─────────────────────────────────────                    │  │
+│   │  dependency-analyzer + file-conflict-analyzer 分析        │  │
+│   │  如果任务独立 + 文件不冲突 → parallel                       │  │
+│   │  否则 → serial（保守）                                   │  │
+│   │  用户可手动覆盖                                           │  │
+│   └─────────────────────────────────────────────────────────┘  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 关键职责分离
+### 核心机制：三层门禁（Integration Gate）
 
-| 职责 | spec-graph | 宿主 agent |
-|------|-----------|------------|
-| 任务依赖分析 | ✓ (dependency-analyzer) | — |
-| 文件冲突检测 | ✓ (file-conflict-analyzer) | — |
-| Wave 编排 | ✓ (方法论) | — |
-| Worktree 创建 | 方法论 (skill) | ✓ (bash 命令) |
-| 并行执行 | 方法论 (skill) | ✓ (sub-agent tool) |
-| Merge queue | 方法论 (skill) | ✓ (bash 命令) |
-| 进程管理 | — | ✓ (sub-agent 内部管理) |
-| 资源限制 | — | ✓ (sub-agent 配置) |
-
-### 增强 pipeline
-
-新增 4 个阶段作为前置分析 pipeline：
+并行执行时，**每个 sub-agent 完成后不直接视为通过**，而是经过三层门禁：
 
 ```
-requirement-analysis → design → ui-design → user-stories → dev-stories → task-decomposition
-    ↓ (智能深度: 根据 intent 复杂度自适应)
-    ↓
-  [8 个现有阶段: specify → design → plan → implement → review → test → accept → integrate]
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│   三层门禁模型（Integration Gate）                                │
+│   ───────────────────────────────                                │
+│                                                                  │
+│   Level 1: Individual Gate（每个 sub-agent 自己的 gate）         │
+│   ─────────────────────────────────────────────                  │
+│   • 评估 sub-agent 自己的产物是否符合要求                        │
+│   • 与 V2 单 agent 的 gate 相同                                  │
+│   • 失败 → 该 sub-agent 单独重试                                 │
+│                                                                  │
+│   Level 2: Merge Gate（合并到 main 后的 gate）                  │
+│   ─────────────────────────────────────                          │
+│   • 每个 worktree 合并到 main 后评估                             │
+│   • 检查合并是否引入冲突                                         │
+│   • 检查合并后产物是否完整                                       │
+│   • 失败 → 分析冲突来源 → 重新并行或降级串行                    │
+│                                                                  │
+│   Level 3: System Gate（系统级整合 gate）                       │
+│   ───────────────────────────────────────                        │
+│   • 所有 worktree 合并到 main 后，评估整个产物                   │
+│   • 检查跨 sub-agent 的一致性（风格、命名、结构）                │
+│   • 运行整合测试（如果有）                                        │
+│   • 失败 → 精准归因（哪几个 sub-agent 的问题）→ 针对性恢复     │
+│                                                                  │
+│   只有三层全部通过 → 视为并行执行成功                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- **requirement-analysis**: 需求分析（深度自适应）
-- **ui-design**: UI 设计（独立阶段）
-- **user-stories**: 用户故事设计
-- **dev-stories**: 开发故事设计（技术视角）
+### 上下文共享机制
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│   并行 sub-agent 之间的上下文共享                                 │
+│   ─────────────────────────────                                  │
+│                                                                  │
+│   每个 sub-agent 接收：                                          │
+│   ┌─────────────────────────────────────────────────────┐      │
+│   │  ① 完整的项目上下文（sense 输出）                      │      │
+│   │     语言、框架、已有特性、项目类型                      │      │
+│   │                                                      │      │
+│   │  ② 项目总览文档（Project Overview）                   │      │
+│   │     整体架构、关键模块、已有 specs                      │      │
+│   │                                                      │      │
+│   │  ③ 其他 sub-agent 的计划（只读）                       │      │
+│   │     "sub-agent B 将修改 src/books/*"                  │      │
+│   │     → 本 agent 知道不要修改同一文件                    │      │
+│   │                                                      │      │
+│   │  ④ 共享方法论（spec-graph skill 提供）                 │      │
+│   │     一致的命名、注释、结构约定                          │      │
+│   └─────────────────────────────────────────────────────┘      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 并行失败恢复策略
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│   四层恢复策略（每层失败对应不同恢复方式）                        │
+│   ─────────────────────────────────────                          │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Level 1 失败 (Individual Gate):                         │  │
+│   │  → 该 sub-agent 单独重试（不影响其他）                    │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Level 2 失败 (Merge Conflict):                          │  │
+│   │  → 分析冲突文件                                          │  │
+│   │  → 如果是 sub-agent 之间的冲突 → 改为串行                │  │
+│   │  → 如果是 sub-agent 与 main 的冲突 → 重新 rebase        │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  Level 3 失败 (System Gate):                             │  │
+│   │  → 精准归因：哪个 sub-agent 的产物有问题                │  │
+│   │  → 针对性重试：只重试有问题的 sub-agent                │  │
+│   │  → 如果无法归因 → 整个 wave 降级为串行                │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │  多次失败后:                                             │  │
+│   │  → 自动切换到 serial 模式                               │  │
+│   │  → 记录失败原因，供后续分析                              │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 保守的并行边界
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│   默认倾向于串行（保守策略）                                      │
+│   ───────────────────────────                                    │
+│                                                                  │
+│   只有满足以下条件才并行：                                        │
+│   ✓ 任务之间没有依赖关系                                         │
+│   ✓ 任务之间没有文件冲突                                         │
+│   ✓ 任务规模适中（单个 sub-agent < 30 分钟）                   │
+│   ✓ 任务不是高风险（安全、核心逻辑等串行）                      │
+│                                                                  │
+│   默认串行：                                                      │
+│   ✗ 任何依赖关系存在 → 串行                                     │
+│   ✗ 任何文件冲突可能 → 串行                                     │
+│   ✗ 不确定是否冲突 → 串行                                       │
+│   ✗ 用户未确认并行 → 串行                                        │
+│                                                                  │
+│   用户可手动覆盖：                                                │
+│   ✓ 用户显式指定并行 → 即使 analyzer 保守也执行并行              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Capabilities
 
 ### New Capabilities
 
-- `dependency-analyzer`: 分析任务依赖关系，生成执行 waves。独立模块，可被多个 skill 调用。
+- `dependency-analyzer`: 分析任务依赖关系，生成执行 waves。保守策略：依赖不明时默认串行。
 
-- `file-conflict-analyzer`: 分析任务文件影响，检测文件冲突，生成冲突矩阵。
+- `file-conflict-analyzer`: 分析任务文件影响，检测文件冲突。保守策略：不确定时默认串行。
 
-### New Skills
+- `integration-gate`: 三层门禁模型。确保并行开发的可靠性与串行持平。
 
-- `spec-graph-parallel`: 并行方法论。指导宿主 agent 如何用 sub-agent 并行执行任务。包括 wave 调度、子 agent 任务分配、进度报告、失败处理。
-
-- `spec-graph-worktree`: Worktree 方法论。指导宿主 agent 如何创建/清理 git worktrees。包括分支命名约定、冲突处理。
-
-- `spec-graph-merge`: Merge queue 方法论。指导宿主 agent 如何顺序合并多个 worktree 到主分支。包括 rebase 策略、冲突解决。
-
-- `spec-graph-requirement-analysis`: 需求分析 skill（深度自适应）。根据 intent 复杂度选择轻量/中等/复杂的分析模板。
-
-- `spec-graph-ui-design`: UI 设计 skill（独立阶段）。
-
-- `spec-graph-user-stories`: 用户故事设计 skill。
-
-- `spec-graph-dev-stories`: 开发故事设计 skill。
+- `parallel-recovery`: 精准归因 + 针对性恢复。失败时分析源头，针对性重试或降级串行。
 
 ### Modified Capabilities
 
-- `task-decomposition`: 增强任务分解，加入依赖分析和文件影响预估。
+- `automator`: 增加 stage execution mode (serial/parallel/auto)。并行模式下使用 integration gate。
 
-- `automator`: 增强 `auto` 命令，支持 `--mode parallel/serial/auto`。
+- `task-decomposition`: 增强任务分解，加入依赖分析和文件影响预估。
 
 ## Impact
 
 ### 代码（轻量）
 
-spec-graph V3 核心模块只有 2 个新模块：
-- `dependency-analyzer`（~300 LOC）
-- `file-conflict-analyzer`（~200 LOC）
-
-其他都是 skill（SKILL.md），不需要代码。
-
-### 跨平台兼容
-
-spec-graph V3 可以运行在所有支持 sub-agent 的工具中：
-- Claude Code (Agent tool)
-- OpenAI Codex CLI (Subagents)
-- Trae (Sub-agent)
-- Cursor (Parallel agents)
-- Windsurf (Cascade)
-- Qoder (Experts mode)
+新增 4 个核心模块：
+- `dependency-analyzer` (~300 LOC)
+- `file-conflict-analyzer` (~200 LOC)
+- `integration-gate` (~150 LOC)
+- `parallel-recovery` (~200 LOC)
 
 ### 向后兼容
 
-- V2 串行模式完全保留
-- `spec-graph auto` 默认串行
-- `spec-graph auto --mode parallel` 启用并行
+- V2 串行模式完全保留（默认）
+- 用户必须显式指定 `--mode parallel` 或 `--mode auto`
+- 任何失败自动降级到串行模式
 
 ## Risks / Trade-offs
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| 宿主 agent 的 sub-agent 行为不可控 | Medium | High | spec-graph 方法论里包含错误处理指导 |
-| 不同工具的 sub-agent 语法差异 | Medium | Medium | spec-graph 提供通用方法论，宿主适配 |
-| Worktree 冲突 | Low | High | file-conflict-analyzer 提前检测 |
-| 合并冲突 | Medium | Medium | Merge 方法论指导处理 |
+| 并行可靠性仍低于串行 | Low | High | 三层门禁 + 精准归因 + 自动降级 |
+| 并行分析器误判 | Medium | Medium | 保守策略（默认串行）+ 用户手动覆盖 |
+| 并行失败恢复复杂 | Medium | Medium | 4 层恢复策略 + 自动降级串行 |
+| 上下文共享开销 | Low | Low | 共享文档只包含必要信息 |
+
+## Success Criteria
+
+**并行开发被认为"可靠"当且仅当：**
+1. 并行开发的成功率 ≥ 90%（串行为 95%+）
+2. 并行开发的平均速度 ≥ 2x 串行
+3. 任何失败都能精准归因（哪个 sub-agent 的问题）
+4. 任何不可恢复的失败都自动降级串行
+5. 用户体验与串行无异（失败时清晰反馈）
