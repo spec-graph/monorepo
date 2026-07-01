@@ -81,11 +81,9 @@ export function runIntegrationGate(
 
   // If conflict matrix shows file overlaps, also fail merge gate
   const conflictMatrix = analyzeConflicts(allTaskFiles);
-  const hasConflicts = Object.entries(conflictMatrix)
-    .filter(([key]) => key !== 'impacts') // exclude the impacts map
-    .some(([, row]) =>
-      Object.values(row as { [taskB: string]: boolean }).some((conflict) => conflict)
-    );
+  const hasConflicts = Object.values(conflictMatrix.rows).some(
+    (row) => Object.values(row).some((conflict) => conflict)
+  );
   if (hasConflicts) {
     mergeGate.result = 'fail';
     mergeGate.failures.push('File conflicts detected between sub-agents');

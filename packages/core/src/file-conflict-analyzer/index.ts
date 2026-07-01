@@ -35,7 +35,7 @@ export interface ConflictMatrix {
  */
 export function analyzeConflicts(taskFiles: Record<string, string[]>): ConflictMatrix {
   const taskIds = Object.keys(taskFiles);
-  const matrix: ConflictMatrix = { impacts: {} };
+  const matrix: ConflictMatrix = { impacts: {}, rows: {} };
 
   // Build per-task impact records
   for (const taskId of taskIds) {

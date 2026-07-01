@@ -8,8 +8,8 @@ describe('file-conflict-analyzer', () => {
         A: ['src/auth/login.ts'],
         B: ['src/books/list.ts'],
       });
-      expect(matrix.A.B).toBe(false);
-      expect(matrix.B.A).toBe(false);
+      expect(matrix.rows.A.B).toBe(false);
+      expect(matrix.rows.B.A).toBe(false);
     });
 
     it('detects same file conflict', () => {
@@ -17,7 +17,7 @@ describe('file-conflict-analyzer', () => {
         A: ['src/auth/login.ts'],
         B: ['src/auth/login.ts'],
       });
-      expect(matrix.A.B).toBe(true);
+      expect(matrix.rows.A.B).toBe(true);
     });
 
     it('detects same-directory conflict', () => {
@@ -25,7 +25,7 @@ describe('file-conflict-analyzer', () => {
         A: ['src/auth/login.ts'],
         B: ['src/auth/logout.ts'],
       });
-      expect(matrix.A.B).toBe(true);
+      expect(matrix.rows.A.B).toBe(true);
     });
 
     it('detects wildcard pattern overlap', () => {
@@ -33,7 +33,7 @@ describe('file-conflict-analyzer', () => {
         A: ['src/auth/*'],
         B: ['src/auth/login.ts'],
       });
-      expect(matrix.A.B).toBe(true);
+      expect(matrix.rows.A.B).toBe(true);
     });
 
     it('treats read-only as no conflict', () => {
@@ -42,7 +42,7 @@ describe('file-conflict-analyzer', () => {
         A: ['src/auth/types.ts'],
         B: ['src/books/types.ts'],
       });
-      expect(matrix.A.B).toBe(false);
+      expect(matrix.rows.A.B).toBe(false);
     });
 
     it('handles empty file list as unknown', () => {
@@ -51,7 +51,7 @@ describe('file-conflict-analyzer', () => {
         B: ['src/books/list.ts'],
       });
       expect(matrix.impacts.A.risk).toBe('unknown');
-      expect(matrix.A.B).toBe(false); // conservative: don't flag unknown as conflict
+      expect(matrix.rows.A.B).toBe(false); // conservative: don't flag unknown as conflict
     });
 
     it('assesses risk based on file count', () => {

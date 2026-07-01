@@ -165,7 +165,7 @@ function checkFileConflicts(
         [taskIds[i]]: taskFiles[taskIds[i]] || [],
         [taskIds[j]]: taskFiles[taskIds[j]] || [],
       });
-      if (conflictMatrix[taskIds[i]]?.[taskIds[j]]) {
+      if (conflictMatrix.rows[taskIds[i]]?.[taskIds[j]]) {
         conflictingTasks.push(taskIds[i]);
         conflictingTasks.push(taskIds[j]);
       }
