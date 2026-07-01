@@ -1,0 +1,21 @@
+entry:
+  - id: user-stories-prerequisites
+    description: UI design and requirements must be complete
+    verification: rule
+
+exit:
+  - id: stories-have-as-a-i-want-so-that
+    description: All stories use As a... I want... So that... format
+    verification: rule
+
+  - id: acceptance-criteria-given-when-then
+    description: Each story has Given/When/Then acceptance criteria
+    verification: rule
+
+  - id: stories-have-priority
+    description: Each story has P0/P1/P2 priority
+    verification: rule
+
+  - id: out-of-scope-defined
+    description: Out of scope explicitly defined
+    verification: rule

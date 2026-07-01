@@ -10,6 +10,7 @@ Create the task list that breaks down the implementation work. Tasks.md is the e
 - **Verifiable.** You know when a task is done. If you can't verify completion, the task is too vague.
 - **Ordered by dependency.** Tasks that must be done first come first. The list is executable as-is.
 - **Traceable to design.** Every task should trace back to something in design.md (or specs).
+- **Parallel-aware.** Tag tasks with file impact to enable parallel analysis.
 
 ## Required format
 
@@ -18,13 +19,19 @@ Create the task list that breaks down the implementation work. Tasks.md is the e
 ```
 ## 1. <group-name>
 
-- [ ] 1.1 <task description>
-- [ ] 1.2 <task description>
+- [ ] 1.1 <task description> (US-001, files: src/auth/login.ts)
+- [ ] 1.2 <task description> (US-001, files: src/auth/middleware.ts)
 
 ## 2. <group-name>
 
-- [ ] 2.1 <task description>
+- [ ] 2.1 <task description> (US-002, files: src/books/list.ts)
 ```
+
+**Important for parallel execution**: Tag each task with:
+- User Story reference (US-xxx)
+- File paths it modifies
+
+This allows dependency-analyzer and file-conflict-analyzer to determine which tasks can run in parallel.
 
 ## Grouping strategy
 

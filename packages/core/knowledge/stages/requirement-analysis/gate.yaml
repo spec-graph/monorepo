@@ -1,0 +1,21 @@
+entry:
+  - id: plan-confirmed
+    description: Plan must be confirmed before starting requirement analysis
+    verification: rule
+
+exit:
+  - id: problem-statement
+    description: Clear problem statement (depth-appropriate)
+    verification: rule
+
+  - id: personas-present
+    description: User personas defined (HEAVY depth only)
+    verification: rule
+
+  - id: acceptance-criteria
+    description: Acceptance criteria defined
+    verification: rule
+
+  - id: risks-identified
+    description: Risks identified (MEDIUM/HEAVY depth)
+    verification: rule

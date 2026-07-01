@@ -1,0 +1,21 @@
+entry:
+  - id: requirement-analysis-passed
+    description: Requirement analysis must be complete
+    verification: rule
+
+exit:
+  - id: user-flows-documented
+    description: All user flows documented
+    verification: rule
+
+  - id: component-tree-defined
+    description: Component tree (atomic/molecular/organism) defined
+    verification: rule
+
+  - id: design-tokens-specified
+    description: Design tokens (color, typography, spacing) specified
+    verification: rule
+
+  - id: accessibility-checked
+    description: WCAG accessibility requirements checked
+    verification: rule
