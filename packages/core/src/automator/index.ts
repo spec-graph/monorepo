@@ -121,6 +121,7 @@ interface SessionData {
   trace: TraceEntry[];
   previousDiagnoses: Diagnosis[];
   retryCount: number;
+  readyForArchive: boolean;
 }
 
 interface TraceEntry {
@@ -237,6 +238,7 @@ export function startSession(intent: string, projectRoot?: string): Plan {
     trace: [],
     previousDiagnoses: [],
     retryCount: 0,
+    readyForArchive: false,
   };
   saveSession(data, projectRoot);
 
@@ -417,6 +419,7 @@ export function submitResult(
     if (done) {
       data.stage = 'integrate';
       data.state = 'completed';
+      data.readyForArchive = true;
     } else {
       data.stage = STAGES[nextIdx];
     }
