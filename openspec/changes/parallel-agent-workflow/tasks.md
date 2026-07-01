@@ -223,13 +223,17 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
 ## 6. Automator + CLI (M6)
 
-### Task 6.1: Add --mode flag + context sharing
-- **Points**: 2
+### Task 6.1: Add --mode flag + agent-analyzed dependsOn
+- **Points**: 3 (was 2)
 - **Blocked by**: M1-M5
 - **Acceptance criteria**:
   - [ ] `autoRun()` accepts mode: 'serial' | 'parallel' | 'auto'
-  - [ ] Context-sharing module integrated
-  - [ ] Each sub-agent receives shared context
+  - [ ] task-decomposition prompt requires agent to analyze **actual** dependsOn (not template-default)
+  - [ ] Agent reads specs + design + existing code to determine real dependencies
+  - [ ] Agent output includes: task-level dependsOn[] + files[] per task
+  - [ ] dependency-analyzer receives agent-analyzed dependsOn, not template data
+  - [ ] planning module DOMAIN_TEMPLATES provides hints only (optional)
+  - [ ] User can confirm/override agent-analyzed dependencies at plan stage
 
 ### Task 6.2: Add new CLI commands
 - **Points**: 2

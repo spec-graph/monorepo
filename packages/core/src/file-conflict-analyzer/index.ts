@@ -18,7 +18,7 @@ export interface TaskImpact {
 
 export interface ConflictMatrix {
   /** matrix[taskA][taskB] = true means taskA and taskB have conflicts */
-  [taskA: string]: { [taskB: string]: boolean };
+  rows: Record<string, Record<string, boolean>>;
   /** Per-task impact summary */
   impacts: Record<string, TaskImpact>;
 }
@@ -49,13 +49,13 @@ export function analyzeConflicts(taskFiles: Record<string, string[]>): ConflictM
 
   // Build conflict matrix
   for (const taskA of taskIds) {
-    matrix[taskA] = {};
+    matrix.rows[taskA] = {};
     for (const taskB of taskIds) {
       if (taskA === taskB) {
-        matrix[taskA][taskB] = false;
+        matrix.rows[taskA][taskB] = false;
         continue;
       }
-      matrix[taskA][taskB] = hasConflict(taskFiles[taskA] || [], taskFiles[taskB] || []);
+      matrix.rows[taskA][taskB] = hasConflict(taskFiles[taskA] || [], taskFiles[taskB] || []);
     }
   }
 

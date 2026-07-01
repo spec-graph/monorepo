@@ -138,7 +138,54 @@ spec-graph V2 是单 agent 串行执行，可靠性 95%+。V3 要引入并行开
 - 针对性恢复节省资源
 - 降级串行保证可用性
 
+### Decision 6: dependsOn 由 agent 分析得出，非模板预设
+
+**Choice:** task-decomposition 阶段的 agent 必须分析项目实际代码、specs、design，自行判断每个 task 的 dependsOn 和 file impact。planning 模块的 DOMAIN_TEMPLATES 只作为 hint（可选提示），不作为最终决策。
+
+**Rationale:**
+- 模板预设的 dependsOn 是通用模式，无法感知项目实际状态：
+  - 例："auth-endpoints dependsOn: [user-model]" 是通用情况，但如果项目已有 user-model，则 dependsOn 应为 []
+  - 例："login endpoint 还依赖 rate-limiting" 模板不知道这个隐含依赖
+- Agent 读 specs/design/现有代码后能做出更精确的判断
+- dependsOn 的精确定义决定了并行可行性（误判 = 文件冲突）
+- 保守策略：agent 不确定时保留依赖（宁可串行，不要错并行）
+- 用户可最终确认/覆盖 agent 的分析结果
+
+**数据流:**
+```
+planning 模板 (hint)
+    ↓
+agent 分析 specs + design + 现有代码 → task-level dependsOn + files
+    ↓
+用户确认/覆盖
+    ↓
+dependency-analyzer (生成 waves)
+file-conflict-analyzer (生成冲突矩阵)
+```
+
+**对比:**
+| 维度 | 模板预设 dependsOn | agent 分析 dependsOn |
+|------|-------------------|---------------------|
+| 准确性 | 通用模式，不对应实际 | 基于实际代码，精确 |
+| 维护 | 每新领域需新模板 | agent 自动分析 |
+| 成本 | 一次性写模板 | 每次运行时 agent 分析 |
+| 结果 | 可能多错判依赖，少并行 | 更精准，多并行机会 |
+
 ### Decision 4: Sub-agent 架构，宿主 agent 执行
+
+**Choice:** spec-graph 作为 skill 提供方法论及决策算法，宿主 agent 用它的 sub-agent tool 执行并行。
+
+**Rationale:**
+- 所有主流 AI agent 工具（2026）都已支持 sub-agent
+- Sub-agent 是宿主 agent 的原生能力，资源管理由宿主负责
+- 符合 spec-graph 的 DNA："大脑不做手"
+- 跨平台兼容（不绑定特定 agent 工具）
+- 每个 sub-agent 有独立上下文，避免上下文污染
+
+**Alternatives considered:**
+- child_process.spawn → 拒绝：复杂，资源管理麻烦，只能在 CLI 独立运行
+- 进程池 → 拒绝：过度设计，宿主 agent 已有优化
+- Agent SDK 直接调用 → 拒绝：失去宿主工具集成特性
 
 **Choice:** spec-graph 作为 skill 提供方法论，宿主 agent 用它的 sub-agent tool 执行并行。
 
