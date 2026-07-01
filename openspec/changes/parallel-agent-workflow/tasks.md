@@ -298,4 +298,44 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 **Current completion: 42/62 points (68%)**
 
 **Implemented:** M1-M5 core modules, pipeline stages, and skills
+
+---
+
+## OpenSpec Apply Task List
+
+Standard-format task list for `openspec apply` command tracking:
+
+### Decision + Reliability Modules
+- [x] dependency-analyzer (task 1.1): 10 tests pass, Kahn's algorithm with cycle detection
+- [x] file-conflict-analyzer (task 1.2): 15 tests pass, conflict matrix + parseAgentFileList
+- [x] integration-gate (task 2.1): 10 tests pass, three-level gate validation
+- [x] parallel-recovery (task 2.2): 11 tests pass, attribution + targeted recovery
+- [x] context-sharing (task 3.1): 8 tests pass, JSON + Markdown format
+
+### Pipeline Stages
+- [x] requirement-analysis stage (task 4.1): knowledge path + gate.yaml + deep-analysis skill
+- [x] ui-design stage (task 4.2): knowledge path + gate.yaml + ui-design skill
+- [x] user-stories stage (task 4.3): knowledge path + gate.yaml + user-stories skill
+- [x] dev-stories stage (task 4.4): knowledge path + gate.yaml + dev-stories skill
+- [x] task-decomposition update (task 4.5): instruction.md updated for parallel awareness
+
+### Skills
+- [x] spec-graph-parallel (task 5.1): sub-agent dispatch + three-level gate
+- [x] spec-graph-worktree (task 5.2): git worktree creation/cleanup
+- [x] spec-graph-merge (task 5.3): sequential merge queue
+- [x] spec-graph-integration-gate (task 5.4): gate level explanation
+- [x] spec-graph-parallel-recovery (task 5.5): failure attribution strategies
+- [x] spec-graph-sub-agent-methodology (task 5.6): sub-agent dev standards
+- [x] spec-graph-context-sharing (task 5.7): shared context methodology
+- [x] spec-graph-requirement-analysis (task 5.8): auto-depth analysis
+- [x] spec-graph-ui-design (task 5.9): UI design methodology
+
+### Automator + CLI
+- [x] --mode flag + agent-analyzed dependsOn + 12-stage FSM (task 6.1)
+- [ ] CLI commands: waves + integration-status (task 6.2)
+
+### Tests + E2E
+- [ ] Integration tests for parallel workflow (task 7.1)
+- [ ] E2E: parallel workflow on Express starter (task 8.1)
+- [ ] E2E: cross-tool validation (task 8.2)
 **Remaining:** M6 automator/CLI, M7 tests, M8 E2E validation
