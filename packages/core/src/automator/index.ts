@@ -31,6 +31,7 @@ import {
   type Diagnosis as GateDiagnosis,
 } from '../gate-enforcement/index.js';
 import { generatePlan } from '../planning/index.js';
+import { sense } from '../sense/index.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -335,7 +336,7 @@ export function nextPrompt(
       path: path.join(sessionDir(sessionId, projectRoot), a),
       summary: `${a} — completed`,
     })),
-    projectProfile: `Session: ${sessionId}\nIntent: ${data.intent}\nStage: ${stage}`,
+    projectProfile: buildProfileString(sense(projectRoot)),
     outputSpec: { outputPath },
   };
 
@@ -726,6 +727,23 @@ export async function autoRun(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function buildProfileString(profile: ReturnType<typeof sense>): string {
+  const parts: string[] = [];
+  if (profile.language) parts.push(`Language: ${profile.language}`);
+  if (profile.framework) parts.push(`Framework: ${profile.framework}`);
+  if (profile.runtime) parts.push(`Runtime: ${profile.runtime}`);
+  if (profile.testFramework) parts.push(`Test framework: ${profile.testFramework}`);
+  if (profile.buildTool) parts.push(`Build tool: ${profile.buildTool}`);
+  if (profile.brownfield) parts.push('Brownfield project — respect existing patterns');
+  if (profile.existingFeatures.length > 0) {
+    parts.push(`Existing features: ${profile.existingFeatures.join(', ')}`);
+  }
+  if (profile.hints.length > 0) {
+    parts.push(`Hints: ${profile.hints.join('; ')}`);
+  }
+  return parts.join('\n');
+}
 
 function buildTraceEdges(data: SessionData): Record<string, string[]> {
   const edges: Record<string, string[]> = {};
