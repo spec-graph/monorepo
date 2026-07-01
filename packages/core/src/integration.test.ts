@@ -127,9 +127,9 @@ describe('automator integration', () => {
 });
 
 describe('knowledge-base integration', () => {
-  it('loads all 14 skills', () => {
+  it('loads all 17 skills', () => {
     const kb = core.knowledgeBase.loadKnowledgeBase();
-    expect(kb.skills.size).toBe(14);
+    expect(kb.skills.size).toBe(17);
   });
 
   it('each stage has at least one skill', () => {

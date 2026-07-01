@@ -298,7 +298,7 @@ export function nextPrompt(
   // Methodology selection per stage (BMAD skills integrated)
   const methodologies = weaveMethodology(
     stage === 'design'
-      ? ['specs-authoring', 'design-authoring', 'architecture']
+      ? ['specs-authoring', 'design-authoring', 'architecture', 'api-design']
       : stage === 'specify'
         ? ['brainstorming', 'design-thinking', 'requirement-analysis']
         : stage === 'plan'
@@ -306,13 +306,13 @@ export function nextPrompt(
           : stage === 'implement'
             ? ['code-generation', 'story-splitting']
             : stage === 'review'
-              ? ['code-review']
+              ? ['code-review', 'security-hardening']
               : stage === 'test'
                 ? ['test-strategy']
                 : stage === 'accept'
                   ? ['e2e-verification']
                   : stage === 'integrate'
-                    ? ['ci-integration']
+                    ? ['ci-integration', 'retrospective']
                     : [],
     kbp
   );
