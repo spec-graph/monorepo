@@ -600,6 +600,148 @@ export function listSessions(projectRoot?: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Auto-run: fully automatic loop
+// ---------------------------------------------------------------------------
+
+export interface AutoRunOptions {
+  adapterId: string;
+  projectRoot?: string;
+  knowledgeBasePath?: string;
+  /** Max retries per stage before escalating (default: 3) */
+  maxRetriesPerStage?: number;
+  /** Called for each progress update */
+  onProgress?: (event: AutoRunEvent) => void;
+}
+
+export interface AutoRunEvent {
+  type: 'stage-start' | 'agent-called' | 'gate-result' | 'retry' | 'stage-advanced' | 'done' | 'error';
+  stage?: Stage;
+  message: string;
+  data?: unknown;
+}
+
+/**
+ * Run the full automated workflow for a session.
+ *
+ * The loop:
+ *   1. nextPrompt → generate XML prompt
+ *   2. invokeAgent → delegate to external agent (Claude Code, Codex, etc.)
+ *   3. submitResult → evaluate gate, advance state
+ *   4. repeat until done or non-recoverable error
+ *
+ * Returns the final Status of the session.
+ */
+export async function autoRun(
+  sessionId: string,
+  options: AutoRunOptions
+): Promise<Status> {
+  const maxRetries = options.maxRetriesPerStage ?? 3;
+
+  while (true) {
+    const s = status(sessionId, options.projectRoot);
+    options.onProgress?.({
+      type: 'stage-start',
+      stage: s.stage || undefined,
+      message: `Starting stage: ${s.stage}`,
+    });
+
+    if (s.state === 'completed') {
+      options.onProgress?.({ type: 'done', message: 'All stages complete!' });
+      return s;
+    }
+    if (s.state === 'paused') {
+      options.onProgress?.({ type: 'error', message: 'Session is paused. Run spec-graph intervene resume first.' });
+      return s;
+    }
+
+    // 1. Generate prompt
+    const prompt = nextPrompt(sessionId, options.projectRoot, options.knowledgeBasePath);
+
+    // 2. Invoke agent with retry loop
+    let retryCount = 0;
+    let advanced = false;
+
+    while (!advanced && retryCount < maxRetries) {
+      options.onProgress?.({
+        type: 'agent-called',
+        stage: prompt.stage as Stage,
+        message: `Invoking agent (attempt ${retryCount + 1}/${maxRetries})...`,
+      });
+
+      const { invokeAgent, createClaudeCodeAdapter, createCodexAdapter } =
+        await import('../external-coordination/index.js');
+
+      // Ensure adapter is registered
+      try { createClaudeCodeAdapter(); } catch {}
+      try { createCodexAdapter(); } catch {}
+
+      const agentResponse = await invokeAgent(prompt.xml, {
+        adapterId: options.adapterId,
+        timeoutMs: 300_000,
+      });
+
+      options.onProgress?.({
+        type: 'agent-called',
+        stage: prompt.stage as Stage,
+        message: `Agent: ${agentResponse.status} (${agentResponse.durationMs}ms)`,
+      });
+
+      // 3. Submit result
+      const result = submitResult(
+        sessionId,
+        {
+          artifacts: agentResponse.artifacts.length > 0
+            ? agentResponse.artifacts
+            : [{ path: `${prompt.stage}-output`, content: agentResponse.raw }],
+          selfCheck: { acceptanceCriteriaMet: agentResponse.status === 'success' },
+        },
+        options.projectRoot,
+        options.knowledgeBasePath
+      );
+
+      options.onProgress?.({
+        type: 'gate-result',
+        stage: prompt.stage as Stage,
+        message: result.advanced
+          ? `Gate passed → ${result.nextStage || 'done'}`
+          : `Gate failed: ${result.diagnosis?.failedCriteria.map(c => c.id).join(', ') || 'unknown'}`,
+        data: result.diagnosis || null,
+      });
+
+      if (result.advanced) {
+        advanced = true;
+        options.onProgress?.({ type: 'stage-advanced', message: `Advanced to ${result.nextStage}` });
+      } else if (result.diagnosis) {
+        retryCount++;
+        if (retryCount < maxRetries) {
+          options.onProgress?.({
+            type: 'retry',
+            stage: prompt.stage as Stage,
+            message: `Retry ${retryCount}/${maxRetries}`,
+            data: result.diagnosis,
+          });
+        } else {
+          options.onProgress?.({
+            type: 'error',
+            message: `Max retries (${maxRetries}) exhausted. Escalating to user.`,
+            data: result.diagnosis,
+          });
+          return status(sessionId, options.projectRoot);
+        }
+      }
+    }
+
+    if (advanced) {
+      const current = status(sessionId, options.projectRoot);
+      if (current.state === 'completed') {
+        options.onProgress?.({ type: 'done', message: 'All stages complete!' });
+        return current;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
