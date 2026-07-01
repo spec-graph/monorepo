@@ -27,6 +27,7 @@ export * as gateEnforcement from './gate-enforcement/index.js';
 export * as externalCoordination from './external-coordination/index.js';
 export * as knowledgeBase from './knowledge-base/index.js';
 export * as recovery from './recovery/index.js';
+export * as sense from './sense/index.js';
 
 // Re-export key types for convenience
 export type {
