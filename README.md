@@ -1,412 +1,219 @@
 # spec-graph
 
-**Domain-neutral spec-driven workflow orchestration kernel**
+**Strict-gate, prompt-driven, automatic progression development brain**
 
 [![npm version](https://img.shields.io/npm/v/spec-graph.svg)](https://www.npmjs.com/package/spec-graph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
-spec-graph automatically analyzes your project structure and composes customized governance workflows. It provides 38 CLI commands, 17 packs, and an 8-stage FSM with quality gates to ensure specification-driven development.
+spec-graph is a development "brain, not hands." It generates rich layered XML prompts for external AI agents (Claude Code, Codex, Gemini CLI), evaluates their outputs through strict quality gates, and automatically advances through the 8-stage workflow — from intent to integrated PR.
+
+## Philosophy
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  spec-graph is a brain, not hands                             │
+│                                                               │
+│  ✓ Generates rich, layered prompts (MUST / SHOULD / MAY)      │
+│  ✓ Evaluates outputs through strict quality gates             │
+│  ✓ Advances state automatically when gates pass               │
+│  ✗ Never writes code or documents directly                    │
+│  ✗ Never runs tests or CI directly                            │
+│                                                               │
+│  All execution is delegated to external AI agents             │
+│  via pluggable adapters.                                      │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
-- **6 Primitives**: Work-unit, Artifact, Contract, Check, Gate, Trace-edge
 - **8-Stage FSM**: specify → design → plan → implement → review → test → accept → integrate
-- **38 CLI Commands**: Full lifecycle management from init to archive
-- **17 Packs**: Domain packs (API, frontend, backend, embedded, DDD) + intent packs (feature, bugfix, refactor)
-- **22-Dimension Sense**: Automatic project analysis (40+ signals)
-- **Quality Gates**: 7 gates + 23 checks with automatic enforcement
-- **Traceability**: Bidirectional requirement tracking with impact analysis
-- **Brownfield Support**: Deep integration with existing projects
-- **AI Agent Ready**: Dispatch manifests for Claude Code, Codex, and other AI agents
-- **Multi-Agent Collaboration**: Meeting protocols, expert invites, status reports
+- **Strict Quality Gates**: Entry/exit criteria evaluated automatically at every transition
+- **Automatic Progression**: `spec-graph auto` runs the full loop without manual intervention
+- **Rich Layered Prompts**: XML-style prompts with MUST/SHOULD/MAY priority levels
+- **Methodology Library**: Built-in knowledge-base with 8 stages × multiple skills (OpenSpec + BMAD style)
+- **Pluggable Agents**: Claude Code adapter (shipped), Codex adapter (stub), custom adapters welcome
+- **Progressive Recovery**: 4-level retry strategy (lightweight fix → swap methodology → decompose → escalate to user)
+- **Similarity Detection**: Avoids wasting retries on the same failing approach
+- **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml`
 
 ## Installation
 
 ```bash
-# Global install (recommended)
-npm install -g spec-graph
+# From this monorepo (local development)
+npm install
+npm run build
 
-# Or use npx (no install needed)
-npx spec-graph --version
-
-# Or add to your project
-npm install --save-dev spec-graph
+# CLI available as:
+npx tsx packages/cli/src/index.ts --help
 ```
 
 ## Quick Start
 
 ```bash
-# Initialize a new project (one-command bootstrap)
-spec-graph init --quick
+# Start a new workflow (plan → confirm → automatic progression)
+npx tsx packages/cli/src/index.ts plan "Add JWT authentication" --confirm
 
-# Or step by step
-spec-graph init --description "My awesome project"
-spec-graph compose
-spec-graph prime --bootstrap
+# Get the next prompt for the external agent
+npx tsx packages/cli/src/index.ts next-prompt
 
-# Check project health
-spec-graph doctor
+# Submit the agent's result and advance (if gate passes)
+npx tsx packages/cli/src/index.ts advance --result '{"artifacts": [...]}'
 
-# View workflow status
-spec-graph status
+# Check current state
+npx tsx packages/cli/src/index.ts status
 
-# See what to do next
-spec-graph next
-
-# Generate dispatch manifest for AI agents
-spec-graph dispatch --json
-
-# Auto-run checks and transitions
-spec-graph run
-
-# View dashboard
-spec-graph dashboard
-
-# Generate visualization
-spec-graph visualize --format mermaid
+# Full automatic mode (delegates to Claude Code)
+npx tsx packages/cli/src/index.ts auto "Add JWT authentication" --adapter claude-code
 ```
 
-## Core Concepts
-
-### Two-Axis Composition
-
-spec-graph composes workflows using two types of packs:
-
-1. **Domain Packs** - What you're building (API, frontend, backend, embedded, DDD, etc.)
-2. **Intent Packs** - How you're modifying it (feature, bugfix, refactor, migration, etc.)
-
-The system automatically matches packs based on your project profile and change type, then merges their artifacts, checks, gates, and tracks into a unified workflow graph.
-
-### 8-Stage FSM
+## Architecture
 
 ```
-specify → design → plan → implement → review → test → accept → integrate
-   ↑                                                          ↓
-   └──────────────────── feedback loop ────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Layer A: Skills (SKILL.md files for AI agents)              │
+│   packages/skills/                                           │
+│   └─ spec-graph-plan / auto / status / intervene             │
+│                                                              │
+│  Layer B: CLI (command-line tool, human + agent-orchestrated)│
+│   packages/cli/                                              │
+│   └─ 8 commands: plan, auto, status, next-prompt,            │
+│                 advance, validate, intervene, diagnose        │
+│                                                              │
+│  Layer C: core (TypeScript library — the brain)              │
+│   packages/core/                                             │
+│   └─ automator / prompt-construction / planning /            │
+│      gate-enforcement / external-coordination /              │
+│      knowledge-base / recovery                               │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-Each transition is guarded by quality gates that check:
-- Required artifacts are completed
-- Required checks pass
-- Required traces are verified
-- No forbidden invariants are violated
+### Core Modules
 
-### Dispatch Manifest
+| Module | Responsibility |
+|--------|----------------|
+| **automator** | Session lifecycle, state machine loop, `autoRun` |
+| **prompt-construction** | Build layered XML prompts with methodology weaving |
+| **planning** | Intent → capabilities decomposition with topological ordering |
+| **gate-enforcement** | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
+| **external-coordination** | Adapter registry + Claude Code / Codex adapters |
+| **knowledge-base** | Directory tree loader, skill selection, local overrides |
+| **recovery** | 4-level progressive retry strategy with Jaccard similarity |
 
-The dispatch manifest is a structured JSON/YAML that tells AI agents what to do next:
+### Knowledge Base
 
-```json
-{
-  "done": false,
-  "gate_passed": true,
-  "current_stage": "implement",
-  "next_stage": "review",
-  "actions": [
-    {
-      "id": "produce-impl-code",
-      "agent_id": "developer-agent",
-      "template_ref": "packs/foundation.pack/templates/implementation.md",
-      "suggested_doc_path": ".spec-graph/artifacts/implementation/code.md",
-      "document_guidance": "...",
-      "distilled_context": {
-        "relevant_artifacts": [...],
-        "total": 5
-      }
-    }
-  ],
-  "constitution_principles": [...],
-  "active_change": {...},
-  "codebase_summary": "..."
-}
+The knowledge-base is a directory tree shipped with spec-graph:
+
+```
+knowledge/
+├── stages/
+│   ├── specify/
+│   │   ├── gate.yaml                # Entry/exit criteria
+│   │   └── skills/
+│   │       └── requirement-analysis/
+│   │           ├── instruction.md   # Methodology guidance
+│   │           └── templates/
+│   │               └── proposal.md
+│   ├── design/
+│   │   ├── gate.yaml
+│   │   └── skills/
+│   │       ├── specs-authoring/     # OpenSpec-style specs
+│   │       └── design-authoring/    # OpenSpec-style design
+│   ├── plan/
+│   ├── implement/
+│   ├── review/
+│   ├── test/
+│   ├── accept/
+│   └── integrate/
+└── shared/
+    ├── prompt-schema.md             # XML prompt format specification
+    ├── project-context.md           # Project profile template
+    └── verification-format.md       # Agent response format
 ```
 
-## Commands Overview
+Users can override or extend by placing files in `.spec-graph/knowledge/` within their project.
 
-### Workflow Commands
+## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `spec-graph init` | Initialize project (creates .spec-graph/, runs sense, compose, prime) |
-| `spec-graph sense` | Analyze project structure (22 dimensions, 40+ signals) |
-| `spec-graph compose` | Generate workflow graph from profile + packs |
-| `spec-graph prime` | Initialize machine state with graph declarations |
-| `spec-graph status` | Show unified workflow dashboard |
-| `spec-graph next` | Show next required step |
-| `spec-graph dispatch` | Generate agent dispatch manifest |
-| `spec-graph run` | Auto-execute checks and transitions |
-| `spec-graph dashboard` | Rich terminal/HTML/JSON dashboard |
-
-### Quality Commands
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph gate` | Evaluate quality gates |
-| `spec-graph check` | Run validation checks |
-| `spec-graph checklist` | Run 5 mechanical + 5 soft checks |
-| `spec-graph constitution` | Manage governance constitution |
-| `spec-graph doctor` | Diagnose project health |
-| `spec-graph analyze` | Cross-document analysis |
-
-### Traceability Commands
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph trace` | Trace requirements ↔ implementation |
-| `spec-graph impact` | Analyze change impact (ripple tracking) |
-| `spec-graph trace add` | Add trace edges |
-
-### Change Management
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph change create` | Create change descriptor + plan MD |
-| `spec-graph change apply` | Begin change execution |
-| `spec-graph change complete` | Mark change complete |
-| `spec-graph change archive` | Archive change + plan MD |
-| `spec-graph retro` | Generate retrospective |
-| `spec-graph rollback` | Safe rollback to pre-change state |
-| `spec-graph review` | Multi-model review prompts (Claude/Codex/Gemini) |
-
-### Safety & Collaboration
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph safety-net` | Snapshot baseline for rollback |
-| `spec-graph migrate` | Brownfield project migration |
-| `spec-graph scope` | Scope overlap detection |
-| `spec-graph meeting` | Multi-agent meeting protocol |
-| `spec-graph worktree` | Git worktree management |
-| `spec-graph merge-queue` | Atomic merge queue |
-
-### Configuration
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph config` | Manage configuration |
-| `spec-graph permissions` | Manage agent permissions |
-| `spec-graph profile` | View/edit project profile |
-| `spec-graph hooks` | Manage pre/post command hooks |
-
-### Visualization
-
-| Command | Description |
-|---------|-------------|
-| `spec-graph visualize` | Generate DOT/Mermaid/JSON visualization |
-| `spec-graph distill` | Compress artifacts for context injection |
-
-## Usage Examples
-
-### Initialize a New Project
-
-```bash
-# Quick bootstrap (recommended)
-spec-graph init --quick
-
-# Or step by step with options
-spec-graph init \
-  --description "E-commerce API" \
-  --permission-level full-auto \
-  --git-hooks
-```
-
-### Create and Execute a Change
-
-```bash
-# Create a new feature change
-spec-graph change create \
-  --title "Add user authentication" \
-  --type feature \
-  --priority high
-
-# Apply the change
-spec-graph change apply <change-id>
-
-# AI agent fills in the plan MD
-# ... agent work ...
-
-# Complete and archive
-spec-graph change complete <change-id>
-spec-graph change archive <change-id>
-
-# Generate retrospective
-spec-graph retro <change-id>
-```
-
-### Generate Dispatch for AI Agents
-
-```bash
-# Generate dispatch manifest
-spec-graph dispatch --json > manifest.json
-
-# AI agent reads manifest and executes
-# ... agent work ...
-
-# Re-dispatch to continue
-spec-graph dispatch --json
-```
-
-### Visualize Workflow
-
-```bash
-# Generate Mermaid diagram (paste into GitHub/GitLab)
-spec-graph visualize --format mermaid
-
-# Generate Graphviz DOT
-spec-graph visualize --format dot --output graph.dot
-dot -Tpng graph.dot -o workflow.png
-
-# Generate HTML dashboard
-spec-graph dashboard --html --output dashboard.html
-```
-
-### Multi-Model Review
-
-```bash
-# Generate review prompts for Claude + Codex
-spec-graph review --artifact plan/tasks --save
-
-# Focus on specific areas
-spec-graph review --artifact design/arch \
-  --models "claude,codex,gemini" \
-  --focus "security,performance"
-```
-
-## Project Structure
-
-After running `spec-graph init`, your project will have:
-
-```
-your-project/
-├── .spec-graph/
-│   ├── profile.yaml           # 22-dimension project profile
-│   ├── graph.yaml             # Composed workflow graph
-│   ├── machine-state.yaml     # FSM state (current stage, artifacts, checks)
-│   ├── constitution.yaml      # Governance rules
-│   ├── permissions.yaml       # Agent permissions
-│   ├── config.yaml            # Runtime configuration
-│   ├── hooks.yaml             # Pre/post command hooks
-│   ├── pack-overrides.yaml    # Pack customization
-│   ├── changes/               # Active change descriptors
-│   │   └── <title>-<timestamp>.json
-│   │   └── <title>-<timestamp>-plan.md
-│   ├── artifacts/             # Generated documents
-│   │   ├── requirements/
-│   │   ├── design/
-│   │   ├── plan/
-│   │   ├── contract/
-│   │   ├── verification/
-│   │   └── implementation/
-│   ├── traces/                # Traceability edges
-│   ├── retros/                # Retrospectives
-│   ├── distilled/             # Compressed artifacts
-│   ├── reviews/               # Multi-model review prompts
-│   └── archived/              # Historical changes
-├── .claude/
-│   └── settings.json          # Claude Code permissions
-└── .opencode.json             # OpenCode/Codex permissions
-```
-
-## Configuration
-
-### Permission Levels
-
-| Level | Auto-Execute | Use Case |
-|-------|--------------|----------|
-| `full-auto` | Everything | Solo development, trusted environment |
-| `semi-auto` | Checks + transitions | Team development (default) |
-| `manual` | Nothing | Strict control, learning mode |
-
-```bash
-# Set permission level
-spec-graph permissions set --level full-auto
-
-# Sync agent configs
-spec-graph permissions sync --force
-```
-
-### Hooks
-
-Configure pre/post command hooks in `.spec-graph/hooks.yaml`:
-
-```yaml
-version: "1"
-hooks:
-  - command: echo "✓ Dispatch completed"
-    when: post
-    command_name: dispatch
-  
-  - command: npm run lint
-    when: pre
-    command_name: check
-```
+| `plan <intent> [--confirm]` | Create a session + plan. Use `--confirm` to auto-confirm. |
+| `auto <intent>` | Start + confirm + run the full automatic workflow loop. |
+| `status [--json]` | Show current session state (stage, progress, blockers, diagnosis). |
+| `next-prompt` | Get the next XML prompt for the external agent. |
+| `advance --result <json>` | Submit agent result; evaluate gate; advance state if passed. |
+| `validate` | Validate current state. |
+| `intervene <action>` | Manual intervention: `force-advance`, `rollback`, `resume`, `modify-plan`. |
+| `diagnose [--json]` | Show the most recent gate failure diagnosis. |
 
 ## AI Agent Integration
 
-spec-graph is designed to work with AI agents (Claude Code, Codex, etc.):
+spec-graph provides two ways for AI agents to consume it:
 
-1. **Dispatch Manifest**: Tells agents what to do next
-2. **Status Report Protocol**: Agents report back (DONE / BLOCKED / NEEDS_CONTEXT)
-3. **Auto-Loop Protocol**: Continuous dispatch → execute → re-dispatch cycle
-4. **Meeting Protocol**: Multi-agent collaboration
-5. **Constitution Injection**: Governance rules in every dispatch
+### Via Skills (Claude Code)
 
-See [CLAUDE.md](./CLAUDE.md) for the full agent protocol.
+Install the SKILL.md files into Claude Code's skills directory:
 
-## Comparison with Other Tools
+```bash
+# Copy skills
+cp -r packages/skills/spec-graph-* ~/.claude/skills/
+```
 
-| Feature | spec-graph | wdf | BMAD | spec-kit |
-|---------|-----------|-----|------|----------|
-| Domain-neutral | ✅ | ❌ (Web-only) | ❌ | ⚠️ |
-| FSM stages | 8 | 4 | ⚠️ | 4 |
-| Quality gates | 7 | 4 | ⚠️ | ⚠️ |
-| CLI commands | 38 | 25 | 48 skills | 15 |
-| Brownfield support | ✅ (22D) | ⚠️ | ❌ | ❌ |
-| Traceability | ✅ | ✅ | ❌ | ⚠️ |
-| Multi-agent | ✅ | ❌ | ✅ | ❌ |
-| Constitution | ✅ | ✅ | ❌ | ✅ |
+Then in Claude Code:
+- `/spec-graph-plan "<intent>"` — start a planning session
+- `/spec-graph-auto "<intent>"` — start automatic workflow
+- `/spec-graph-status` — check progress
+- `/spec-graph-intervene <action>` — manual intervention
 
-**Score: 88/90** (16/18 dimensions at ⭐⭐⭐⭐⭐)
+### Via CLI (any agent)
 
-See [comparison-scoring.md](./.spec-graph/artifacts/meta/comparison-scoring.md) for details.
+Any agent that can execute shell commands can drive spec-graph:
+
+```bash
+spec-graph plan "..." --confirm --json
+spec-graph next-prompt                    # returns XML prompt
+# ... agent does the work ...
+spec-graph advance --result '{"artifacts": [...]}'
+```
+
+## State Persistence
+
+All state is persisted in `.spec-graph/sessions/<session-id>/`:
+
+```
+.spec-graph/
+└── sessions/
+    └── add-jwt-authentication/
+        ├── state.yaml           # Current stage, state, trace log
+        ├── specify/
+        │   └── proposal.md      # Artifact from specify stage
+        ├── design/
+        │   ├── specs.md         # specs from design stage
+        │   └── design.md        # design from design stage
+        └── ...
+```
 
 ## Development
 
 ```bash
-# Clone and install
-git clone https://github.com/spec-graph/core.git
-cd core
+# Install dependencies
 npm install
 
-# Build
-npm run build
+# Build core
+npm run build --workspace=packages/core
 
-# Run tests (576 tests)
+# Run CLI
+npx tsx packages/cli/src/index.ts --help
+
+# Run tests (when available)
 npm test
-
-# Development mode
-npm run dev -- status
-
-# Lint
-npm run lint:fix
 ```
-
-## Requirements
-
-- Node.js >= 18.0.0
-- Git (for version control features)
-- Optional: Graphviz (for DOT visualization)
 
 ## License
 
 MIT
 
-## Links
-
-- **GitHub**: https://github.com/spec-graph/core
-- **Issues**: https://github.com/spec-graph/core/issues
-- **npm**: https://www.npmjs.com/package/spec-graph
-
 ## Contributing
 
-Contributions welcome! Please read [CLAUDE.md](./CLAUDE.md) for development guidelines.
+Contributions welcome. Please read the architecture in `openspec/changes/spec-graph-v2/` for the full design rationale.
