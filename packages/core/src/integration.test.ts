@@ -88,12 +88,15 @@ describe('automator integration', () => {
     );
 
     expect(result.advanced).toBe(true);
-    expect(result.nextStage).toBe('design');
+    // The next stage depends on STAGES order; after 'specify' comes the next stage
+    const specifyIndex = core.automator.STAGES.indexOf('specify');
+    const expectedNextStage = core.automator.STAGES[specifyIndex + 1];
+    expect(result.nextStage).toBe(expectedNextStage);
     expect(result.done).toBe(false);
 
     const status = core.automator.status(plan.sessionId, projectRoot);
-    expect(status.stage).toBe('design');
-    expect(status.progress.currentStageIndex).toBe(1);
+    expect(status.stage).toBe(expectedNextStage);
+    expect(status.progress.currentStageIndex).toBe(specifyIndex + 1);
   });
 
   it('submitResult produces diagnosis when gate fails', () => {
