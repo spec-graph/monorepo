@@ -294,18 +294,21 @@ const KNOWN_RULES: Record<
   'capabilities-enumerated': (c, ctx) => {
     const content = ctx.artifactContents['proposal'] || '';
     // Capture the Capabilities section content up to the next H2 (## ) that
-    // isn't an H3 (###). Use negative lookahead to skip ### headers.
+    // isn't an H3 (###).
     const capSection = content.match(/## Capabilities([\s\S]*?)(?:\n## [^#]|$)/);
     if (!capSection) {
       return { criterion: c, passed: false, reason: 'Capabilities section not found' };
     }
-    const count = (capSection[1]?.match(/- `[\w-]+`:/g) || []).length;
+    // Accept both backtick (`name`: desc) and bold (**name**: desc) formats
+    const backtickCount = (capSection[1]?.match(/- `[\w-]+`:/g) || []).length;
+    const boldCount = (capSection[1]?.match(/- \*\*[\w-]+\*\*:/g) || []).length;
+    const count = backtickCount + boldCount;
     return {
       criterion: c,
       passed: count >= 1,
       reason: count >= 1
-        ? `Found ${count} capabilities`
-        : 'No capabilities found. Expected at least 1.',
+        ? `Found ${count} capabilities (${backtickCount} backtick, ${boldCount} bold)`
+        : 'No capabilities found. Expected format: - `name`: desc or - **name**: desc',
     };
   },
 

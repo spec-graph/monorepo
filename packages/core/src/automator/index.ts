@@ -30,6 +30,7 @@ import {
   type GateResult,
   type Diagnosis as GateDiagnosis,
 } from '../gate-enforcement/index.js';
+import { generatePlan } from '../planning/index.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -196,9 +197,8 @@ function saveSession(data: SessionData, projectRoot?: string): void {
 /**
  * Start a new session. Creates a session with a draft plan.
  *
- * The plan is a simple decomposition of the intent. For richer planning,
- * the user can call `spec-graph plan <intent>` which will invoke a planning
- * skill via an external agent.
+ * Delegates to the planning module for intent decomposition, capability
+ * ordering, complexity estimation, and risk identification.
  */
 export function startSession(intent: string, projectRoot?: string): Plan {
   const sessionId = intent
@@ -213,39 +213,17 @@ export function startSession(intent: string, projectRoot?: string): Plan {
     return existing.plan;
   }
 
-  // Simple plan: one capability per keyword detected in intent
-  const capabilityHints: Record<string, string[]> = {
-    auth: ['user-auth', 'protected-routes', 'token-management'],
-    api: ['api-endpoints', 'request-validation', 'error-handling'],
-    ui: ['ui-components', 'state-management', 'routing'],
-    db: ['data-model', 'migrations', 'query-layer'],
-    test: ['test-coverage', 'test-automation'],
-  };
-
-  const capabilities: Plan['capabilities'] = [];
-  const seen = new Set<string>();
-  for (const [keyword, caps] of Object.entries(capabilityHints)) {
-    if (intent.toLowerCase().includes(keyword)) {
-      for (const cap of caps) {
-        if (!seen.has(cap)) {
-          capabilities.push({ id: cap, description: '', dependsOn: [] });
-          seen.add(cap);
-        }
-      }
-    }
-  }
-  if (capabilities.length === 0) {
-    capabilities.push({ id: 'implementation', description: intent, dependsOn: [] });
-  }
+  // Delegate to planning module
+  const planOutput = generatePlan({ intent, profile: {} });
 
   const plan: Plan = {
     sessionId,
-    intent,
-    capabilities,
-    order: capabilities.map((c) => c.id),
-    complexity: 'medium',
-    risks: [],
-    openQuestions: [],
+    intent: planOutput.intent,
+    capabilities: planOutput.capabilities,
+    order: planOutput.order,
+    complexity: planOutput.complexity,
+    risks: planOutput.risks,
+    openQuestions: planOutput.openQuestions,
   };
 
   // Save as draft (not confirmed yet)

@@ -30,7 +30,7 @@ exit:
     verification: rule
 
   - id: capabilities-enumerated
-    description: At least one capability is identified in the Capabilities section
+    description: At least one capability is listed in the Capabilities section. Use format '- `kebab-name`: description' or '- **bold-name**: description'
     verification: rule
 
   - id: capabilities-kebab-case
