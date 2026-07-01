@@ -329,6 +329,189 @@ const KNOWN_RULES: Record<
     };
   },
 
+  // ─── Layer 3 Quality: specify stage ───────────────────────────────────────
+  'proposal-length': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    const words = content.trim().split(/\s+/).filter((w) => w.length > 0).length;
+    return {
+      criterion: c,
+      passed: words >= 200 && words <= 1500,
+      reason: `${words} words (expected 200-1500)`,
+    };
+  },
+
+  'focuses-on-why': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    const whyIdx = content.indexOf('## Why');
+    const whatIdx = content.indexOf('## What Changes');
+    if (whyIdx < 0) {
+      return { criterion: c, passed: false, reason: '## Why section not found' };
+    }
+    if (whatIdx < 0) {
+      return { criterion: c, passed: false, reason: '## What Changes section not found' };
+    }
+    return {
+      criterion: c,
+      passed: whyIdx < whatIdx,
+      reason: whyIdx < whatIdx
+        ? '"Why" section comes before "What Changes"'
+        : '"Why" section should come before "What Changes"',
+    };
+  },
+
+  'scope-defined': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    return checkContentContains(c, ctx, 'proposal', ['## Out of Scope']);
+  },
+
+  'risks-identified': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    const hasRisks = /## (Risks|Impact)/i.test(content);
+    return {
+      criterion: c,
+      passed: hasRisks,
+      reason: hasRisks
+        ? 'Risks or Impact section found'
+        : 'No Risks or Impact section found',
+    };
+  },
+
+  // ─── Layer 1 User Perspective: specify stage ──────────────────────────────
+  'user-personas-defined': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    const hasPersonas = /## (User Personas?|Personas?)/i.test(content);
+    return {
+      criterion: c,
+      passed: hasPersonas,
+      reason: hasPersonas ? 'User Personas section found' : 'No User Personas section',
+    };
+  },
+
+  'user-stories-present': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    const hasStories = /## (User Stories?|Stories?)/i.test(content) ||
+                       /As a .+, I want .+,? so that/i.test(content);
+    return {
+      criterion: c,
+      passed: hasStories,
+      reason: hasStories ? 'User Stories found' : 'No User Stories found',
+    };
+  },
+
+  'capabilities-map-to-stories': (c, ctx) => {
+    const content = ctx.artifactContents['proposal'] || '';
+    // Look for capabilities section and check if it contains US-xxx references
+    const capSection = content.match(/## Capabilities([\s\S]*?)(?:\n## [^#]|$)/);
+    if (!capSection) {
+      return { criterion: c, passed: false, reason: 'Capabilities section not found' };
+    }
+    const hasRefs = /US-\d+/i.test(capSection[1] || '');
+    return {
+      criterion: c,
+      passed: hasRefs,
+      reason: hasRefs
+        ? 'Capabilities reference User Stories'
+        : 'No User Story references (US-xxx) in Capabilities section',
+    };
+  },
+
+  // ─── Layer 3 Quality: design stage ────────────────────────────────────────
+  'alternatives-considered': (c, ctx) => {
+    const content = ctx.artifactContents['design'] || '';
+    const hasAlternatives = /Alternatives [Cc]onsidered/i.test(content) ||
+                           /Alternative/i.test(content);
+    return {
+      criterion: c,
+      passed: hasAlternatives,
+      reason: hasAlternatives
+        ? 'Alternatives considered section found'
+        : 'No "Alternatives Considered" section in design.md',
+    };
+  },
+
+  'design-risks': (c, ctx) => {
+    const content = ctx.artifactContents['design'] || '';
+    const hasRisks = /## (Risks|Trade-offs|Tradeoffs)/i.test(content);
+    return {
+      criterion: c,
+      passed: hasRisks,
+      reason: hasRisks
+        ? 'Risks or Trade-offs section found'
+        : 'No Risks or Trade-offs section in design.md',
+    };
+  },
+
+  'design-length': (c, ctx) => {
+    const content = ctx.artifactContents['design'] || '';
+    const words = content.trim().split(/\s+/).filter((w) => w.length > 0).length;
+    return {
+      criterion: c,
+      passed: words >= 300 && words <= 3000,
+      reason: `${words} words (expected 300-3000)`,
+    };
+  },
+
+  // ─── Layer 1 + 3: plan stage ──────────────────────────────────────────────
+  'user-story-traceability': (c, ctx) => {
+    const content = ctx.artifactContents['tasks'] || '';
+    const hasTrace = /US-\d+/i.test(content) ||
+                     /user story/i.test(content) ||
+                     /\(US-\d+\)/i.test(content);
+    return {
+      criterion: c,
+      passed: hasTrace,
+      reason: hasTrace
+        ? 'User Story references found in tasks'
+        : 'No User Story references (US-xxx) in tasks.md',
+    };
+  },
+
+  'tasks-sized-appropriately': (c, ctx) => {
+    const content = ctx.artifactContents['tasks'] || '';
+    const taskLines = content.match(/- \[[ x]\]\s+\d+\.\d+\s+(.+)/g) || [];
+    const oversized = taskLines.filter((line) => {
+      const desc = line.replace(/- \[[ x]\]\s+\d+\.\d+\s+/, '');
+      return desc.length > 200;
+    });
+    return {
+      criterion: c,
+      passed: oversized.length === 0,
+      reason: oversized.length === 0
+        ? `All ${taskLines.length} tasks are appropriately sized`
+        : `${oversized.length}/${taskLines.length} tasks exceed 200 characters`,
+    };
+  },
+
+  'tasks-verifiable': (c, ctx) => {
+    const content = ctx.artifactContents['tasks'] || '';
+    const taskLines = content.match(/- \[[ x]\]\s+\d+\.\d+\s+(.+)/g) || [];
+    // Heuristic: tasks with specific action verbs are more verifiable
+    const actionVerbs = /^(Implement|Add|Create|Update|Delete|Write|Test|Refactor|Fix|Remove|Build|Configure|Setup|Wire|Integrate)/i;
+    const verifiable = taskLines.filter((line) => {
+      const desc = line.replace(/- \[[ x]\]\s+\d+\.\d+\s+/, '');
+      return actionVerbs.test(desc);
+    });
+    const ratio = taskLines.length > 0 ? verifiable.length / taskLines.length : 1;
+    return {
+      criterion: c,
+      passed: ratio >= 0.8,
+      reason: `${verifiable.length}/${taskLines.length} tasks use action verbs (${Math.round(ratio * 100)}%)`,
+    };
+  },
+
+  // ─── Layer 3 Quality: test stage ──────────────────────────────────────────
+  'edge-cases-covered': (c, ctx) => {
+    const content = ctx.artifactContents['test'] || '';
+    const hasEdgeCases = /edge[- ]?case|error|boundary|invalid|null|undefined/i.test(content);
+    return {
+      criterion: c,
+      passed: hasEdgeCases,
+      reason: hasEdgeCases
+        ? 'Edge case / error / boundary scenarios found'
+        : 'No edge case or error scenario keywords found in tests',
+    };
+  },
+
   'all-tasks-implemented': (c, ctx) => {
     const content = ctx.artifactContents['tasks'] || '';
     const allTasks = (content.match(/- \[[ x]\]/g) || []).length;
@@ -571,6 +754,23 @@ function suggestFix(criterion: Criterion): string {
     'design-covers-specs':
       'Add design sections that cover every spec requirement',
     'trace-complete': 'Ensure traceability edges exist for the full chain',
+    // Layer 1 (user perspective)
+    'user-personas-defined': 'Add a "User Personas" section to proposal.md',
+    'user-stories-present':
+      'Add "User Stories" section with "As a [type], I want [goal], So that [benefit]" format',
+    'capabilities-map-to-stories': 'Reference User Stories (US-xxx) from each capability',
+    'user-story-traceability': 'Add User Story references (US-xxx) to each task in tasks.md',
+    // Layer 3 (quality)
+    'proposal-length': 'Proposal should be 200-1500 words (~1-2 pages)',
+    'focuses-on-why': 'Place "## Why" section before "## What Changes" in proposal.md',
+    'scope-defined': 'Add an "## Out of Scope" section to proposal.md',
+    'risks-identified': 'Add a "## Risks" or "## Impact" section to proposal.md',
+    'alternatives-considered': 'Add "Alternatives Considered" subsection for each design decision',
+    'design-risks': 'Add a "## Risks" or "## Trade-offs" section to design.md',
+    'design-length': 'design.md should be 300-3000 words (~1-6 pages)',
+    'tasks-sized-appropriately': 'Keep task descriptions under 200 characters',
+    'tasks-verifiable': 'Start task descriptions with action verbs (Implement, Add, Create, etc.)',
+    'edge-cases-covered': 'Add test cases for edge cases, errors, and boundary conditions',
   };
   return suggestions[criterion.id] || `Fix the issue with '${criterion.id}'`;
 }

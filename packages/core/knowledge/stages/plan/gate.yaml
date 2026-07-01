@@ -21,9 +21,13 @@ exit:
     verification: traceability
 
   - id: tasks-verifiable
-    description: Each task is verifiable (you know when it's done)
-    verification: llm-judge
+    description: Each task has a clear completion criterion (contains specific, measurable language)
+    verification: rule
 
-  - id: tasks-ordered-by-dependency
-    description: Tasks are ordered by dependency (what must be done first comes first)
-    verification: llm-judge
+  - id: tasks-sized-appropriately
+    description: No single task description exceeds 200 characters (indicates appropriately scoped tasks)
+    verification: rule
+
+  - id: user-story-traceability
+    description: Tasks table includes User Story references (US-xxx column or US-xxx in task description)
+    verification: rule

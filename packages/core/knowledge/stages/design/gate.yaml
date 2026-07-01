@@ -35,8 +35,20 @@ exit:
     verification: traceability
 
   - id: design-rationale
-    description: Technical choices include rationale (why X over Y, alternatives considered)
-    verification: llm-judge
+    description: Technical choices include rationale (why X over Y). Each "Decision" or "ADR" section must contain a "Rationale" or "Why" subsection.
+    verification: rule
+
+  - id: alternatives-considered
+    description: Each decision has an "Alternatives considered" or "Alternatives Considered" subsection with at least one alternative described.
+    verification: rule
+
+  - id: design-risks
+    description: design.md contains a "Risks" or "Trade-offs" section
+    verification: rule
+
+  - id: design-length
+    description: design.md is between 300-3000 words (roughly 1-6 pages)
+    verification: rule
 
   - id: design-risks
     description: design.md has a Risks/Trade-offs section

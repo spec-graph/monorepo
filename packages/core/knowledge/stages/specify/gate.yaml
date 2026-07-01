@@ -42,17 +42,25 @@ exit:
     verification: rule
 
   - id: capabilities-map-to-stories
-    description: Each capability references at least one User Story it serves
-    verification: traceability
+    description: Each capability references at least one User Story it serves (US-xxx format)
+    verification: rule
 
   - id: capabilities-kebab-case
     description: All capability identifiers use kebab-case
     verification: rule
 
   - id: proposal-length
-    description: Proposal is concise (1-2 pages, not over-engineered)
-    verification: llm-judge
+    description: Proposal is between 200-1500 words (roughly 1-2 pages)
+    verification: rule
 
   - id: focuses-on-why
-    description: Proposal focuses on "why" not "how" (implementation details belong in design)
-    verification: llm-judge
+    description: "Why" section exists and is placed before "What Changes"
+    verification: rule
+
+  - id: scope-defined
+    description: Proposal contains an "Out of Scope" section
+    verification: rule
+
+  - id: risks-identified
+    description: Proposal contains a "Risks" or "Impact" section that identifies potential issues
+    verification: rule

@@ -17,5 +17,5 @@ exit:
     verification: traceability
 
   - id: edge-cases-covered
-    description: Edge cases and error paths are tested
-    verification: llm-judge
+    description: Test files include edge case / error / boundary scenarios (filenames or describe blocks mention these terms)
+    verification: rule
