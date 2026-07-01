@@ -10,7 +10,7 @@
 
 Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
-**Total estimate:** ~50 story points
+**Total estimate:** ~62 story points
 
 ## Milestones
 
@@ -20,65 +20,65 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 | M2: Reliability modules | 2.1-2.2 | 10 | integration-gate + parallel-recovery |
 | M3: Context sharing | 3.1 | 5 | context-sharing module |
 | M4: Pipeline stages | 4.1-4.5 | 12 | 4 new pipeline stages |
-| M5: Skills | 5.1-5.7 | 14 | 7 new skills |
+| M5: Skills | 5.1-5.9 | 15 | 9 new skills |
 | M6: Automator + CLI | 6.1-6.2 | 4 | --mode support + new commands |
-| M7: Tests | 7.1-7.2 | 3 | Unit + integration tests |
+| M7: Tests | 7.1 | 2 | Unit + integration tests |
 | M8: E2E validation | 8.1-8.2 | 4 | Reliability validation |
 
 ---
 
 ## 1. Decision Modules (M1)
 
-### Task 1.1: Implement dependency-analyzer (conservative)
+### Task 1.1: Implement dependency-analyzer (conservative) ✓ DONE
 - **Points**: 5
 - **Blocked by**: —
 - **Acceptance criteria**:
-  - [ ] `packages/core/src/dependency-analyzer/index.ts` created
-  - [ ] `analyzeTasks(tasks)` returns ExecutionPlan with waves
-  - [ ] Kahn's algorithm for topological sort
-  - [ ] Cycle detection
-  - [ ] **Conservative strategy**: if dependency is uncertain → serial
-  - [ ] JSON output: `{waves: [...], edges: [...], serialTasks: [...]}`
-  - [ ] ≥10 unit tests
+  - [x] `packages/core/src/dependency-analyzer/index.ts` created
+  - [x] `analyzeTasks(tasks)` returns ExecutionPlan with waves
+  - [x] Kahn's algorithm for topological sort
+  - [x] Cycle detection
+  - [x] **Conservative strategy**: if dependency is uncertain → serial
+  - [x] JSON output: `{waves: [...], edges: [...], serialTasks: [...]}`
+  - [x] ≥10 unit tests (10 tests pass)
 
-### Task 1.2: Implement file-conflict-analyzer (conservative)
+### Task 1.2: Implement file-conflict-analyzer (conservative) ✓ DONE
 - **Points**: 5
 - **Blocked by**: —
 - **Acceptance criteria**:
-  - [ ] `packages/core/src/file-conflict-analyzer/index.ts` created
-  - [ ] `analyzeConflicts(tasks)` returns ConflictMatrix
-  - [ ] Static analyzer + agent pre-query
-  - [ ] **Conservative strategy**: if impact uncertain → serial
-  - [ ] Risk classification per task (low/medium/high conflict risk)
-  - [ ] ≥10 unit tests
+  - [x] `packages/core/src/file-conflict-analyzer/index.ts` created
+  - [x] `analyzeConflicts(tasks)` returns ConflictMatrix
+  - [x] Static analyzer + agent pre-query
+  - [x] **Conservative strategy**: if impact uncertain → serial
+  - [x] Risk classification per task (low/medium/high conflict risk)
+  - [x] ≥10 unit tests (15 tests pass)
 
 ---
 
 ## 2. Reliability Modules (M2)
 
-### Task 2.1: Implement integration-gate
+### Task 2.1: Implement integration-gate ✓ DONE
 - **Points**: 5
 - **Blocked by**: 1.1, 1.2
 - **Acceptance criteria**:
-  - [ ] `packages/core/src/integration-gate/index.ts` created
-  - [ ] Three-level gate: individualGate, mergeGate, systemGate
-  - [ ] Individual gate uses same criteria as serial gate
-  - [ ] Merge gate analyzes conflicts
-  - [ ] System gate checks style consistency + integration tests
-  - [ ] Returns structured result: `{level: 1|2|3, passed: boolean, failures: [...]}`
-  - [ ] ≥10 unit tests
+  - [x] `packages/core/src/integration-gate/index.ts` created
+  - [x] Three-level gate: individualGate, mergeGate, systemGate
+  - [x] Individual gate uses same criteria as serial gate
+  - [x] Merge gate analyzes conflicts
+  - [x] System gate checks style consistency + integration tests
+  - [x] Returns structured result: `{level: 1|2|3, passed: boolean, failures: [...]}`
+  - [x] ≥10 unit tests (10 tests pass)
 
-### Task 2.2: Implement parallel-recovery
+### Task 2.2: Implement parallel-recovery ✓ DONE
 - **Points**: 5
 - **Blocked by**: 2.1
 - **Acceptance criteria**:
-  - [ ] `packages/core/src/parallel-recovery/index.ts` created
-  - [ ] `analyzeFailure(failureInfo)` returns attribution result
-  - [ ] Attribution: identify which sub-agent caused failure
-  - [ ] Targeted recovery: retry specific sub-agent
-  - [ ] Auto-degrade to serial if attribution fails
-  - [ ] Failure logging with full trace
-  - [ ] ≥10 unit tests
+  - [x] `packages/core/src/parallel-recovery/index.ts` created
+  - [x] `analyzeFailure(failureInfo)` returns attribution result
+  - [x] Attribution: identify which sub-agent caused failure
+  - [x] Targeted recovery: retry specific sub-agent
+  - [x] Auto-degrade to serial if attribution fails
+  - [x] Failure logging with full trace
+  - [x] ≥10 unit tests (11 tests pass)
 
 ---
 
@@ -157,7 +157,7 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
   - [ ] Mentions Claude Code Agent tool, Codex Subagents, etc.
 
 ### Task 5.2: Create spec-graph-worktree skill
-- **Points**: 2
+- **Points**: 1
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
   - [ ] Covers worktree creation/cleanup
@@ -165,7 +165,7 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
   - [ ] Cleanup options
 
 ### Task 5.3: Create spec-graph-merge skill
-- **Points**: 2
+- **Points**: 1
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
   - [ ] Sequential merge to main
@@ -188,14 +188,31 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
   - [ ] Targeted recovery strategies
   - [ ] Degradation to serial
 
-### Task 5.6: Create spec-graph-requirement-analysis skill
+### Task 5.6: Create spec-graph-sub-agent-methodology skill
+- **Points**: 2
+- **Blocked by**: 5.1
+- **Acceptance criteria**:
+  - [ ] Defines sub-agent execution standards
+  - [ ] Code + tests + lint + typecheck + build + self-review
+  - [ ] Functionality verification against specs
+  - [ ] Naming/style conventions
+
+### Task 5.7: Create spec-graph-context-sharing skill
+- **Points**: 1
+- **Blocked by**: 5.1
+- **Acceptance criteria**:
+  - [ ] Explains what context is shared across sub-agents
+  - [ ] Project overview + other agents' plans (read-only)
+  - [ ] Shared methodology guidance
+
+### Task 5.8: Create spec-graph-requirement-analysis skill
 - **Points**: 1
 - **Blocked by**: 4.1
 - **Acceptance criteria**:
-  - [ ] Auto-depth selection
+  - [ ] Auto-depth selection (light/medium/heavy)
   - [ ] 3 depth templates
 
-### Task 5.7: Create spec-graph-ui-design skill
+### Task 5.9: Create spec-graph-ui-design skill
 - **Points**: 2
 - **Blocked by**: 4.2
 - **Acceptance criteria**:
@@ -226,24 +243,15 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
 ## 7. Tests (M7)
 
-### Task 7.1: Unit tests for all new modules
+### Task 7.1: Integration tests for parallel workflow
 - **Points**: 2
 - **Blocked by**: M1-M5
-- **Acceptance criteria**:
-  - [ ] dependency-analyzer: 10+ tests
-  - [ ] file-conflict-analyzer: 10+ tests
-  - [ ] integration-gate: 10+ tests
-  - [ ] parallel-recovery: 10+ tests
-  - [ ] context-sharing: 5+ tests
-
-### Task 7.2: Integration tests for parallel workflow
-- **Points**: 1
-- **Blocked by**: 7.1
 - **Acceptance criteria**:
   - [ ] Parallel execution with 3-level gate
   - [ ] Failure recovery scenarios
   - [ ] Auto-degradation to serial
   - [ ] Context sharing across sub-agents
+  - [ ] Sub-agent methodology enforcement
 
 ---
 
@@ -277,9 +285,9 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 | 2. Reliability Modules | 2.1-2.2 | 10 | ✗ |
 | 3. Context Sharing | 3.1 | 5 | ✗ |
 | 4. Pipeline Stages | 4.1-4.5 | 12 | ✗ |
-| 5. Skills | 5.1-5.7 | 14 | ✗ |
+| 5. Skills | 5.1-5.9 | 15 | ✗ |
 | 6. Automator + CLI | 6.1-6.2 | 4 | ✗ |
-| 7. Tests | 7.1-7.2 | 3 | ✗ |
+| 7. Tests | 7.1 | 2 | ✗ |
 | 8. E2E Validation | 8.1-8.2 | 4 | ✗ |
 | **TOTAL** | | **62** | |
 

@@ -62,12 +62,14 @@ spec-graph V2 是单 agent 串行执行，可靠性 95%+。V3 要引入并行开
 │                                                                  │
 │   Layer A: Skills (方法论)                                        │
 │   ──────────────────────────                                     │
-│   原有 6 + 新增 9 = 15 skills:                                    │
+│   原有 6 + 新增 10 = 16 skills:                                   │
 │   • spec-graph-parallel (并行方法论 + 三层门禁)                   │
 │   • spec-graph-worktree (worktree 方法论)                         │
 │   • spec-graph-merge (merge 方法论)                               │
 │   • spec-graph-integration-gate (整合门禁方法论)                 │
 │   • spec-graph-parallel-recovery (并行恢复方法论)                 │
+│   • spec-graph-sub-agent-methodology (sub-agent 执行标准)         │
+│   • spec-graph-context-sharing (上下文共享方法论)                 │
 │   • spec-graph-requirement-analysis (自适应深度)                 │
 │   • spec-graph-ui-design                                          │
 │   • spec-graph-user-stories                                        │
@@ -140,7 +142,24 @@ spec-graph V2 是单 agent 串行执行，可靠性 95%+。V3 要引入并行开
 
 **Choice:** spec-graph 作为 skill 提供方法论，宿主 agent 用它的 sub-agent tool 执行并行。
 
-**Rationale:** 与之前设计一致（见 sub-agent 架构决策）。
+**Rationale:**
+- 所有主流 AI agent 工具（2026）都已支持 sub-agent：
+  - Claude Code: Agent tool（并行多个子 agent）
+  - OpenAI Codex CLI: Subagents（独立 context window）
+  - Trae: Sub-agent（垂直拓扑）
+  - Cursor: Parallel agents（最多 8 个并行）
+  - Windsurf: Cascade agent
+  - Qoder: Experts mode
+- Sub-agent 是宿主 agent 的原生能力，资源管理由宿主负责
+- 符合 spec-graph 的 DNA："大脑不做手"
+- 跨平台兼容（不绑定特定 agent 工具）
+- 每个 sub-agent 有独立上下文，避免上下文污染
+- 失败归因精准（每个 sub-agent 独立）
+
+**Alternatives considered:**
+- child_process.spawn → 拒绝：复杂，资源管理麻烦，只能在 CLI 独立运行
+- 进程池 → 拒绝：过度设计，宿主 agent 已有优化
+- Agent SDK 直接调用 → 拒绝：失去宿主工具集成特性
 
 ### Decision 5: 上下文共享
 

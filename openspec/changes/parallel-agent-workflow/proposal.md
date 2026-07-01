@@ -192,6 +192,8 @@ spec-graph V2 是单 agent 串行执行，可靠性高但速度慢。2026 年所
 
 - `parallel-recovery`: 精准归因 + 针对性恢复。失败时分析源头，针对性重试或降级串行。
 
+- `context-sharing`: 跨 sub-agent 的上下文共享机制。每个 sub-agent 接收项目总览 + 其他 sub-agent 计划 + 共享方法论，解决上下文分散问题。
+
 ### Modified Capabilities
 
 - `automator`: 增加 stage execution mode (serial/parallel/auto)。并行模式下使用 integration gate。
