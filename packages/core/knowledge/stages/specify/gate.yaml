@@ -33,6 +33,18 @@ exit:
     description: At least one capability is listed in the Capabilities section. Use format '- `kebab-name`: description' or '- **bold-name**: description'
     verification: rule
 
+  - id: user-personas-defined
+    description: Proposal contains at least one User Persona with characteristics and goals
+    verification: rule
+
+  - id: user-stories-present
+    description: Proposal contains at least one User Story in 'As a [type], I want [goal], So that [benefit]' format. Skip for pure-refactoring changes.
+    verification: rule
+
+  - id: capabilities-map-to-stories
+    description: Each capability references at least one User Story it serves
+    verification: traceability
+
   - id: capabilities-kebab-case
     description: All capability identifiers use kebab-case
     verification: rule

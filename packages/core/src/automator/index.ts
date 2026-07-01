@@ -293,15 +293,16 @@ export function nextPrompt(
   const gateConfig = loadGateConfig(stage, kbp);
 
   // Build PromptContext
+  // Methodology selection per stage (BMAD skills integrated)
   const methodologies = weaveMethodology(
     stage === 'design'
-      ? ['specs-authoring', 'design-authoring']
+      ? ['specs-authoring', 'design-authoring', 'architecture']
       : stage === 'specify'
-        ? ['requirement-analysis']
+        ? ['brainstorming', 'design-thinking', 'requirement-analysis']
         : stage === 'plan'
-          ? ['task-decomposition']
+          ? ['prd', 'task-decomposition']
           : stage === 'implement'
-            ? ['code-generation']
+            ? ['code-generation', 'story-splitting']
             : stage === 'review'
               ? ['code-review']
               : stage === 'test'
