@@ -131,6 +131,10 @@ function parseGateYaml(yaml: string): GateConfig {
     const topLevel = line.match(/^(\w+):\s*$/);
     if (topLevel) {
       if (topLevel[1] === 'entry' || topLevel[1] === 'exit') {
+        // Push the previous section's last criterion before switching
+        if (section && currentCriterion && currentCriterion.id) {
+          config[section].push(currentCriterion as GateCriterion);
+        }
         section = topLevel[1];
         currentCriterion = null;
       }
