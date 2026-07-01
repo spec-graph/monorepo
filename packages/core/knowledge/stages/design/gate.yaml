@@ -1,0 +1,43 @@
+entry:
+  - id: proposal-passed-gate
+    description: The specify stage has passed its exit gate (proposal is complete and valid)
+    verification: rule
+
+exit:
+  # Specs exit criteria
+  - id: specs-one-per-capability
+    description: One spec file exists for each capability listed in the proposal
+    verification: traceability
+
+  - id: specs-requirement-format
+    description: Each requirement uses "### Requirement: <name>" format
+    verification: rule
+
+  - id: specs-shall-must
+    description: Requirements use SHALL/MUST for normative statements (not should/may)
+    verification: rule
+
+  - id: specs-scenarios-present
+    description: Every requirement has at least one #### Scenario with WHEN/THEN
+    verification: rule
+
+  - id: specs-delta-operations
+    description: Delta specs use proper ADDED/MODIFIED/REMOVED/RENAMED headers
+    verification: rule
+
+  # Design exit criteria
+  - id: design-exists-if-needed
+    description: design.md exists if change is cross-cutting, has new dependencies, or has security/perf/migration complexity
+    verification: rule
+
+  - id: design-covers-specs
+    description: design.md references and covers every spec requirement (traceability)
+    verification: traceability
+
+  - id: design-rationale
+    description: Technical choices include rationale (why X over Y, alternatives considered)
+    verification: llm-judge
+
+  - id: design-risks
+    description: design.md has a Risks/Trade-offs section
+    verification: rule

@@ -1,0 +1,29 @@
+entry:
+  - id: plan-passed-gate
+    description: The plan stage has passed its exit gate (tasks.md is complete)
+    verification: rule
+
+exit:
+  - id: all-tasks-implemented
+    description: Every task in tasks.md is marked complete (- [x])
+    verification: rule
+
+  - id: lint-passes
+    description: Project linter passes with no errors
+    verification: rule
+
+  - id: typecheck-passes
+    description: Project type-checker passes with no errors (for typed languages)
+    verification: rule
+
+  - id: build-passes
+    description: Project builds successfully
+    verification: rule
+
+  - id: existing-tests-pass
+    description: All pre-existing tests still pass (no regressions)
+    verification: rule
+
+  - id: no-broken-contracts
+    description: No existing APIs/interfaces were broken without a migration path
+    verification: traceability

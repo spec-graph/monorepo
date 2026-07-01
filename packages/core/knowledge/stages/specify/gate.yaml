@@ -1,0 +1,46 @@
+# Gate configuration for the specify stage.
+#
+# Entry criteria: what must be true BEFORE entering specify.
+# Exit criteria: what must be true BEFORE leaving specify (→ moving to design).
+#
+# Each criterion has:
+#   - id: unique identifier
+#   - description: human-readable description
+#   - verification: how to check this criterion
+#       - rule: deterministic check (file exists, structure matches, etc.)
+#       - traceability: check relationship between artifacts
+#       - llm-judge: use LLM with rubric
+#       - downstream-executability: can the next stage be executed based on this?
+#       - human: requires human confirmation
+#
+# Entry criteria
+entry:
+  - id: plan-confirmed
+    description: A plan has been confirmed by the user (plan.yaml exists and is marked confirmed)
+    verification: rule
+
+# Exit criteria
+exit:
+  - id: proposal-exists
+    description: proposal.md has been created
+    verification: rule
+
+  - id: proposal-structure
+    description: proposal.md contains the required sections (Why / What Changes / Capabilities / Impact)
+    verification: rule
+
+  - id: capabilities-enumerated
+    description: At least one capability is identified in the Capabilities section
+    verification: rule
+
+  - id: capabilities-kebab-case
+    description: All capability identifiers use kebab-case
+    verification: rule
+
+  - id: proposal-length
+    description: Proposal is concise (1-2 pages, not over-engineered)
+    verification: llm-judge
+
+  - id: focuses-on-why
+    description: Proposal focuses on "why" not "how" (implementation details belong in design)
+    verification: llm-judge

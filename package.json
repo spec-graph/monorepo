@@ -1,26 +1,30 @@
 {
   "name": "spec-graph-monorepo",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "spec-graph monorepo: core kernel, server, and web UI",
+  "description": "spec-graph v2: strict-gate, prompt-driven, automatic progression development brain. Monorepo with core (engine), cli (human/agent interface), and skills (SKILL.md collection for AI agents).",
   "workspaces": [
-    "packages/*"
+    "packages/core",
+    "packages/cli",
+    "packages/skills"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspace=packages/core",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "dev:core": "npm run dev --workspace=packages/core",
-    "dev:server": "npm run dev --workspace=packages/server",
-    "dev:ui": "npm run dev --workspace=packages/ui",
-    "publish:core": "npm publish --workspace=packages/core",
-    "publish:server": "npm publish --workspace=packages/server",
-    "publish:ui": "npm publish --workspace=packages/ui"
+    "dev:cli": "npm run dev --workspace=packages/cli",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present"
   },
   "keywords": [
     "specification",
     "workflow",
     "orchestration",
-    "monorepo"
+    "ai-agent",
+    "automation",
+    "quality-gates",
+    "claude-code",
+    "codex"
   ],
   "author": "spec-graph team",
   "license": "MIT",
@@ -30,8 +34,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "@spec-graph/core": "^1.0.0"
   }
 }

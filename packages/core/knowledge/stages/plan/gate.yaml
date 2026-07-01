@@ -1,0 +1,29 @@
+entry:
+  - id: design-passed-gate
+    description: The design stage has passed its exit gate (specs + design.md are complete)
+    verification: rule
+
+exit:
+  - id: tasks-exists
+    description: tasks.md has been created
+    verification: rule
+
+  - id: tasks-checkbox-format
+    description: All tasks use checkbox format (- [ ] X.Y Task description)
+    verification: rule
+
+  - id: tasks-grouped
+    description: Tasks are grouped under ## numbered headings
+    verification: rule
+
+  - id: tasks-cover-design
+    description: Tasks cover every component/decision in design.md (traceability)
+    verification: traceability
+
+  - id: tasks-verifiable
+    description: Each task is verifiable (you know when it's done)
+    verification: llm-judge
+
+  - id: tasks-ordered-by-dependency
+    description: Tasks are ordered by dependency (what must be done first comes first)
+    verification: llm-judge

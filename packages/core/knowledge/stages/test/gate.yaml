@@ -1,0 +1,21 @@
+entry:
+  - id: review-passed-gate
+    description: Code review passed (all findings resolved or accepted)
+    verification: rule
+
+exit:
+  - id: all-tests-pass
+    description: All tests pass (unit, integration, e2e)
+    verification: rule
+
+  - id: coverage-met
+    description: Code coverage meets project threshold (if defined)
+    verification: rule
+
+  - id: new-code-tested
+    description: All new code has corresponding tests
+    verification: traceability
+
+  - id: edge-cases-covered
+    description: Edge cases and error paths are tested
+    verification: llm-judge
