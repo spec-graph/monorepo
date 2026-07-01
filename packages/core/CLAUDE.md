@@ -24,6 +24,47 @@
 
 **停止条件**: manifest.done === true / gate blocked 无法自动修复 / sub-agent BLOCKED
 
+## ⛔ 开发纪律：没有规划不得开发
+
+用户输入后，Agent 必须执行以下决策流程，不得跳过：
+
+```
+用户输入
+    ↓
+Agent 分析：这是新功能/变更吗？
+    ├─ 否 → 直接回答 / 查询状态
+    └─ 是 → [必须] 检查 plan 状态
+              ├─ plan 未完成 → [必须] 先完成 plan
+              │     1. spec-graph dispatch --json
+              │     2. 按 manifest 生产文档（PRD → 设计 → Epics → Stories）
+              │     3. 循环直到 gate 通过
+              │     4. [禁止] 在 plan 完成前开始写代码
+              └─ plan 已完成 → 进入开发
+                    spec-graph dev → coding/reviewing/testing
+```
+
+**纪律要点**：
+
+1. **禁止跳过规划** — Plan 未完成时，`spec-graph dev` 会自动拒绝执行
+2. **Agent 自动决策** — 不需要用户说"先规划"，Agent 自己判断并执行
+3. **PM 优先于 Architect 优先于 Developer** — 按依赖顺序生产文档
+4. **Gate 是硬门禁** — 不过 gate 不能进入下一阶段
+
+## 自动决策：是否开启 Plan 模式
+
+Agent 分析用户输入后，自动决定是否需要 plan：
+
+| 用户输入 | Agent 决策 | 说明 |
+|---------|----------|------|
+| "做一个登录功能" | ✅ 需要 plan | 新功能，需要 PRD + 设计 + 任务拆分 |
+| "修复这个 bug" | ⚠️ 简化 plan | 需要 root-cause 分析，但可跳过完整 PRD |
+| "项目状态如何" | ❌ 不需要 | 直接查 status，不进入 plan |
+| "这个函数是什么意思" | ❌ 不需要 | 直接回答，不进入 plan |
+| "重构用户模块" | ✅ 需要 plan | 需要设计 + 影响分析 + 测试策略 |
+
+**判断标准**：涉及需求变化、新增功能、架构变更 → 必须 plan。纯查询/澄清 → 不需要。
+
+
 ## ⚠️ Auto-Loop 纪律
 
 每完成一个 action 后立即重新 dispatch, 不要中途停下。只有 hit 停止条件才询问用户。
