@@ -1,73 +1,118 @@
 ## ADDED Requirements
 
-### Requirement: Execution delegation to external agents
+### Requirement: Agent adapter interface
 
-The external-coordination capability SHALL delegate all execution (code writing, document writing, test execution, verification commands) to external AI agents. spec-graph SHALL NOT directly execute code, write to project files, or run tests itself. All execution SHALL happen via structured prompts sent to external agents.
+The external-coordination capability SHALL define a standard `AgentAdapter` interface:
+- `id: string` — unique adapter identifier (e.g., 'claude-code', 'codex')
+- `invoke(prompt: string, config: AgentConfig): Promise<AgentResponse>` — invoke the agent with a prompt
+- `parseResponse(raw: string): Promise<StructuredResult>` — parse the raw agent output into structured artifacts + self-check
 
-#### Scenario: Code implementation via external agent
-- **WHEN** the implement stage needs to write code for a task
-- **THEN** external-coordination SHALL generate a structured prompt describing the task, hand it to an external agent (e.g., Claude Code), and receive the resulting code changes back
+All adapters SHALL implement this interface.
 
-#### Scenario: spec-graph never writes code directly
-- **WHEN** spec-graph is running
-- **THEN** spec-graph's own process SHALL NOT write to the project's source files; all source file writes SHALL come from the external agent
+#### Scenario: Adapter invocation
+- **WHEN** an agent is invoked via `invokeAgent`
+- **THEN** the adapter's `invoke` method SHALL be called with the prompt and config, returning an `AgentResponse`
 
-### Requirement: Structured verification prompts
+#### Scenario: Custom adapter registration
+- **WHEN** a user registers a custom adapter via `registerAdapter`
+- **THEN** the adapter SHALL be added to the registry and available for subsequent `invokeAgent` calls
 
-For verification tasks (end-to-end testing, security scans, performance checks), external-coordination SHALL generate a structured verification prompt that lists the scenarios to verify, the expected outcomes, and the format for reporting results. The external agent SHALL execute the verification and return results in the specified structured format.
+### Requirement: Claude Code adapter
 
-#### Scenario: E2E verification prompt
-- **WHEN** the accept stage needs to verify end-to-end behavior
-- **THEN** external-coordination SHALL generate a prompt listing each scenario (e.g., "POST /login with valid credentials"), expected outcome (e.g., "200 + JWT token"), and request the agent to return a structured verification report
+The external-coordination capability SHALL ship with a `ClaudeCodeAdapter` that:
+- Invokes the `claude` CLI via `child_process.spawn`
+- Passes the prompt via `-p "<prompt>" --output-format text`
+- Searches for `claude` on PATH, including common global npm paths (`~/.npm-global/bin`, `/usr/local/bin`, `/usr/bin`)
+- Returns `agent-not-found` status if `claude` is not installed, with an actionable error message
 
-#### Scenario: Agent returns structured results
-- **WHEN** the external agent executes the verification
-- **THEN** the agent's response SHALL be a structured report with per-scenario results (status code, response body, pass/fail)
+#### Scenario: Claude is installed
+- **WHEN** `claude` is found on PATH
+- **THEN** the adapter SHALL spawn the process, capture stdout and stderr, and return an `AgentResponse` with `status: 'success'` if exit code is 0 and stdout is non-empty
 
-### Requirement: Structured result validation
+#### Scenario: Claude not installed
+- **WHEN** `claude` is not found on PATH
+- **THEN** the adapter SHALL return `status: 'agent-not-found'` with an error message including the install command: "npm install -g @anthropic-ai/claude-code"
 
-The external-coordination capability SHALL validate the structured results returned by external agents against the acceptance criteria defined in the gate-enforcement configuration. Validation SHALL be deterministic and machine-checkable.
+#### Scenario: Claude invocation fails
+- **WHEN** `claude` exits with a non-zero exit code
+- **THEN** the adapter SHALL return `status: 'failure'` with the stderr content in the error field
 
-#### Scenario: All scenarios pass
-- **WHEN** all scenarios in the verification report match their expected outcomes
-- **THEN** external-coordination SHALL report gate pass to the automator
+#### Scenario: Claude produces no output
+- **WHEN** `claude` exits with code 0 but stdout is empty
+- **THEN** the adapter SHALL return `status: 'partial'` with a warning message
 
-#### Scenario: One scenario fails
-- **WHEN** one scenario in the verification report does not match its expected outcome
-- **THEN** external-coordination SHALL report gate failure with the specific failing scenario, and the gate-enforcement capability SHALL generate a targeted diagnosis
+### Requirement: Timeout handling
 
-### Requirement: Multi-agent support
+The external-coordination capability SHALL enforce a timeout on agent invocations. Default timeout SHALL be 300,000 ms (5 minutes). The timeout SHALL be configurable per invocation.
 
-The external-coordination capability SHALL support multiple external agent types (Claude Code, Codex CLI, Gemini CLI, etc.) through configurable agent adapters. Each adapter SHALL translate spec-graph's standardized prompt into the agent's native invocation format, and translate the agent's response back into spec-graph's standardized format.
+#### Scenario: Agent responds within timeout
+- **WHEN** the agent responds within the configured timeout
+- **THEN** the adapter SHALL return the response normally
 
-#### Scenario: Switching agents between stages
-- **WHEN** the user configures Claude Code for implement stage and Codex for review stage
-- **THEN** external-coordination SHALL invoke Claude Code for implement tasks and Codex for review tasks, using the appropriate adapter for each
+#### Scenario: Agent times out
+- **WHEN** the agent does not respond within the timeout
+- **THEN** the adapter SHALL abort the invocation and return `status: 'timeout'` with a descriptive error
 
-#### Scenario: New agent adapter added
-- **WHEN** a maintainer adds a new agent adapter for a new AI agent
-- **THEN** external-coordination SHALL be able to invoke the new agent without modifying its core logic
+#### Scenario: Custom timeout
+- **WHEN** the config specifies `timeoutMs: 60000`
+- **THEN** the timeout SHALL be 60 seconds for that invocation only
 
-### Requirement: Prompt result traceability
+### Requirement: Artifact extraction from agent output
 
-For every prompt sent to an external agent, external-coordination SHALL persist: the prompt content, the agent invoked, the agent's response, the timestamp, and the resulting gate evaluation. This trace SHALL be queryable for diagnostics and retrospectives.
+The external-coordination capability SHALL attempt to extract structured artifacts from the agent's raw output using two patterns:
+1. **Fenced code blocks with file path**: `` ```path/to/file\n<content>\n``` ``
+2. **Write markers**: Lines matching `(Writing|Created|Saved):\s*<path>`
 
-#### Scenario: Querying agent interaction history
-- **WHEN** the user or a diagnostic tool queries the trace
-- **THEN** external-coordination SHALL return the full history of prompt-response interactions for the current change
+#### Scenario: Fenced code block detected
+- **WHEN** the agent output contains ` ```path/to/file.md\n<content>\n``` `
+- **THEN** the adapter SHALL extract `{ path: 'path/to/file.md', content: '<content>' }` into the artifacts array
 
-#### Scenario: Failed agent response analyzed
-- **WHEN** an agent's response fails gate validation
-- **THEN** the diagnosis engine SHALL have access to the exact prompt and response that failed, enabling targeted retry
+#### Scenario: Write marker detected
+- **WHEN** the agent output contains `Writing: path/to/file.md`
+- **THEN** the adapter SHALL extract a path marker `{ path: 'path/to/file.md', content: '' }` into the artifacts array (content may be in the next line of output)
 
-### Requirement: Graceful agent failure handling
+#### Scenario: No extraction patterns match
+- **WHEN** the agent output does not contain any recognized patterns
+- **THEN** the adapter SHALL return an empty artifacts array. The caller (automator) SHALL fall back to using the raw output as a single artifact
 
-If an external agent fails to respond, returns malformed output, or times out, external-coordination SHALL treat this as a gate failure and feed it into the gate-enforcement retry strategy. The capability SHALL NOT crash or hang.
+### Requirement: Response parsing
 
-#### Scenario: Agent timeout
-- **WHEN** an external agent does not respond within the configured timeout
-- **THEN** external-coordination SHALL record a timeout, feed it to gate-enforcement as a failure, and trigger the retry strategy
+The external-coordination capability SHALL provide a `parseResponse` method that converts raw agent output into a `StructuredResult`:
+- `artifacts`: extracted file paths + content
+- `selfCheck`: parsed from agent's self-check section (if present), with `acceptanceCriteriaMet: boolean` and optional `notes`
 
-#### Scenario: Malformed agent response
-- **WHEN** an external agent returns output that cannot be parsed into the expected structured format
-- **THEN** external-coordination SHALL record a parse error, feed it to gate-enforcement, and retry with a more explicit format instruction in the next prompt
+#### Scenario: Self-check section present
+- **WHEN** the agent output contains a section matching `(Self[- ]?Check|Acceptance)` that includes words like "met", "pass", or "all criteria"
+- **THEN** `selfCheck.acceptanceCriteriaMet` SHALL be true
+
+#### Scenario: No self-check section
+- **WHEN** the agent output does not contain a self-check section
+- **THEN** `selfCheck` SHALL be undefined
+
+### Requirement: Agent registry
+
+The external-coordination capability SHALL maintain an in-memory registry of adapters, keyed by adapter id. Multiple adapters can be registered concurrently.
+
+#### Scenario: Registry starts with built-in adapters
+- **WHEN** the `createClaudeCodeAdapter()` and `createCodexAdapter()` functions are called
+- **THEN** the registry SHALL contain adapters with ids `claude-code` and `codex`
+
+#### Scenario: Registry empty initially
+- **WHEN** no adapters have been explicitly created
+- **THEN** `listAdapters()` SHALL return an empty array
+
+#### Scenario: Unknown adapter invocation
+- **WHEN** `invokeAgent` is called with an `adapterId` not in the registry
+- **THEN** the response SHALL be `status: 'failure'` with an error listing the available adapters
+
+### Requirement: Codex adapter (stub)
+
+The external-coordination capability SHALL provide a `CodexAdapter` that invokes the `codex` CLI via `codex exec <prompt>`. The adapter SHALL be a stub that delegates to the same parsing logic as ClaudeCodeAdapter.
+
+#### Scenario: Codex not installed
+- **WHEN** `codex` is not found on PATH
+- **THEN** the adapter SHALL return `status: 'agent-not-found'` with an error message
+
+#### Scenario: Codex installed
+- **WHEN** `codex` is found on PATH
+- **THEN** the adapter SHALL invoke it and return the response (delegating to the shared parsing logic)

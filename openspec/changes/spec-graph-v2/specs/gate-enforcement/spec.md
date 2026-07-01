@@ -1,79 +1,120 @@
 ## ADDED Requirements
 
-### Requirement: Entry and exit criteria evaluation per stage
+### Requirement: Gate configuration loading
 
-The gate-enforcement capability SHALL evaluate explicit entry criteria (what must be true to enter a stage) and exit criteria (what must be true to leave a stage) for every stage in the state machine. Each criterion SHALL be a verifiable assertion with a defined verification method.
+The gate-enforcement capability SHALL load gate configuration from `knowledge/stages/<stage>/gate.yaml` for each stage. If the file is missing, a built-in fallback configuration SHALL be used.
 
-#### Scenario: Entry criteria check
-- **WHEN** the automator is about to enter the design stage
-- **THEN** gate-enforcement SHALL verify that entry criteria are met (e.g., "proposal.md exists and passed its gate") before allowing entry
+#### Scenario: Standard gate loaded
+- **WHEN** `loadGateConfig` is called for a stage that has a `gate.yaml`
+- **THEN** the returned config SHALL have `entry` and `exit` arrays with criteria parsed from the YAML
 
-#### Scenario: Exit criteria check
-- **WHEN** the automator is about to leave the design stage
-- **THEN** gate-enforcement SHALL verify that all exit criteria are met (e.g., "design.md covers every spec requirement", "risks are documented", "technical choices have rationale") before allowing advancement
+#### Scenario: Missing gate.yaml
+- **WHEN** `loadGateConfig` is called for a stage without a `gate.yaml` file
+- **THEN** the returned config SHALL be a built-in fallback with `entry: [previous-stage-passed]` and `exit: [artifacts-exist]`
 
-### Requirement: State transition blocking on failure
+#### Scenario: Malformed YAML
+- **WHEN** the gate.yaml file contains invalid YAML syntax
+- **THEN** the parser SHALL fall back to the built-in configuration and log a warning
 
-When any criterion fails, the gate-enforcement capability SHALL block the state transition and emit a structured failure report. The automator SHALL NOT proceed until all criteria pass or the user explicitly overrides.
+### Requirement: Entry criteria evaluation
 
-#### Scenario: Gate failure halts progression
-- **WHEN** exit criteria for the implement stage include "all tests pass" and one test fails
-- **THEN** gate-enforcement SHALL block advancement to the review stage and emit a failure report listing the failing test
+The gate-enforcement capability SHALL evaluate all entry criteria for a stage before allowing the stage to begin. If any entry criterion fails, the stage SHALL NOT begin.
 
-#### Scenario: User override (rare)
-- **WHEN** the user explicitly overrides a failed gate (e.g., via `--force`)
-- **THEN** gate-enforcement SHALL record the override in the trace log with the user's justification and allow the transition
+#### Scenario: Entry criteria pass
+- **WHEN** all entry criteria for the design stage are satisfied
+- **THEN** the stage SHALL be allowed to begin, and the automator SHALL generate a prompt
 
-### Requirement: Structured diagnosis output
+#### Scenario: Entry criteria fail
+- **WHEN** an entry criterion fails (e.g., previous stage not passed)
+- **THEN** the stage SHALL NOT begin, and a structured error SHALL be returned to the caller
 
-On gate failure, the gate-enforcement capability SHALL produce a structured diagnosis including: the failed criterion identifier, the reason for failure, evidence from the artifact, and a suggested fix. This diagnosis SHALL be machine-readable so the recovery-engine can act on it.
+### Requirement: Exit criteria evaluation
+
+The gate-enforcement capability SHALL evaluate all exit criteria for a stage when a result is submitted. If all exit criteria pass, the stage SHALL be marked complete and the automator SHALL advance to the next stage.
+
+#### Scenario: All exit criteria pass
+- **WHEN** all exit criteria for the specify stage are satisfied by the submitted proposal.md
+- **THEN** the automator SHALL mark the stage complete and advance to design
+
+#### Scenario: One exit criterion fails
+- **WHEN** one or more exit criteria fail
+- **THEN** the automator SHALL NOT advance, SHALL produce a diagnosis listing all failed criteria, and SHALL increment the retry counter
+
+### Requirement: Verification methods
+
+Each criterion SHALL have a verification method: `rule` | `traceability` | `llm-judge` | `downstream-executability` | `human`. The gate-enforcement capability SHALL dispatch to the appropriate verification implementation.
+
+#### Scenario: Rule verification
+- **WHEN** a criterion has verification method `rule`
+- **THEN** the gate-enforcement SHALL use the registered rule handler (from the `KNOWN_RULES` map) to evaluate it. If no handler is registered, the criterion SHALL pass with a warning "skipped"
+
+#### Scenario: Traceability verification
+- **WHEN** a criterion has verification method `traceability`
+- **THEN** the gate-enforcement SHALL check that the specified artifact relationships exist in the trace edges
+
+#### Scenario: Human verification
+- **WHEN** a criterion has verification method `human`
+- **THEN** the gate-enforcement SHALL return `passed: true` with a reason indicating human confirmation is required. The caller (automator) SHALL pause and request user confirmation
+
+#### Scenario: LLM-judge verification (not yet implemented)
+- **WHEN** a criterion has verification method `llm-judge`
+- **THEN** the gate-enforcement SHALL return `passed: true` with a reason indicating "not yet implemented — skipped"
+
+#### Scenario: Downstream-executability verification (not yet implemented)
+- **WHEN** a criterion has verification method `downstream-executability`
+- **THEN** the gate-enforcement SHALL return `passed: true` with a reason indicating "not yet implemented — skipped"
+
+### Requirement: Rule-based checks
+
+The gate-enforcement capability SHALL support deterministic rule-based checks for common artifact validation scenarios:
+
+- `proposal-structure`: proposal.md contains Why / What Changes / Capabilities / Impact sections (case-insensitive section header matching)
+- `capabilities-enumerated`: At least one capability is listed in Capabilities section. Accepts format `- \`kebab-name\`: description` or `- **bold-name**: description`
+- `capabilities-kebab-case`: All capability identifiers match `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`
+- `specs-requirement-format`: Specs contain requirements in `### Requirement:` format
+- `specs-scenarios-present`: Every requirement has at least one `#### Scenario:` block
+- `all-tasks-implemented`: All tasks in tasks.md are marked complete (`- [x]`)
+
+#### Scenario: Proposal structure check
+- **WHEN** proposal.md has all four sections (Why / What Changes / Capabilities / Impact)
+- **THEN** `proposal-structure` SHALL pass
+
+#### Scenario: Capabilities in bold format
+- **WHEN** capabilities are listed as `- **bold-name**: description` instead of backtick format
+- **THEN** `capabilities-enumerated` SHALL still pass (accept both formats)
+
+#### Scenario: Tasks partially complete
+- **WHEN** tasks.md has 5 tasks but only 3 are marked `[x]`
+- **THEN** `all-tasks-implemented` SHALL fail with a reason showing "3/5 tasks complete"
+
+### Requirement: Structured diagnosis
+
+On gate failure, the gate-enforcement capability SHALL produce a structured diagnosis with:
+- `gateId`: the criterion id that triggered the diagnosis
+- `failedCriteria`: array of failed criteria, each with `id`, `reason`, `evidence` (optional), `suggestedFix` (optional)
+- `retryLevel`: the appropriate retry level (1-4) based on retry count
+- `similarToPrevious`: boolean indicating if the failure is similar to a previous one
 
 #### Scenario: Diagnosis includes actionable fix
 - **WHEN** the design stage gate fails because "design.md does not cover spec 'auth' requirement 'token expiration'"
-- **THEN** the diagnosis SHALL identify the specific missing coverage, quote the relevant spec requirement, and suggest adding a "Token Expiration" section to design.md
+- **THEN** the diagnosis SHALL include a `suggestedFix` such as "Add design sections that cover every spec requirement"
 
-#### Scenario: Diagnosis consumed by recovery-engine
-- **WHEN** the recovery-engine receives a diagnosis
-- **THEN** the diagnosis SHALL contain enough information for the recovery-engine to generate a targeted fix prompt without re-analyzing the artifact
+#### Scenario: Retry level progression
+- **WHEN** the first gate failure occurs
+- **THEN** retryLevel SHALL be 1. On the second failure, retryLevel SHALL be 2. On the third, 3. On the fourth, 4.
 
-### Requirement: Progressive retry strategy
+### Requirement: Suggested fixes
 
-The gate-enforcement capability SHALL implement a four-level progressive retry strategy, configurable per stage:
-- Level 1 (lightweight fix): re-prompt with the diagnosis woven in
-- Level 2 (swap methodology): use a different methodology from the knowledge-base
-- Level 3 (decompose task): split the current task into smaller subtasks
-- Level 4 (escalate to user): pause and request human intervention
+For known criteria, the gate-enforcement capability SHALL provide specific suggested fixes:
 
-Each stage SHALL have a configurable maximum retry level (e.g., specify: 2, implement: 5).
+#### Scenario: Missing sections
+- **WHEN** proposal-structure fails
+- **THEN** suggestedFix SHALL be "Add the missing sections to proposal.md"
 
-#### Scenario: First retry uses lightweight fix
-- **WHEN** a gate fails for the first time
-- **THEN** gate-enforcement SHALL trigger Level 1 retry, instructing the recovery-engine to re-prompt with the diagnosis
+#### Scenario: Capabilities not enumerated
+- **WHEN** capabilities-enumerated fails
+- **THEN** suggestedFix SHALL be "List your capabilities in the format: - `kebab-name`: description"
 
-#### Scenario: Repeated failures escalate
-- **WHEN** Level 1 and Level 2 retries both fail
-- **THEN** gate-enforcement SHALL escalate to Level 3 (decompose task) or Level 4 (escalate to user) depending on configuration
-
-### Requirement: Similarity detection
-
-The gate-enforcement capability SHALL compare each new failure diagnosis against recent previous diagnoses. If the new diagnosis is substantially similar to a previous one (same root cause), the capability SHALL skip lower retry levels and escalate immediately.
-
-#### Scenario: Repeated same failure detected
-- **WHEN** Level 1 retry produces a failure with the same diagnosis as the original failure
-- **THEN** gate-enforcement SHALL skip further Level 1 retries and escalate to Level 2 or higher
-
-#### Scenario: Different failure treated independently
-- **WHEN** a new failure has a substantially different diagnosis from previous failures
-- **THEN** gate-enforcement SHALL start the retry strategy from Level 1
-
-### Requirement: Configurable retry limits per stage
-
-The gate-enforcement capability SHALL allow per-stage configuration of maximum retry attempts and maximum retry level. This prevents infinite retry loops on inherently problematic tasks.
-
-#### Scenario: Stage retry limit reached
-- **WHEN** the implement stage is configured with max 5 retries and the 5th retry fails
-- **THEN** gate-enforcement SHALL escalate to the user regardless of retry level
-
-#### Scenario: Total time limit
-- **WHEN** a stage has consumed more than a configured time budget
-- **THEN** gate-enforcement SHALL halt retries and escalate to the user
+#### Scenario: Unknown criterion
+- **WHEN** the failed criterion is not in the known suggestions map
+- **THEN** suggestedFix SHALL be a generic "Fix the issue with '<criterion-id>'"
