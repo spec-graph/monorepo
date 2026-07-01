@@ -84,140 +84,140 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
 ## 3. Context Sharing (M3)
 
-### Task 3.1: Implement context-sharing module
+### Task 3.1: Implement context-sharing module ✓ DONE
 - **Points**: 5
 - **Blocked by**: 1.1, 1.2
 - **Acceptance criteria**:
-  - [ ] `packages/core/src/context-sharing/index.ts` created
-  - [ ] Generates shared context per wave
-  - [ ] Each sub-agent receives:
+  - [x] `packages/core/src/context-sharing/index.ts` created
+  - [x] Generates shared context per wave
+  - [x] Each sub-agent receives:
     - Project profile (from sense)
     - Project overview (from plan)
     - Other sub-agents' planned changes (read-only)
     - Shared methodology (naming, structure, etc.)
-  - [ ] Shared context is JSON or markdown
-  - [ ] Context is minimal (avoid overwhelming sub-agents)
-  - [ ] ≥5 unit tests
+  - [x] Shared context is JSON or markdown
+  - [x] Context is minimal (avoid overwhelming sub-agents)
+  - [x] ≥5 unit tests (8 tests pass)
 
 ---
 
 ## 4. Pipeline Stages (M4)
 
-### Task 4.1: Add requirement-analysis stage
+### Task 4.1: Add requirement-analysis stage ✓ DONE
 - **Points**: 3
 - **Blocked by**: M1
 - **Acceptance criteria**:
-  - [ ] `knowledge/stages/requirement-analysis/` created
-  - [ ] 3 depth templates (light/medium/heavy)
-  - [ ] Auto-depth selection based on intent complexity
-  - [ ] `STAGES` includes 'requirement-analysis'
+  - [x] `knowledge/stages/requirement-analysis/` created
+  - [x] 3 depth templates (light/medium/heavy)
+  - [x] Auto-depth selection based on intent complexity
+  - [x] `STAGES` includes 'requirement-analysis'
 
-### Task 4.2: Add ui-design stage
+### Task 4.2: Add ui-design stage ✓ DONE
 - **Points**: 2
 - **Blocked by**: 4.1
 - **Acceptance criteria**:
-  - [ ] `knowledge/stages/ui-design/` created
-  - [ ] Covers wireframes, component tree, accessibility
-  - [ ] `STAGES` includes 'ui-design'
+  - [x] `knowledge/stages/ui-design/` created
+  - [x] Covers wireframes, component tree, accessibility
+  - [x] `STAGES` includes 'ui-design'
 
-### Task 4.3: Add user-stories stage
+### Task 4.3: Add user-stories stage ✓ DONE
 - **Points**: 2
 - **Blocked by**: 4.2
 - **Acceptance criteria**:
-  - [ ] `knowledge/stages/user-stories/` created
-  - [ ] Covers AS-A / I-WANT / SO-THAT format
-  - [ ] `STAGES` includes 'user-stories'
+  - [x] `knowledge/stages/user-stories/` created
+  - [x] Covers AS-A / I-WANT / SO-THAT format
+  - [x] `STAGES` includes 'user-stories'
 
-### Task 4.4: Add dev-stories stage
+### Task 4.4: Add dev-stories stage ✓ DONE
 - **Points**: 2
 - **Blocked by**: 4.3
 - **Acceptance criteria**:
-  - [ ] `knowledge/stages/dev-stories/` created
-  - [ ] Covers technical story decomposition
-  - [ ] `STAGES` includes 'dev-stories'
+  - [x] `knowledge/stages/dev-stories/` created
+  - [x] Covers technical story decomposition
+  - [x] `STAGES` includes 'dev-stories'
 
-### Task 4.5: Update task-decomposition stage
+### Task 4.5: Update task-decomposition stage ✓ DONE
 - **Points**: 3
 - **Blocked by**: 4.4
 - **Acceptance criteria**:
-  - [ ] `knowledge/stages/task-decomposition/instruction.md` updated
-  - [ ] Mentions dependency analysis + parallelism
-  - [ ] `STAGES` now has 12 stages
+  - [x] `knowledge/stages/task-decomposition/instruction.md` updated
+  - [x] Mentions dependency analysis + parallelism
+  - [x] `STAGES` now has 12 stages
 
 ---
 
 ## 5. Skills (M5)
 
-### Task 5.1: Create spec-graph-parallel skill (with 3-level gate guidance)
+### Task 5.1: Create spec-graph-parallel skill (with 3-level gate guidance) ✓ DONE
 - **Points**: 3
 - **Blocked by**: M1-M3
 - **Acceptance criteria**:
-  - [ ] Covers sub-agent dispatch + three-level gate
-  - [ ] Includes recovery strategy guidance
-  - [ ] Mentions Claude Code Agent tool, Codex Subagents, etc.
+  - [x] Covers sub-agent dispatch + three-level gate
+  - [x] Includes recovery strategy guidance
+  - [x] Mentions Claude Code Agent tool, Codex Subagents, etc.
 
-### Task 5.2: Create spec-graph-worktree skill
+### Task 5.2: Create spec-graph-worktree skill ✓ DONE
 - **Points**: 1
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
-  - [ ] Covers worktree creation/cleanup
-  - [ ] Branch naming convention
-  - [ ] Cleanup options
+  - [x] Covers worktree creation/cleanup
+  - [x] Branch naming convention
+  - [x] Cleanup options
 
-### Task 5.3: Create spec-graph-merge skill
+### Task 5.3: Create spec-graph-merge skill ✓ DONE
 - **Points**: 1
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
-  - [ ] Sequential merge to main
-  - [ ] Rebase before merge
-  - [ ] Conflict resolution strategies
+  - [x] Sequential merge to main
+  - [x] Rebase before merge
+  - [x] Conflict resolution strategies
 
-### Task 5.4: Create spec-graph-integration-gate skill
+### Task 5.4: Create spec-graph-integration-gate skill ✓ DONE
 - **Points**: 2
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
-  - [ ] Explains three-level gate
-  - [ ] When each level applies
-  - [ ] How to interpret gate results
+  - [x] Explains three-level gate
+  - [x] When each level applies
+  - [x] How to interpret gate results
 
-### Task 5.5: Create spec-graph-parallel-recovery skill
+### Task 5.5: Create spec-graph-parallel-recovery skill ✓ DONE
 - **Points**: 2
 - **Blocked by**: 5.4
 - **Acceptance criteria**:
-  - [ ] Explains failure attribution
-  - [ ] Targeted recovery strategies
-  - [ ] Degradation to serial
+  - [x] Explains failure attribution
+  - [x] Targeted recovery strategies
+  - [x] Degradation to serial
 
-### Task 5.6: Create spec-graph-sub-agent-methodology skill
+### Task 5.6: Create spec-graph-sub-agent-methodology skill ✓ DONE
 - **Points**: 2
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
-  - [ ] Defines sub-agent execution standards
-  - [ ] Code + tests + lint + typecheck + build + self-review
-  - [ ] Functionality verification against specs
-  - [ ] Naming/style conventions
+  - [x] Defines sub-agent execution standards
+  - [x] Code + tests + lint + typecheck + build + self-review
+  - [x] Functionality verification against specs
+  - [x] Naming/style conventions
 
-### Task 5.7: Create spec-graph-context-sharing skill
+### Task 5.7: Create spec-graph-context-sharing skill ✓ DONE
 - **Points**: 1
 - **Blocked by**: 5.1
 - **Acceptance criteria**:
-  - [ ] Explains what context is shared across sub-agents
-  - [ ] Project overview + other agents' plans (read-only)
-  - [ ] Shared methodology guidance
+  - [x] Explains what context is shared across sub-agents
+  - [x] Project overview + other agents' plans (read-only)
+  - [x] Shared methodology guidance
 
-### Task 5.8: Create spec-graph-requirement-analysis skill
+### Task 5.8: Create spec-graph-requirement-analysis skill ✓ DONE
 - **Points**: 1
 - **Blocked by**: 4.1
 - **Acceptance criteria**:
-  - [ ] Auto-depth selection (light/medium/heavy)
-  - [ ] 3 depth templates
+  - [x] Auto-depth selection (light/medium/heavy)
+  - [x] 3 depth templates
 
-### Task 5.9: Create spec-graph-ui-design skill
+### Task 5.9: Create spec-graph-ui-design skill ✓ DONE
 - **Points**: 2
 - **Blocked by**: 4.2
 - **Acceptance criteria**:
-  - [ ] UI design methodology
-  - [ ] Output format
+  - [x] UI design methodology
+  - [x] Output format
 
 ---
 
@@ -285,14 +285,17 @@ Total: ~18 tasks across 8 phases. Estimated effort: 4-5 weeks.
 
 | Phase | Tasks | Points | Status |
 |-------|-------|--------|--------|
-| 1. Decision Modules | 1.1-1.2 | 10 | ✗ |
-| 2. Reliability Modules | 2.1-2.2 | 10 | ✗ |
-| 3. Context Sharing | 3.1 | 5 | ✗ |
-| 4. Pipeline Stages | 4.1-4.5 | 12 | ✗ |
-| 5. Skills | 5.1-5.9 | 15 | ✗ |
-| 6. Automator + CLI | 6.1-6.2 | 4 | ✗ |
-| 7. Tests | 7.1 | 2 | ✗ |
-| 8. E2E Validation | 8.1-8.2 | 4 | ✗ |
+| 1. Decision Modules | 1.1-1.2 | 10 | ✓ DONE |
+| 2. Reliability Modules | 2.1-2.2 | 10 | ✓ DONE |
+| 3. Context Sharing | 3.1 | 5 | ✓ DONE |
+| 4. Pipeline Stages | 4.1-4.5 | 12 | ✓ DONE |
+| 5. Skills | 5.1-5.9 | 15 | ✓ DONE |
+| 6. Automator + CLI | 6.1-6.2 | 4 | IN PROGRESS |
+| 7. Tests | 7.1 | 2 | PENDING |
+| 8. E2E Validation | 8.1-8.2 | 4 | PENDING |
 | **TOTAL** | | **62** | |
 
-**Current completion: 0/62 points (0%)**
+**Current completion: 42/62 points (68%)**
+
+**Implemented:** M1-M5 core modules, pipeline stages, and skills
+**Remaining:** M6 automator/CLI, M7 tests, M8 E2E validation
