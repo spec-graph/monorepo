@@ -1,6 +1,6 @@
 entry:
-  - id: user-stories-prerequisites
-    description: UI design and requirements must be complete
+  - id: ui-design-passed
+    description: UI design must be complete
     verification: rule
 
 exit:
@@ -14,8 +14,4 @@ exit:
 
   - id: stories-have-priority
     description: Each story has P0/P1/P2 priority
-    verification: rule
-
-  - id: out-of-scope-defined
-    description: Out of scope explicitly defined
     verification: rule

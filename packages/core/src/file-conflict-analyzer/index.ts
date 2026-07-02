@@ -1,9 +1,12 @@
 /**
- * File Conflict Analyzer — analyzes task file impact and detects conflicts.
+ * File Conflict Analyzer
  *
- * Conservative strategy: if impact is uncertain, default to serial.
- * Static analysis based on task description + design references.
- * Optional pre-dispatch agent query for accurate file lists.
+ * Analyzes task file impact and detects conflicts. Returns a conflict
+ * matrix indicating which task pairs should NOT run in parallel.
+ *
+ * **Conservative strategy**: if impact is uncertain (task has no file list),
+ * risk is marked "unknown" and the task is excluded from conflict checks
+ * (per design Decision 3).
  */
 
 // ---------------------------------------------------------------------------
@@ -17,7 +20,7 @@ export interface TaskImpact {
 }
 
 export interface ConflictMatrix {
-  /** matrix[taskA][taskB] = true means taskA and taskB have conflicts */
+  /** matrix[taskA][taskB] = true means conflict detected */
   rows: Record<string, Record<string, boolean>>;
   /** Per-task impact summary */
   impacts: Record<string, TaskImpact>;
@@ -29,15 +32,14 @@ export interface ConflictMatrix {
 
 /**
  * Analyze file conflicts between tasks.
- *
- * Each task should provide its planned files (via pre-query or static analysis).
- * Returns a conflict matrix indicating which task pairs should NOT run in parallel.
+ * Each task provides its planned file list (from agent analysis).
+ * Conservative: tasks with unknown impact (empty file list) are
+ * excluded from conflict checks.
  */
 export function analyzeConflicts(taskFiles: Record<string, string[]>): ConflictMatrix {
   const taskIds = Object.keys(taskFiles);
   const matrix: ConflictMatrix = { impacts: {}, rows: {} };
 
-  // Build per-task impact records
   for (const taskId of taskIds) {
     const files = taskFiles[taskId] || [];
     matrix.impacts[taskId] = {
@@ -45,17 +47,24 @@ export function analyzeConflicts(taskFiles: Record<string, string[]>): ConflictM
       files,
       risk: assessRisk(files),
     };
+    matrix.rows[taskId] = {};
   }
 
-  // Build conflict matrix
   for (const taskA of taskIds) {
-    matrix.rows[taskA] = {};
     for (const taskB of taskIds) {
       if (taskA === taskB) {
         matrix.rows[taskA][taskB] = false;
         continue;
       }
-      matrix.rows[taskA][taskB] = hasConflict(taskFiles[taskA] || [], taskFiles[taskB] || []);
+      // Conservative: if either task has unknown risk, no conflict flag
+      if (matrix.impacts[taskA].risk === 'unknown' || matrix.impacts[taskB].risk === 'unknown') {
+        matrix.rows[taskA][taskB] = false;
+      } else {
+        matrix.rows[taskA][taskB] = hasConflict(
+          matrix.impacts[taskA].files,
+          matrix.impacts[taskB].files,
+        );
+      }
     }
   }
 
@@ -63,61 +72,30 @@ export function analyzeConflicts(taskFiles: Record<string, string[]>): ConflictM
 }
 
 /**
- * Query an agent for which files it plans to modify.
- * Returns the parsed list of files, or [] if parsing fails.
+ * Parse agent file list response (JSON array or text).
+ * Used when querying agents pre-dispatch for file impact.
  */
 export function parseAgentFileList(response: string): string[] {
-  // Try to parse as JSON array
   try {
     const parsed = JSON.parse(response);
     if (Array.isArray(parsed)) {
       return parsed.filter((f): f is string => typeof f === 'string');
     }
   } catch {
-    // Fall through to text parsing
+    // Fall through
   }
-
-  // Try to extract files from common patterns
   const files: string[] = [];
   const patterns = [
-    /["'`]([^"'`\s]+)["'`]/g, // "path/to/file" (any path, with or without extension)
-    /(?:modify|create|update|write|edit|touch|files?):\s*([^\s,;]+)/gi, // "modify: path" or "files: path"
-    /^\s*-\s+["'`]?([^"'`\s,;]+)["'`]?\s*$/gm, // "- path" (line-start bullet)
+    /["'`]([^"'`\s]+)["'`]/g,
+    /(?:modify|create|update|write|edit|touch|files?):\s*([^\s,;]+)/gi,
+    /^\s*-\s+["'`]?([^"'`\s,;]+)["'`]?\s*$/gm,
   ];
-
   for (const pattern of patterns) {
-    const matches = response.matchAll(pattern);
-    for (const m of matches) {
+    for (const m of response.matchAll(pattern)) {
       if (m[1]) files.push(m[1]);
     }
   }
-
   return [...new Set(files)];
-}
-
-/**
- * Static analysis: extract likely files from task description.
- * This is a heuristic; agent-query is more accurate.
- */
-export function staticAnalyze(description: string, designRefs: string[] = []): string[] {
-  const files = new Set<string>();
-
-  // Extract from design references
-  for (const ref of designRefs) {
-    if (ref.startsWith('src/') || ref.startsWith('test/') || ref.startsWith('docs/')) {
-      files.add(ref);
-    }
-  }
-
-  // Extract from description
-  // Pattern: "src/X/Y.ts" or "test/X/Y.test.ts" etc.
-  const pathPattern = /\b((?:src|test|tests|docs|lib|app|backend|frontend|api|services|src\/modules|src\/components)\/[a-zA-Z0-9_\-/.]+(?:\.[a-z]+)?)\b/g;
-  const pathMatches = description.matchAll(pathPattern);
-  for (const m of pathMatches) {
-    files.add(m[1]);
-  }
-
-  return Array.from(files);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,11 +103,9 @@ export function staticAnalyze(description: string, designRefs: string[] = []): s
 // ---------------------------------------------------------------------------
 
 function hasConflict(filesA: string[], filesB: string[]): boolean {
-  if (filesA.length === 0 || filesB.length === 0) return false;
-
-  for (const fileA of filesA) {
-    for (const fileB of filesB) {
-      if (fileOverlap(fileA, fileB)) return true;
+  for (const a of filesA) {
+    for (const b of filesB) {
+      if (fileOverlap(a, b)) return true;
     }
   }
   return false;
@@ -137,22 +113,13 @@ function hasConflict(filesA: string[], filesB: string[]): boolean {
 
 function fileOverlap(fileA: string, fileB: string): boolean {
   if (fileA === fileB) return true;
-
-  // Directory overlap
+  // Same directory
   const dirA = fileA.split('/').slice(0, -1).join('/');
   const dirB = fileB.split('/').slice(0, -1).join('/');
   if (dirA && dirA === dirB) return true;
-
-  // Wildcard pattern overlap (e.g., "src/auth/*" matches "src/auth/login.ts")
-  if (fileA.endsWith('*')) {
-    const prefix = fileA.slice(0, -1);
-    if (fileB.startsWith(prefix)) return true;
-  }
-  if (fileB.endsWith('*')) {
-    const prefix = fileB.slice(0, -1);
-    if (fileA.startsWith(prefix)) return true;
-  }
-
+  // Wildcard pattern
+  if (fileA.endsWith('*') && fileB.startsWith(fileA.slice(0, -1))) return true;
+  if (fileB.endsWith('*') && fileA.startsWith(fileB.slice(0, -1))) return true;
   return false;
 }
 

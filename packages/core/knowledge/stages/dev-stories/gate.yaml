@@ -13,9 +13,9 @@ exit:
     verification: rule
 
   - id: technical-acceptance-criteria
-    description: Technical acceptance criteria defined for each dev story
+    description: Technical acceptance criteria defined
     verification: rule
 
   - id: effort-estimated
-    description: Effort estimated (S/M/L/XL or story points)
+    description: Effort estimated (S/M/L/XL)
     verification: rule

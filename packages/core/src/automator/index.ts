@@ -33,73 +33,19 @@ import {
 import { generatePlan } from '../planning/index.js';
 import { sense } from '../sense/index.js';
 
-/**
- * Methodology guidance for agent-analyzed dependsOn.
- * Per Decision 6: dependsOn must come from agent analysis, not templates.
- */
-const AGENT_DEPENDENCY_ANALYSIS_METHODOLOGY = `
-## Dependency Analysis — Required for Parallel Execution
-
-For each task in this plan, analyze the **actual** dependencies by examining:
-1. **Specs** — what does this task require from other components?
-2. **Design** — what existing code/modules does this task reference?
-3. **Existing code** — what already exists in the codebase?
-
-### Required output format per task
-
-\`\`\`
-## Task 1.1: <description>
-- **dependsOn**: [<list of task IDs this task depends on>]
-- **files**: [<list of relative file paths this task will modify>]
-- **reasoning**: "<why these dependencies exist>"
-\`\`\`
-
-### Rules
-
-1. **If a dependency already exists in the codebase** → mark as "exists", do NOT list as dependsOn
-2. **If you are unsure** → list the dependency (conservative: prefer serial over wrong parallel)
-3. **File paths must be relative** and concrete (not globs like "src/auth/*" unless necessary)
-4. **Every task must have files[]** — this enables file-conflict-analyzer
-5. **Every task must have dependsOn[]** — even if empty (means independent, can be parallel)
-
-### Example
-
-\`\`\`
-## Task 1.1: Implement user model
-- **dependsOn**: []
-- **files**: ["src/auth/user.ts", "src/types/user.ts"]
-- **reasoning**: "No existing user model in codebase; creating new"
-
-## Task 1.2: Implement login endpoint
-- **dependsOn**: [1.1]
-- **files**: ["src/auth/login.ts", "src/auth/validation.ts"]
-- **reasoning**: "Depends on user model for user lookup; rate-limiter referenced from existing middleware"
-\`\`\`
-
-### Conservative strategy
-
-When in doubt about a dependency, **add it**. False positive (extra serialization) is safer than false negative (incorrect parallel execution → file conflict → recovery).
-`;
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type Stage =
-  | 'requirement-analysis'
-  | 'design'
-  | 'ui-design'
-  | 'user-stories'
-  | 'dev-stories'
   | 'specify'
+  | 'design'
   | 'plan'
   | 'implement'
   | 'review'
   | 'test'
   | 'accept'
   | 'integrate';
-
-export type ExecutionMode = 'serial' | 'parallel' | 'auto';
 
 export type SessionState = 'running' | 'paused' | 'completed' | 'failed';
 
@@ -192,18 +138,13 @@ interface TraceEntry {
 // ---------------------------------------------------------------------------
 
 export const STAGES: Stage[] = [
-  'requirement-analysis', 'design', 'ui-design', 'user-stories', 'dev-stories',
-  'specify', 'plan', 'implement',
+  'specify', 'design', 'plan', 'implement',
   'review', 'test', 'accept', 'integrate',
 ];
 
 export const STAGE_OUTPUTS: Record<Stage, { artifact: string; dir: string }> = {
-  'requirement-analysis': { artifact: 'requirements.md', dir: 'requirement-analysis' },
-  design: { artifact: 'design.md', dir: 'design' },
-  'ui-design': { artifact: 'ui-design.md', dir: 'ui-design' },
-  'user-stories': { artifact: 'user-stories.md', dir: 'user-stories' },
-  'dev-stories': { artifact: 'dev-stories.md', dir: 'dev-stories' },
   specify: { artifact: 'proposal.md', dir: 'specify' },
+  design: { artifact: 'design.md', dir: 'design' },
   plan: { artifact: 'tasks.md', dir: 'plan' },
   implement: { artifact: 'code', dir: 'implement' },
   review: { artifact: 'review.md', dir: 'review' },
@@ -376,15 +317,6 @@ export function nextPrompt(
                     : [],
     kbp
   );
-
-  // Inject agent-analyzed dependsOn instructions for plan stage (per Decision 6)
-  if (stage === 'plan') {
-    methodologies.push({
-      source: 'agent-dependency-analysis',
-      category: 'domain_methodology',
-      content: AGENT_DEPENDENCY_ANALYSIS_METHODOLOGY,
-    });
-  }
 
   const ctx: PromptContext = {
     sessionId,
@@ -655,10 +587,7 @@ export function listSessions(projectRoot?: string): string[] {
 // ---------------------------------------------------------------------------
 
 export interface AutoRunOptions {
-  /** Execution mode: 'serial' (V2 behavior), 'parallel' (V3 parallel), 'auto' (auto-detect) */
-  mode?: ExecutionMode;
-  /** Agent adapter id (default: 'claude-code') */
-  adapterId?: string;
+  adapterId: string;
   projectRoot?: string;
   knowledgeBasePath?: string;
   /** Max retries per stage before escalating (default: 3) */
@@ -730,7 +659,7 @@ export async function autoRun(
       try { createCodexAdapter(); } catch {}
 
       const agentResponse = await invokeAgent(prompt.xml, {
-        adapterId: options.adapterId || 'claude-code',
+        adapterId: options.adapterId,
         timeoutMs: 300_000,
       });
 

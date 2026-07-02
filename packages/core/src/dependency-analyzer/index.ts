@@ -1,14 +1,29 @@
 /**
- * Dependency Analyzer — analyzes task dependencies and produces execution waves.
+ * Dependency Analyzer
  *
- * Conservative strategy: if dependency is uncertain, default to serial.
- * Uses Kahn's algorithm for topological sort with cycle detection.
+ * Analyzes task dependencies and produces execution waves (groups of
+ * tasks that can execute in parallel). Uses Kahn's algorithm for
+ * topological sort with cycle detection.
+ *
+ * **Conservative strategy**: if a dependency cannot be verified, the
+ * task is placed in `serialTasks` rather than being parallelized
+ * (per design Decision 3).
+ *
+ * **Agent-analyzed input (Decision 6)**: the `Task.dependsOn` field
+ * should be filled by the agent at task-decomposition stage based on
+ * actual code + specs + design analysis, not from template-default values.
  */
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * A task with its declared dependencies.
+ * The `dependsOn` field should contain task IDs that this task must
+ * wait for. The agent is responsible for filling this based on
+ * project-specific analysis (per Decision 6).
+ */
 export interface Task {
   id: string;
   description: string;
@@ -16,10 +31,14 @@ export interface Task {
 }
 
 export interface ExecutionPlan {
-  waves: string[][]; // waves[0] = first wave, waves[1] = second, etc.
+  /** waves[0] = first wave (no dependencies), waves[1] = second, etc. */
+  waves: string[][];
+  /** Dependency edges: { from: dependency, to: dependent } */
   edges: Array<{ from: string; to: string }>;
-  serialTasks: string[]; // tasks that cannot be parallelized (uncertain deps)
-  cycles: string[][]; // detected cycles (each is array of task ids)
+  /** Tasks that cannot be parallelized (unknown deps) */
+  serialTasks: string[];
+  /** Detected cycles (each cycle is an array of task IDs) */
+  cycles: string[][];
 }
 
 // ---------------------------------------------------------------------------
@@ -27,94 +46,94 @@ export interface ExecutionPlan {
 // ---------------------------------------------------------------------------
 
 /**
- * Analyze a set of tasks with dependencies and produce an execution plan
- * dividing tasks into waves (parallel execution groups).
+ * Analyze tasks with dependencies and produce an execution plan.
  *
- * Conservative strategy: tasks with uncertain dependencies are placed
- * in `serialTasks` rather than parallelized.
+ * @param tasks - Array of tasks with `id` and `dependsOn` fields
+ * @returns ExecutionPlan with waves, edges, serialTasks, and cycles
+ *
+ * Conservative: unknown dependencies → task goes to serialTasks.
+ * Cycles: detected and reported (no wave generated for cyclic tasks).
  */
 export function analyzeTasks(tasks: Task[]): ExecutionPlan {
   if (tasks.length === 0) {
     return { waves: [], edges: [], serialTasks: [], cycles: [] };
   }
 
+  // Step 1: Build task map and detect unknown dependencies (conservative)
   const taskMap = new Map<string, Task>();
+  const unknownDeps = new Set<string>();
+  const edges: Array<{ from: string; to: string }> = [];
+
   for (const task of tasks) {
     taskMap.set(task.id, task);
   }
 
-  // Build adjacency list and in-degree map
-  const adjacency = new Map<string, string[]>();
-  const inDegree = new Map<string, number>();
-
-  for (const task of tasks) {
-    adjacency.set(task.id, []);
-    inDegree.set(task.id, 0);
-  }
-
-  const edges: Array<{ from: string; to: string }> = [];
-  const unknownDeps: string[] = [];
-
   for (const task of tasks) {
     for (const dep of task.dependsOn) {
       if (!taskMap.has(dep)) {
-        // Unknown dependency — conservative: mark as serial
-        unknownDeps.push(task.id);
-        continue;
+        // Unknown dependency: conservative — mark task as serial
+        unknownDeps.add(task.id);
+      } else {
+        edges.push({ from: dep, to: task.id });
       }
-      adjacency.get(dep)!.push(task.id);
-      inDegree.set(task.id, (inDegree.get(task.id) || 0) + 1);
-      edges.push({ from: dep, to: task.id });
     }
   }
 
-  // Kahn's algorithm for topological sort with cycle detection
-  const queue: string[] = [];
+  // Step 2: Kahn's algorithm — produce waves via BFS topological sort
+  const inDegree = new Map<string, number>();
+  const adjacency = new Map<string, string[]>();
+
+  for (const task of tasks) {
+    if (!unknownDeps.has(task.id)) {
+      inDegree.set(task.id, 0);
+      adjacency.set(task.id, []);
+    }
+  }
+
+  // Count in-degree (only from known deps)
+  for (const task of tasks) {
+    if (unknownDeps.has(task.id)) continue;
+    for (const dep of task.dependsOn) {
+      if (taskMap.has(dep) && !unknownDeps.has(dep)) {
+        inDegree.set(task.id, (inDegree.get(task.id) || 0) + 1);
+        adjacency.get(dep)!.push(task.id);
+      }
+    }
+  }
+
+  // Process waves
   const waves: string[][] = [];
   const visited = new Set<string>();
-
-  // Start with tasks that have no dependencies (in-degree 0)
-  for (const [id, degree] of inDegree) {
-    if (degree === 0 && !unknownDeps.includes(id)) {
-      queue.push(id);
-    }
-  }
+  let queue = Array.from(inDegree.entries())
+    .filter(([, degree]) => degree === 0)
+    .map(([id]) => id);
 
   while (queue.length > 0) {
-    // Process entire current wave (all tasks with in-degree 0)
-    const currentWave = [...queue];
-    waves.push(currentWave);
-
-    for (const id of currentWave) {
-      visited.add(id);
-      queue.shift();
-    }
-
-    // Reduce in-degree for dependents
+    waves.push([...queue]);
     const nextQueue: string[] = [];
-    for (const id of currentWave) {
+
+    for (const id of queue) {
+      visited.add(id);
       for (const dependent of adjacency.get(id) || []) {
         const newDegree = (inDegree.get(dependent) || 1) - 1;
         inDegree.set(dependent, newDegree);
-        if (newDegree === 0 && !visited.has(dependent) && !unknownDeps.includes(dependent)) {
+        if (newDegree === 0 && !visited.has(dependent) && !unknownDeps.has(dependent)) {
           nextQueue.push(dependent);
         }
       }
     }
-    queue.push(...nextQueue);
+    queue = nextQueue;
   }
 
-  // Detect cycles: any task not visited is part of a cycle
+  // Step 3: Detect cycles — any non-visited, non-unknown task is cyclic
   const cycles: string[][] = [];
   for (const task of tasks) {
-    if (!visited.has(task.id) && !unknownDeps.includes(task.id)) {
-      // Find the cycle this task belongs to
-      const cycle = findCycle(task.id, taskMap, visited);
+    if (!visited.has(task.id) && !unknownDeps.has(task.id)) {
+      const cycle = findCycle(task.id, taskMap);
       if (cycle.length > 0) {
-        // Avoid duplicate cycles
-        const cycleKey = cycle.sort().join(',');
-        const existingCycleKeys = cycles.map((c) => c.sort().join(','));
-        if (!existingCycleKeys.includes(cycleKey)) {
+        // Deduplicate cycles by sorted key
+        const key = [...cycle].sort().join(',');
+        if (!cycles.some((existing) => [...existing].sort().join(',') === key)) {
           cycles.push(cycle);
         }
       }
@@ -124,29 +143,25 @@ export function analyzeTasks(tasks: Task[]): ExecutionPlan {
   return {
     waves,
     edges,
-    serialTasks: unknownDeps,
+    serialTasks: Array.from(unknownDeps),
     cycles,
   };
 }
 
 /**
- * Find a cycle containing the given task.
+ * Find a cycle containing the given task using DFS.
  */
-function findCycle(
-  startId: string,
-  taskMap: Map<string, Task>,
-  visited: Set<string>
-): string[] {
+function findCycle(startId: string, taskMap: Map<string, Task>): string[] {
   const path: string[] = [];
   const onPath = new Set<string>();
 
   function dfs(id: string): boolean {
     if (onPath.has(id)) {
-      // Found cycle — extract it
-      const cycleStart = path.indexOf(id);
-      return cycleStart >= 0;
+      // Extract cycle from current path
+      const idx = path.indexOf(id);
+      return idx >= 0;
     }
-    if (visited.has(id)) return false;
+    if (path.includes(id)) return false;
 
     path.push(id);
     onPath.add(id);
@@ -164,9 +179,8 @@ function findCycle(
   }
 
   if (dfs(startId)) {
-    // Extract cycle from path
-    const cycleStart = path.indexOf(startId);
-    return path.slice(cycleStart);
+    const idx = path.indexOf(startId);
+    return idx >= 0 ? path.slice(idx) : [];
   }
   return [];
 }

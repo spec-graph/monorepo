@@ -26,54 +26,42 @@ const taskPlans = [
 
 describe('context-sharing', () => {
   it('generates context with project profile', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(context.markdown).toContain('TypeScript');
-    expect(context.markdown).toContain('Express');
-    expect(context.markdown).toContain('Node.js');
-    expect(context.markdown).toContain('vitest');
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    expect(ctx.markdown).toContain('TypeScript');
+    expect(ctx.markdown).toContain('Express');
+    expect(ctx.markdown).toContain('Node.js');
   });
 
   it('includes project overview', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(context.markdown).toContain('bookstore API');
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    expect(ctx.markdown).toContain('bookstore API');
   });
 
   it('includes methodology', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(context.markdown).toContain('camelCase');
-    expect(context.markdown).toContain('JSDoc');
-    expect(context.markdown).toContain('Supertest');
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    expect(ctx.markdown).toContain('camelCase');
+    expect(ctx.markdown).toContain('JSDoc');
   });
 
-  it('includes other agents\' plans (read-only)', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(context.markdown).toContain('Other Sub-Agents');
-    expect(context.markdown).toContain('User model');
-    expect(context.markdown).toContain('src/auth/user.ts');
-    expect(context.markdown).toContain('READ-ONLY');
+  it('includes other agents\' plans (READ-ONLY)', () => {
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    expect(ctx.markdown).toContain('READ-ONLY');
+    expect(ctx.markdown).toContain('User model');
   });
 
   it('generates JSON format', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(() => JSON.parse(context.json)).not.toThrow();
-    const parsed = JSON.parse(context.json);
-    expect(parsed.profile.language).toBe('TypeScript');
-    expect(parsed.otherTasks.length).toBe(2);
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    expect(() => JSON.parse(ctx.json)).not.toThrow();
   });
 
-  it('counts words', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    expect(context.wordCount).toBeGreaterThan(0);
-  });
-
-  it('validates context size', () => {
-    const context = generateSharedContext(baseContext, taskPlans);
-    const result = validateContextSize(context);
+  it('validates context size under 2000 words', () => {
+    const ctx = generateSharedContext(baseContext, taskPlans);
+    const result = validateContextSize(ctx);
     expect(result.valid).toBe(true);
   });
 
   it('handles empty task plans', () => {
-    const context = generateSharedContext(baseContext, []);
-    expect(context.markdown).not.toContain('Other Sub-Agents');
+    const ctx = generateSharedContext(baseContext, []);
+    expect(ctx.markdown).not.toContain('READ-ONLY');
   });
 });

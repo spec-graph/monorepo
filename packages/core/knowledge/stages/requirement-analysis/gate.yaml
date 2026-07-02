@@ -8,10 +8,6 @@ exit:
     description: Clear problem statement (depth-appropriate)
     verification: rule
 
-  - id: personas-present
-    description: User personas defined (HEAVY depth only)
-    verification: rule
-
   - id: acceptance-criteria
     description: Acceptance criteria defined
     verification: rule

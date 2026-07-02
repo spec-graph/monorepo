@@ -3,111 +3,90 @@ import { analyzeTasks } from './index.js';
 
 describe('dependency-analyzer', () => {
   it('returns empty plan for empty task list', () => {
-    const result = analyzeTasks([]);
-    expect(result.waves).toEqual([]);
-    expect(result.edges).toEqual([]);
-    expect(result.serialTasks).toEqual([]);
-    expect(result.cycles).toEqual([]);
+    const plan = analyzeTasks([]);
+    expect(plan.waves).toEqual([]);
+    expect(plan.edges).toEqual([]);
+    expect(plan.serialTasks).toEqual([]);
+    expect(plan.cycles).toEqual([]);
   });
 
   it('places tasks with no dependencies in wave 1', () => {
-    const tasks = [
-      { id: 'A', description: 'Task A', dependsOn: [] },
-      { id: 'B', description: 'Task B', dependsOn: [] },
-      { id: 'C', description: 'Task C', dependsOn: [] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.waves.length).toBe(1);
-    expect(result.waves[0].sort()).toEqual(['A', 'B', 'C']);
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: [] },
+      { id: 'B', description: 'B', dependsOn: [] },
+      { id: 'C', description: 'C', dependsOn: [] },
+    ]);
+    expect(plan.waves.length).toBe(1);
+    expect(plan.waves[0].sort()).toEqual(['A', 'B', 'C']);
   });
 
   it('places dependent task in later wave', () => {
-    const tasks = [
-      { id: 'A', description: 'Task A', dependsOn: [] },
-      { id: 'B', description: 'Task B', dependsOn: [] },
-      { id: 'C', description: 'Task C', dependsOn: ['A'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.waves.length).toBe(2);
-    expect(result.waves[0].sort()).toEqual(['A', 'B']);
-    expect(result.waves[1]).toEqual(['C']);
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: [] },
+      { id: 'B', description: 'B', dependsOn: [] },
+      { id: 'C', description: 'C', dependsOn: ['A'] },
+    ]);
+    expect(plan.waves.length).toBe(2);
+    expect(plan.waves[0].sort()).toEqual(['A', 'B']);
+    expect(plan.waves[1]).toEqual(['C']);
   });
 
   it('handles linear chain (all serial)', () => {
-    const tasks = [
-      { id: 'A', description: 'Task A', dependsOn: [] },
-      { id: 'B', description: 'Task B', dependsOn: ['A'] },
-      { id: 'C', description: 'Task C', dependsOn: ['B'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.waves.length).toBe(3);
-    expect(result.waves[0]).toEqual(['A']);
-    expect(result.waves[1]).toEqual(['B']);
-    expect(result.waves[2]).toEqual(['C']);
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: [] },
+      { id: 'B', description: 'B', dependsOn: ['A'] },
+      { id: 'C', description: 'C', dependsOn: ['B'] },
+    ]);
+    expect(plan.waves.length).toBe(3);
+    expect(plan.waves[0]).toEqual(['A']);
+    expect(plan.waves[1]).toEqual(['B']);
+    expect(plan.waves[2]).toEqual(['C']);
   });
 
   it('produces correct edges', () => {
-    const tasks = [
-      { id: 'A', description: 'Task A', dependsOn: [] },
-      { id: 'B', description: 'Task B', dependsOn: ['A'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.edges).toEqual([{ from: 'A', to: 'B' }]);
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: [] },
+      { id: 'B', description: 'B', dependsOn: ['A'] },
+    ]);
+    expect(plan.edges).toEqual([{ from: 'A', to: 'B' }]);
   });
 
-  it('marks tasks with unknown dependencies as serial', () => {
-    const tasks = [
-      { id: 'A', description: 'Task A', dependsOn: ['UNKNOWN'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.serialTasks).toEqual(['A']);
-    expect(result.waves).toEqual([]);
+  it('conservative: unknown dependencies → serialTasks', () => {
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: [] },
+      { id: 'B', description: 'B', dependsOn: ['UNKNOWN'] },
+      { id: 'C', description: 'C', dependsOn: [] },
+    ]);
+    expect(plan.serialTasks).toEqual(['B']);
+    expect(plan.waves[0].sort()).toEqual(['A', 'C']);
+  });
+
+  it('detects cycles', () => {
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: ['B'] },
+      { id: 'B', description: 'B', dependsOn: ['A'] },
+    ]);
+    expect(plan.cycles.length).toBeGreaterThan(0);
+  });
+
+  it('handles self-dependency as cycle', () => {
+    const plan = analyzeTasks([
+      { id: 'A', description: 'A', dependsOn: ['A'] },
+    ]);
+    expect(plan.cycles.length).toBeGreaterThan(0);
   });
 
   it('handles complex graph with multiple waves', () => {
-    // A (no deps) → B → D
-    // C (no deps) → D
-    // E (no deps)
-    const tasks = [
+    const plan = analyzeTasks([
       { id: 'A', description: 'A', dependsOn: [] },
       { id: 'B', description: 'B', dependsOn: ['A'] },
       { id: 'C', description: 'C', dependsOn: [] },
       { id: 'D', description: 'D', dependsOn: ['B', 'C'] },
       { id: 'E', description: 'E', dependsOn: [] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.waves.length).toBe(3);
-    expect(result.waves[0].sort()).toEqual(['A', 'C', 'E']);
-    expect(result.waves[1]).toEqual(['B']);
-    expect(result.waves[2]).toEqual(['D']);
-  });
-
-  it('detects cycles', () => {
-    const tasks = [
-      { id: 'A', description: 'A', dependsOn: ['B'] },
-      { id: 'B', description: 'B', dependsOn: ['A'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.cycles.length).toBeGreaterThan(0);
-  });
-
-  it('handles self-dependency as cycle', () => {
-    const tasks = [
-      { id: 'A', description: 'A', dependsOn: ['A'] },
-    ];
-    const result = analyzeTasks(tasks);
-    expect(result.cycles.length).toBeGreaterThan(0);
-  });
-
-  it('conservative: unknown deps prevent parallelization', () => {
-    const tasks = [
-      { id: 'A', description: 'A', dependsOn: [] },
-      { id: 'B', description: 'B', dependsOn: ['UNKNOWN'] },
-      { id: 'C', description: 'C', dependsOn: [] },
-    ];
-    const result = analyzeTasks(tasks);
-    // B is serial, A and C are in wave 1
-    expect(result.serialTasks).toEqual(['B']);
-    expect(result.waves[0].sort()).toEqual(['A', 'C']);
+    ]);
+    expect(plan.waves.length).toBe(3);
+    expect(plan.waves[0].sort()).toEqual(['A', 'C', 'E']);
+    expect(plan.waves[1]).toEqual(['B']);
+    expect(plan.waves[2]).toEqual(['D']);
   });
 });

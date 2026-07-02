@@ -9,11 +9,11 @@ exit:
     verification: rule
 
   - id: component-tree-defined
-    description: Component tree (atomic/molecular/organism) defined
+    description: Component tree defined
     verification: rule
 
   - id: design-tokens-specified
-    description: Design tokens (color, typography, spacing) specified
+    description: Design tokens specified
     verification: rule
 
   - id: accessibility-checked
