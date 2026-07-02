@@ -98,63 +98,108 @@ if (actions.length === 0) {
   process.exit(0);
 }
 
-// Build the reminder for the main agent
-const action = actions[0];
-const agentId = action.agent_id || action.agent_role || 'unknown';
-const requiresSubAgent = action.requires_sub_agent !== false;  // default true for backwards compat
+// Group actions by parallel_group for parallel execution support
+const groups = new Map();
+for (const action of actions) {
+  const g = action.parallel_group ?? -1;
+  if (!groups.has(g)) groups.set(g, []);
+  groups.get(g).push(action);
+}
+const sortedGroups = Array.from(groups.entries()).sort((a, b) => a[0] - b[0]);
 
-// Surface gate failure details when blocked — coordinator needs to know WHAT
-// failed (not just that gate_passed === false) to decide which action to take.
+// Build the reminder for the main agent
+const firstAction = actions[0];
+const agentId = firstAction.agent_id || firstAction.agent_role || 'unknown';
+const requiresSubAgent = firstAction.requires_sub_agent !== false;
+
+// Surface gate failure details when blocked
 const gateFailures = (!manifest.gate_passed && !manifest.done)
   ? `\n   Gate failures: ${
       [
         manifest.missing_artifacts?.length && `missing_artifacts=${manifest.missing_artifacts.length}`,
         manifest.failed_checks?.length && `failed_checks=${manifest.failed_checks.length}`,
-        manifest.missing_traces?.length && `missing_traces=${manifest.missing_traces.length}`,
-        manifest.missing_contracts?.length && `contract_drift=${manifest.missing_contracts.length}`,
-        manifest.forbidden_violations?.length && `forbidden=${manifest.forbidden_violations.length}`,
       ].filter(Boolean).join(', ') || 'unspecified'
     }`
   : '';
 
-// Minimal context: just what the coordinator needs to decide dispatch vs direct execution.
-// The FULL manifest (including action.prompt) is already in the main agent's context
-// from the Bash tool output that triggered this hook — don't duplicate it here.
-const hasMeeting = action.meeting ? `\n   Meeting: ${action.meeting.meeting_id} (${action.meeting.runtime?.status || 'fresh'})` : '';
-const inputArtifactsSummary = (action.input_artifacts && action.input_artifacts.length > 0)
-  ? `\n   Input artifacts: ${action.input_artifacts.length} (see manifest actions[0].input_artifacts for paths)`
-  : '';
+// Build execution instructions based on group structure
+let executionBlock;
+let summaryLine;
 
-const executionBlock = requiresSubAgent
-  ? `EXECUTION (sub-agent):
+if (sortedGroups.length === 1 && sortedGroups[0][1].length === 1) {
+  // Single action — preserve existing behavior
+  const action = actions[0];
+  const hasMeeting = action.meeting ? `\n   Meeting: ${action.meeting.meeting_id} (${action.meeting.runtime?.status || 'fresh'})` : '';
+  const inputArtifactsSummary = (action.input_artifacts && action.input_artifacts.length > 0)
+    ? `\n   Input artifacts: ${action.input_artifacts.length} (see manifest actions[0].input_artifacts for paths)`
+    : '';
+
+  if (requiresSubAgent) {
+    executionBlock = `EXECUTION (sub-agent):
 1. Load system prompt from ${action.agent_prompt_ref || '(none)'}
-2. Construct prompt from actions[0].prompt envelope + fill placeholders with input artifact contents
-3. Dispatch via Agent tool: description="${action.id} stage", model="${action.model_tier || 'standard'}", prompt=<envelope>
+2. Use the FULL prompt from actions[0].prompt as the sub-agent prompt (already includes system prompt + task context + input artifacts)
+3. Dispatch via Agent tool: description="${action.id} stage", model="${action.model_tier || 'standard'}", prompt=actions[0].prompt
 4. Wait for status-report block (DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED)
 5. Run next_step: ${action.next_step || 'spec-graph dispatch --json'}
-6. Loop back to dispatch`
-  : (action.type === 'verify_trace'
-      ? `EXECUTION (deterministic — NO sub-agent):
+6. Loop back to dispatch`;
+  } else if (action.type === 'verify_trace') {
+    executionBlock = `EXECUTION (deterministic — NO sub-agent):
 1. Trace '${action.id}' is required by gate but missing.
 2. Read actions[0].trace_query for from_kind/to_kind/via/cardinality.
 3. Either create the trace manually: spec-graph trace add --from <from_kind> --to <to_kind> --via <via>
    OR complete dependent artifacts (auto-wires traces).
-4. Loop back to: spec-graph dispatch --json`
-      : `EXECUTION (deterministic — NO sub-agent):
+4. Loop back to: spec-graph dispatch --json`;
+  } else {
+    executionBlock = `EXECUTION (deterministic — NO sub-agent):
 1. Run check_command directly via Bash: ${action.check_command || action.recommended_command || action.command}
-2. Loop back to: spec-graph dispatch --json`);
+2. Loop back to: spec-graph dispatch --json`;
+  }
 
-const reminder = `<system-reminder>
-spec-graph dispatch output detected. The FULL manifest is already in your context from the Bash result above — use actions[0] fields directly. Per packs/foundation.pack/agents/coordinator-protocol.md, execute NOW (pre-approved, no user confirmation needed).
-
-Action: ${action.type} — ${action.id}
+  summaryLine = `Action: ${action.type} — ${action.id}
   Agent: ${agentId}
   Model tier: ${action.model_tier || 'standard'}${hasMeeting}${inputArtifactsSummary}${gateFailures}
-  Requires sub-agent: ${requiresSubAgent ? 'YES — dispatch via Agent tool' : 'NO — run check_command directly via Bash'}
+  Requires sub-agent: ${requiresSubAgent ? 'YES — dispatch via Agent tool' : 'NO — run check_command directly via Bash'}`;
+} else {
+  // Multiple actions with parallel groups
+  const waveDescriptions = [];
+  for (const [group, groupActions] of sortedGroups) {
+    if (groupActions.length === 1) {
+      waveDescriptions.push(`  Wave ${group}: ${groupActions[0].id} (single action)`);
+    } else {
+      const agentList = groupActions.map(a => `${a.id}(${a.agent_id || 'self'})`).join(', ');
+      waveDescriptions.push(`  Wave ${group}: PARALLEL dispatch ${groupActions.length} sub-agents: ${agentList}`);
+    }
+  }
+
+  executionBlock = `EXECUTION (parallel waves):
+${sortedGroups.map(([group, groupActions], idx) => {
+  if (groupActions.length === 1) {
+    const a = groupActions[0];
+    const isLast = idx === sortedGroups.length - 1;
+    return `Wave ${group} (sequential):
+  Dispatch sub-agent: description="${a.id}", model="${a.model_tier || 'standard'}", prompt=actions[${a.index - 1}].prompt
+  Wait for completion, then ${isLast ? 'run: ' + a.next_step : 'continue to next wave'}`;
+  } else {
+    const isLast = idx === sortedGroups.length - 1;
+    return `Wave ${group} (PARALLEL — dispatch ALL sub-agents simultaneously):
+${groupActions.map(a => `  - Agent("${a.id}", model="${a.model_tier || 'standard'}", prompt=actions[${a.index - 1}].prompt)`).join('\n')}
+  Wait for ALL to complete, then ${isLast ? 'run next_step for each' : 'continue to next wave'}`;
+  }
+}).join('\n')}
+Loop back to: spec-graph dispatch --json`;
+
+  summaryLine = `Actions: ${actions.length} across ${sortedGroups.length} wave(s)${gateFailures}
+${waveDescriptions.join('\n')}`;
+}
+
+const reminder = `<system-reminder>
+spec-graph dispatch output detected. The FULL manifest is already in your context from the Bash result above — use action fields directly. Per packs/foundation.pack/agents/coordinator-protocol.md, execute NOW (pre-approved, no user confirmation needed).
+
+${summaryLine}
 
 ${executionBlock}
 
-⚠️ AUTO-LOOP PROTOCOL: After completing this action, IMMEDIATELY re-run 'spec-graph dispatch --json' to get the next action. Do NOT wait for user input. Continue this loop until manifest.done === true, gate is blocked with no auto-fix, or sub-agent returns BLOCKED.
+⚠️ AUTO-LOOP PROTOCOL: After completing all actions, IMMEDIATELY re-run 'spec-graph dispatch --json' to get the next action. Do NOT wait for user input. Continue this loop until manifest.done === true, gate is blocked with no auto-fix, or sub-agent returns BLOCKED.
 
 Stop when:
   - manifest.done === true (workflow complete)

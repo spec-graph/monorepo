@@ -2,7 +2,7 @@
 name: spec-graph-validate
 description: Validate the current state of a spec-graph workflow. Runs through the gate criteria and reports which pass and which fail. Use before submitting a result to catch issues early, or when you want to check if the current artifact is ready.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
   version: "2.0"

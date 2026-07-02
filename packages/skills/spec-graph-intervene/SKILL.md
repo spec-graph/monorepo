@@ -2,7 +2,7 @@
 name: spec-graph-intervene
 description: Intervene in the current spec-graph workflow. Use when the user wants to modify the plan, force-advance past a gate, rollback a stage, or otherwise take manual control of the automatic workflow.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
   version: "2.0"

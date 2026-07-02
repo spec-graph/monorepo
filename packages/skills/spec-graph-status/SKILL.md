@@ -2,7 +2,7 @@
 name: spec-graph-status
 description: Inspect the current spec-graph workflow state. Shows the active stage, progress, completed artifacts, blockers, and recent gate failures. Use when the user wants to know where things stand.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
   version: "2.0"

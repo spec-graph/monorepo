@@ -15,7 +15,7 @@ Bootstrap a new or existing project for spec-graph.
 /spec-graph-init
 ```
 
-Runs sense → compose → prime to initialize `.spec-graph/`.
+Creates `.spec-graph/` directory, writes config.yaml, registers dispatch-watcher hook.
 
 ### spec-graph-plan
 
@@ -27,15 +27,15 @@ Transform user intent into a structured plan.
 
 Creates a session, generates a plan, and asks the user to confirm before proceeding.
 
-### spec-graph-auto
+### spec-graph-dispatch
 
-Start the full automatic workflow.
+Run the full dispatch workflow (8-stage FSM loop).
 
 ```
-/spec-graph-auto "<intent>"
+/spec-graph-dispatch
 ```
 
-Runs the automatic loop: generate prompt → agent executes → submit result → advance state.
+Loops: dispatch --json → hook → sub-agent → advance. Repeats 8 times until completed.
 
 ### spec-graph-status
 
@@ -82,7 +82,7 @@ Actions: `force-advance`, `rollback`, `resume`, `modify-plan`.
 Skills are the **orchestration layer** — they tell AI agents how to compose CLI commands into workflows. One skill covers N CLI commands. Not every CLI command needs a skill.
 
 ```
-Skills  (7, orchestration)  →  CLI  (19, atomic ops)  →  Core  (15+ modules, API)
+Skills  (7, orchestration)  →  CLI  (20+, atomic ops)  →  Core  (9 modules, API)
 ```
 
 Each skill documents:
@@ -91,8 +91,6 @@ Each skill documents:
 3. **Steps** — which CLI commands to invoke, in what order
 4. **Response handling** — how to interpret CLI output
 5. **Edge cases** — what to do on error
-
-See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) for the full mapping.
 
 ## Installation
 

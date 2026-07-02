@@ -4,24 +4,28 @@ entry:
     verification: rule
 
 exit:
+  - id: implement-source-exists
+    description: Implement directory contains at least one source file (non-.md/.yaml/.json)
+    verification: rule
+
   - id: all-tasks-implemented
     description: Every task in tasks.md is marked complete (- [x])
     verification: rule
 
   - id: lint-passes
-    description: Project linter passes with no errors
+    description: Project linter passes with no errors (npm run lint if configured)
     verification: rule
 
   - id: typecheck-passes
-    description: Project type-checker passes with no errors (for typed languages)
+    description: Project type-checker passes with no errors (tsc --noEmit if configured)
     verification: rule
 
   - id: build-passes
-    description: Project builds successfully
+    description: Project builds successfully (npm run build if configured)
     verification: rule
 
   - id: existing-tests-pass
-    description: All pre-existing tests still pass (no regressions)
+    description: All pre-existing tests still pass (npm test if configured)
     verification: rule
 
   - id: no-broken-contracts

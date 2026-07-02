@@ -28,20 +28,6 @@ describe('automator integration', () => {
     expect(afterConfirm.stage).toBe('specify');
   });
 
-  it('nextPrompt generates XML prompt with woven methodologies', () => {
-    const plan = core.automator.startSession('Add auth feature', projectRoot);
-    core.automator.confirmPlan(plan.sessionId, plan, projectRoot);
-
-    const prompt = core.automator.nextPrompt(plan.sessionId, projectRoot);
-
-    expect(prompt.xml).toContain('<?xml version="1.0"');
-    expect(prompt.xml).toContain('spec_graph_prompt');
-    expect(prompt.xml).toContain('stage="specify"');
-    expect(prompt.xml).toContain('level="MUST"');
-    expect(prompt.xml).toContain('level="SHOULD"');
-    expect(prompt.stage).toBe('specify');
-  });
-
   it('submitResult advances stage when gate passes', () => {
     const plan = core.automator.startSession('Test advance', projectRoot);
     core.automator.confirmPlan(plan.sessionId, plan, projectRoot);

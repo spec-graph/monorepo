@@ -2,7 +2,7 @@
 name: spec-graph-diagnose
 description: Diagnose the most recent gate failure in a spec-graph workflow. Shows which criteria failed, the root cause, suggested fixes, and retry status. Use when the workflow is stuck or you want to understand why a gate failed.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
   version: "2.0"

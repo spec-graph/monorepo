@@ -1,13 +1,16 @@
 {
   "name": "@spec-graph/skills",
-  "version": "2.0.0-alpha.0",
-  "description": "SKILL.md collection for AI agent integration with spec-graph v2. Each SKILL.md is consumed by Claude Code (or similar) to orchestrate spec-graph CLI commands.",
+  "version": "3.0.0",
+  "description": "SKILL.md collection for AI agent integration with spec-graph v3. Each SKILL.md is consumed by Claude Code (or similar) to orchestrate spec-graph CLI commands.",
   "license": "MIT",
   "files": [
     "spec-graph-plan/",
-    "spec-graph-auto/",
+    "spec-graph-dispatch/",
+    "spec-graph-init/",
     "spec-graph-status/",
-    "spec-graph-intervene/"
+    "spec-graph-intervene/",
+    "spec-graph-diagnose/",
+    "spec-graph-validate/"
   ],
   "scripts": {
     "install-skills": "node scripts/install-skills.js"

@@ -1,7 +1,7 @@
 {
   "name": "@spec-graph/core",
-  "version": "2.0.0-alpha.0",
-  "description": "spec-graph v2 engine: automaton, gate enforcement, knowledge-base, prompt construction, recovery. A TypeScript library — does not face users directly. Consumed by the spec-graph CLI and skills.",
+  "version": "3.0.0",
+  "description": "spec-graph v3 engine: automator, gate enforcement, knowledge-base, dispatch, composer, machine-state. A TypeScript library — does not face users directly. Consumed by the spec-graph CLI and skills.",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

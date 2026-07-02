@@ -2,7 +2,7 @@
 name: spec-graph-init
 description: Initialize a new spec-graph project from scratch. Runs the full bootstrap pipeline: sense project profile → compose workflow graph → prime machine state → display ready status. Use when the user wants to set up spec-graph for a new or existing project.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
   version: "2.0"

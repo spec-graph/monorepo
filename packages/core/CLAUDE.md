@@ -1,30 +1,32 @@
 # CLAUDE.md — spec-graph core
 
-> spec-graph is a strict-gate, prompt-driven, automatic progression development brain.
-> It generates rich layered XML prompts for external AI agents and evaluates their
-> outputs through strict quality gates. It is a **brain, not hands** — all execution
-> is delegated to external agents via pluggable adapters.
+> spec-graph v3 is a **declaration engine**: it manages the 8-stage FSM,
+> generates dispatch manifests for sub-agents, and evaluates quality gates.
+> It is a **brain, not hands** — all execution is delegated to external
+> coordinators (Claude Code hooks, CI/CD systems, custom orchestrators).
 
 ## Core Modules
 
-The core library (`packages/core/`) provides seven modules:
+The core library (`packages/core/`) provides nine modules:
 
 | Module | Responsibility |
 |--------|----------------|
-| `automator` | Session lifecycle (start / confirm / next / submit / status / intervene / autoRun) |
-| `prompt-construction` | Build layered XML prompts with methodology weaving (MUST/SHOULD/MAY) |
+| `automator` | Session lifecycle (start / confirm / submit / status / intervene) |
 | `planning` | Intent → capability decomposition with topological ordering |
 | `gate-enforcement` | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
-| `external-coordination` | Agent adapter registry + Claude Code / Codex adapters |
 | `knowledge-base` | Directory tree loader, skill selection, local override support |
 | `recovery` | 4-level progressive retry strategy with Jaccard similarity detection |
+| `sense` | Project feature detection (language, framework, runtime, etc.) |
+| `dispatch` | Generate structured dispatch manifests with 9-section envelopes |
+| `composer` | Scan packs and compose graph.yaml |
+| `machine-state` | Track artifact status per stage and capability |
 
 All modules are accessible via `require('@spec-graph/core').<moduleName>`.
 
 ## 8-Stage FSM
 
 ```
-specify → design → plan → implement → review → test → accept → integrate
+specify → design → tasks → implement → review → test → accept → integrate
 ```
 
 Each stage has:
@@ -42,14 +44,13 @@ const plan = core.automator.startSession(intent);
 // 2. Confirm plan (human-in-the-loop, once)
 core.automator.confirmPlan(plan.sessionId, plan);
 
-// 3. Generate next prompt for agent
-const prompt = core.automator.nextPrompt(plan.sessionId);
-// prompt.xml contains the layered XML prompt
+// 3. Generate dispatch manifest (via CLI)
+// $ spec-graph dispatch --session <id> --json
+// Produces DispatchManifest with 9-section envelope for each action
 
-// 4. Agent executes (via Claude Code adapter, Codex adapter, etc.)
-const response = await core.externalCoordination.invokeAgent(prompt.xml, {
-  adapterId: 'claude-code',
-});
+// 4. External coordinator dispatches sub-agent(s)
+// Claude Code main agent uses Agent tool per manifest actions
+// Sub-agent produces artifact(s)
 
 // 5. Submit result → gate evaluates → state advances if passed
 const result = core.automator.submitResult(plan.sessionId, response);
@@ -59,7 +60,9 @@ const result = core.automator.submitResult(plan.sessionId, response);
 // 6. Repeat steps 3-5 until result.done === true
 ```
 
-The `autoRun` function wraps this into a single call.
+**Note:** spec-graph never invokes agents directly. The dispatch command
+produces a manifest; external coordinators (hooks, orchestrators) invoke
+agents with the manifest's prompt content.
 
 ## File State
 
@@ -134,9 +137,49 @@ When a gate fails, the automator uses the recovery module:
 
 Similarity detection (Jaccard index ≥ 0.8) prevents wasting retries on the same failing approach.
 
+## Dispatch Manifest
+
+The dispatch module produces a JSON manifest for external coordinators:
+
+```typescript
+interface DispatchManifest {
+  sessionId: string;
+  currentStage: Stage;
+  actions: DispatchAction[];  // One or more sub-agent tasks
+  meetings?: DispatchMeeting[];
+}
+
+interface DispatchAction {
+  id: string;
+  agentId: string;
+  modelTier: 'capable' | 'standard' | 'fast';
+  parallelGroup: number;      // Same group = dispatch simultaneously
+  prompt: string;             // 9-section envelope
+  outputSpec: { path, format, template? };
+  fileScope: { read[], write[], forbid[] };
+  verification?: { commands[], expectedExitCode };
+  nextStep: string;           // CLI command to run after completion
+}
+```
+
+## 9-Section Envelope
+
+Each action.prompt contains 9 sections:
+
+1. **Identity** — agent role and model tier
+2. **System Prompt** — domain knowledge from pack
+3. **Task Context** — stage, session, intent, action
+4. **Input Artifacts** — upstream artifacts (READ-ONLY)
+5. **Output Specification** — exact path + format (MUST)
+6. **File Scope** — read/write/forbid globs (MUST)
+7. **Verification** — lint/test/typecheck commands (MUST)
+8. **Status Report Protocol** — JSON response format (MUST)
+9. **After Completion** — next step command
+
 ## Development Discipline
 
-- spec-graph is a library — it should NOT write to user project files directly
-- All execution is delegated to external agents
+- spec-graph is a declaration engine — it generates manifests, not execution
+- All agent invocation is delegated to external coordinators
 - State is persisted to `.spec-graph/` (gitignored in user projects)
 - The knowledge-base is shipped with the package
+- spec-graph never spawns child processes or calls LLM APIs directly

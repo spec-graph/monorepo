@@ -1,8 +1,8 @@
 ---
 name: spec-graph-plan
-description: Start the spec-graph planning flow. Transforms a user intent into a structured plan (capabilities, dependencies, complexity, risks), presents it to the user for confirmation, and initializes the automatic workflow. Use when the user wants to start a new development task with spec-graph's automatic progression.
+description: Start the spec-graph planning flow. Transforms a user intent into a structured plan (capabilities, dependencies, complexity, risks), presents it to the user for confirmation. After confirmation, proceed to the spec-graph-dispatch skill for the 8-stage workflow. Use when the user wants to start a new development task with spec-graph.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed globally or locally.
+compatibility: Requires spec-graph CLI (v3+) installed globally or locally.
 metadata:
   author: spec-graph
   version: "2.0"
@@ -10,9 +10,9 @@ metadata:
 
 Start a planning flow with spec-graph.
 
-spec-graph is a strict-gate, prompt-driven, automatic progression development brain. It does NOT write code or documents — it generates rich prompts for external AI agents and evaluates their outputs, enforcing quality gates at every stage.
+spec-graph is a declaration engine. It manages the 8-stage FSM, generates dispatch manifests for sub-agents, and evaluates outputs through strict quality gates. It does NOT write code or documents, and does NOT invoke agents directly — all execution is delegated to external coordinators.
 
-This skill walks you through the **planning phase** — the ONLY phase where human confirmation is mandatory. After plan confirmation, spec-graph can run automatically.
+This skill walks you through the **planning phase** — the ONLY phase where human confirmation is mandatory. After plan confirmation, proceed to the `spec-graph-dispatch` skill to kick off the 8-stage workflow.
 
 ---
 
@@ -81,7 +81,7 @@ Ask the user to confirm, modify, or reject.
 
 ### 4. Handle the response
 
-- **Confirm**: proceed to the `spec-graph-auto` skill, passing the `session_id`
+- **Confirm**: proceed to the `spec-graph-dispatch` skill, passing the `session_id`
 - **Modify**: capture the user's modifications, re-run `spec-graph plan` with the updated intent or use `spec-graph intervene` to adjust the plan, then re-present
 - **Reject**: abort. Do not proceed.
 
@@ -89,7 +89,9 @@ Ask the user to confirm, modify, or reject.
 
 ## What happens next
 
-After plan confirmation, the user (or you) should switch to the `spec-graph-auto` skill to kick off the automatic workflow. From that point on, spec-graph drives the process through all 8 stages: specify → design → plan → implement → review → test → accept → integrate.
+After plan confirmation, the user (or you) should switch to the `spec-graph-dispatch` skill to kick off the dispatch workflow. From that point on, spec-graph drives the process through all 8 stages: specify → design → tasks → implement → review → test → accept → integrate.
+
+The dispatch workflow is: `dispatch --json` → hook → sub-agent → `advance`. This loop repeats 8 times until state = "completed".
 
 You will be invoked at gate failures that the automator cannot auto-recover from, and at the final acceptance stage.
 

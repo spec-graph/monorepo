@@ -740,7 +740,7 @@ export interface Constitution {
 
 /**
  * Backend abstraction for git operations.
- * Production uses node:child_process; tests inject a fake.
+ * Reserved for future use; tests inject a fake.
  */
 export interface GitBackend {
   exec(
@@ -954,4 +954,100 @@ export interface PackOverrides {
       >;
     }
   >;
+}
+
+// ============ Dispatch Manifest ============
+
+/**
+ * A single action in the dispatch manifest.
+ *
+ * The coordinator (Claude Code main agent) reads actions from the manifest and
+ * either dispatches a sub-agent (requires_sub_agent: true) or runs a shell
+ * command directly (requires_sub_agent: false).
+ *
+ * Actions with the same parallel_group can run concurrently.
+ */
+export interface DispatchAction {
+  index: number;
+  type: "perform_stage" | "produce_artifact" | "run_check" | "transition";
+  /** Unique action id (stage name, artifact id, or check id) */
+  id: string;
+  /** Human-readable description */
+  description: string;
+  /** true = dispatch LLM sub-agent; false = run check_command via Bash */
+  requires_sub_agent: boolean;
+  /** Agent id from Agent Registry */
+  agent_id?: string;
+  /** Path to agent system prompt file (relative to pack dir) */
+  agent_prompt_ref?: string;
+  /** Model tier for this dispatch */
+  model_tier?: ModelTier;
+  /**
+   * Parallel execution group. Actions with the same parallel_group value
+   * can be dispatched concurrently. Different groups run sequentially.
+   * Absent = singleton (no parallelism).
+   */
+  parallel_group?: number;
+  /** Full assembled prompt envelope — coordinator copies this verbatim */
+  prompt: string;
+  /** Read/write path constraints for the sub-agent */
+  file_scope?: { read: string[]; write: string[]; forbid: string[] };
+  /** Expected output specification — exact path + template */
+  output_spec?: { path: string; template?: string; format?: string };
+  /** Commands sub-agent must run before reporting done */
+  verification?: { lint?: string; test?: string; typecheck?: string };
+  /** Command to run after agent completes (advances workflow state) */
+  next_step: string;
+  /** For run_check actions: the shell command from CheckDecl */
+  check_command?: string;
+  /** If present, run meeting protocol instead of single-agent dispatch */
+  meeting?: DispatchMeeting;
+  /** Input artifacts this agent receives (inlined in prompt) */
+  input_artifacts?: Array<{
+    id: string;
+    kind: string;
+    path: string;
+    content: string;
+  }>;
+}
+
+/**
+ * Meeting metadata embedded in a dispatch action.
+ */
+export interface DispatchMeeting {
+  meeting_id: string;
+  purpose: string;
+  participants: Array<{
+    agent_id: string;
+    role: string;
+    perspective: string;
+  }>;
+  min_rounds: number;
+  max_rounds: number;
+  output_artifacts: string[];
+  rounds: Array<{
+    number: number;
+    phase: string;
+    objective: string;
+    prompt: string;
+  }>;
+}
+
+/**
+ * Top-level dispatch manifest returned by `spec-graph dispatch --json`.
+ *
+ * Consumed by dispatch-watcher.mjs hook which injects a system-reminder
+ * into Claude Code's context telling it to dispatch sub-agents per the
+ * actions array.
+ */
+export interface DispatchManifest {
+  version: "1";
+  session_id: string;
+  current_stage: string;
+  gate_passed: boolean;
+  blocking_gate: string | null;
+  missing_artifacts: string[];
+  failed_checks: string[];
+  done: boolean;
+  actions: DispatchAction[];
 }

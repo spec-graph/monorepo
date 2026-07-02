@@ -1,12 +1,12 @@
 # spec-graph
 
-**Strict-gate, prompt-driven, automatic progression development brain**
+**Declaration engine — dispatch manifest generator + gate evaluator**
 
 [![npm version](https://img.shields.io/npm/v/spec-graph.svg)](https://www.npmjs.com/package/spec-graph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
-spec-graph is a development "brain, not hands." It generates rich layered XML prompts for external AI agents (Claude Code, Codex, Gemini CLI), evaluates their outputs through strict quality gates, and automatically advances through the 8-stage workflow — from intent to integrated PR.
+spec-graph is a development "brain, not hands." It manages an 8-stage FSM, generates dispatch manifests with 9-section envelopes for sub-agents, and evaluates their outputs through strict quality gates. spec-graph never invokes agents directly — all execution is delegated to external coordinators (Claude Code hooks, CI/CD, custom orchestrators).
 
 ## Philosophy
 
@@ -14,58 +14,69 @@ spec-graph is a development "brain, not hands." It generates rich layered XML pr
 ┌──────────────────────────────────────────────────────────────┐
 │  spec-graph is a brain, not hands                             │
 │                                                               │
-│  ✓ Generates rich, layered prompts (MUST / SHOULD / MAY)      │
+│  ✓ Generates dispatch manifests (9-section envelopes)         │
 │  ✓ Evaluates outputs through strict quality gates             │
-│  ✓ Advances state automatically when gates pass               │
-│  ✗ Never writes code or documents directly                    │
-│  ✗ Never runs tests or CI directly                            │
+│  ✓ Tracks state via 8-stage FSM                              │
+│  ✗ Never invokes agents directly                              │
+│  ✗ Never spawns child processes                               │
+│  ✗ Never writes code or documents                             │
 │                                                               │
-│  All execution is delegated to external AI agents             │
-│  via pluggable adapters.                                      │
+│  All agent invocation is delegated to external coordinators   │
+│  via the dispatch + hook protocol.                            │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
 
-- **8-Stage FSM**: specify → design → plan → implement → review → test → accept → integrate
+- **8-Stage FSM**: specify → design → tasks → implement → review → test → accept → integrate
 - **Strict Quality Gates**: Entry/exit criteria evaluated automatically at every transition
-- **Automatic Progression**: `spec-graph auto` runs the full loop without manual intervention
-- **Rich Layered Prompts**: XML-style prompts with MUST/SHOULD/MAY priority levels
-- **Methodology Library**: Built-in knowledge-base with 8 stages × multiple skills (OpenSpec + BMAD style)
-- **Pluggable Agents**: Claude Code adapter (shipped), Codex adapter (stub), custom adapters welcome
-- **Progressive Recovery**: 4-level retry strategy (lightweight fix → swap methodology → decompose → escalate to user)
-- **Similarity Detection**: Avoids wasting retries on the same failing approach
+- **Dispatch Manifests**: JSON output with 9-section envelopes for sub-agents
+- **Parallel Execution**: Multiple sub-agents per stage via parallel_group
+- **Hook Integration**: dispatch-watcher.mjs PostToolUse hook auto-injects system-reminder
+- **Methodology Library**: Built-in knowledge-base with 8 stages × multiple skills
+- **Progressive Recovery**: 4-level retry strategy with diagnosis-driven re-prompts
 - **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml`
+- **Real Gate Checks**: Implement gate runs tsc, tests, lint if configured
 
 ## Installation
 
 ```bash
+# Global install
+npm install -g spec-graph@3
+
 # From this monorepo (local development)
 npm install
 npm run build
-
-# CLI available as:
-npx tsx packages/cli/src/index.ts --help
 ```
 
 ## Quick Start
 
 ```bash
-# Start a new workflow (plan → confirm → automatic progression)
-npx tsx packages/cli/src/index.ts plan "Add JWT authentication" --confirm
+# 1. Initialize project
+spec-graph init
+  → creates .spec-graph/ + registers dispatch-watcher hook
 
-# Get the next prompt for the external agent
-npx tsx packages/cli/src/index.ts next-prompt
+# 2. Plan the work
+spec-graph plan "Build JWT authentication" --confirm
+  → LLM decomposes intent into capabilities
+  → state = "running"
 
-# Submit the agent's result and advance (if gate passes)
-npx tsx packages/cli/src/index.ts advance --result '{"artifacts": [...]}'
+# 3. Compose graph from packs
+spec-graph compose
+  → produces graph.yaml
 
-# Check current state
-npx tsx packages/cli/src/index.ts status
-
-# Full automatic mode (delegates to Claude Code)
-npx tsx packages/cli/src/index.ts auto "Add JWT authentication" --adapter claude-code
+# 4. Dispatch loop (repeat 8 times)
+spec-graph dispatch --session <id> --json
+  → produces DispatchManifest JSON
+  → dispatch-watcher hook auto-triggers
+  → main agent dispatches sub-agents via Agent tool
+spec-graph advance --session <id> --result '<json>'
+  → gate evaluation
+  → state progression
+  → repeat until state = "completed"
 ```
+
+Or use the `/spec-graph-dispatch` SKILL for the full loop automation.
 
 ## Architecture
 
@@ -73,31 +84,28 @@ npx tsx packages/cli/src/index.ts auto "Add JWT authentication" --adapter claude
 ┌──────────────────────────────────────────────────────────────┐
 │  Layer 1: Skills (SKILL.md files for AI agents)              │
 │   packages/skills/  (7 entry skills)                         │
-│   └─ init / plan / auto / status / validate / diagnose       │
+│   └─ init / plan / dispatch / status / validate / diagnose   │
 │      / intervene                                             │
 │                                                              │
 │  Layer 2: CLI (command-line tool, shell commands)            │
-│   packages/cli/  (19 commands)                               │
-│   └─ auto, plan, status, advance, validate, intervene,       │
-│      diagnose, next-prompt, sessions, init, compose,         │
-│      config, install, dispatch, gate, check, machine,        │
-│      analyze, completion                                     │
+│   packages/cli/  (20 commands)                               │
+│   └─ plan, status, advance, validate, intervene,             │
+│      diagnose, sessions, init, compose, config, install,     │
+│      dispatch, gate, check, machine, analyze, completion,    │
+│      artifact-complete, check-run                            │
 │                                                              │
 │  Layer 3: Core (TypeScript library — the engine)             │
-│   packages/core/  (15+ modules)                              │
+│   packages/core/  (9 modules)                                │
 │   └─ automator / planning / gate-enforcement /               │
-│      prompt-construction / external-coordination /           │
 │      knowledge-base / recovery / sense /                     │
-│      context-sharing / dependency-analyzer /                 │
-│      file-conflict-analyzer / integration-gate /             │
-│      parallel-recovery / types / utils                       │
+│      dispatch / composer / machine-state                     │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 - **Skills** orchestrate CLI commands for AI agents — 1 skill covers N CLI commands
-- **CLI** provides atomic shell commands — each is a thin (20-40 line) wrapper over core API
-- **Core** provides the programmatic API — never contains SKILL.md files or CLI logic
+- **CLI** provides atomic shell commands — each is a thin wrapper over core API
+- **Core** provides the programmatic API — the declaration engine
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 
@@ -105,13 +113,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 
 | Module | Responsibility |
 |--------|----------------|
-| **automator** | Session lifecycle, state machine loop, `autoRun` |
-| **prompt-construction** | Build layered XML prompts with methodology weaving |
+| **automator** | Session lifecycle, state machine loop |
 | **planning** | Intent → capabilities decomposition with topological ordering |
 | **gate-enforcement** | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
-| **external-coordination** | Adapter registry + Claude Code / Codex adapters |
+| **dispatch** | Generate dispatch manifests with 9-section envelopes |
+| **composer** | Scan packs and compose graph.yaml |
+| **machine-state** | Track artifact status per stage and capability |
 | **knowledge-base** | Directory tree loader, skill selection, local overrides |
 | **recovery** | 4-level progressive retry strategy with Jaccard similarity |
+| **sense** | Project feature detection (language, framework, runtime) |
 
 ### Knowledge Base
 
@@ -132,7 +142,7 @@ knowledge/
 │   │   └── skills/
 │   │       ├── specs-authoring/     # OpenSpec-style specs
 │   │       └── design-authoring/    # OpenSpec-style design
-│   ├── plan/
+│   ├── tasks/
 │   ├── implement/
 │   ├── review/
 │   ├── test/

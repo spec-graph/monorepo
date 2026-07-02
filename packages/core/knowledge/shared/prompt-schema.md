@@ -244,34 +244,42 @@ A complete prompt for the specify stage (proposal):
 </spec_graph_prompt>
 ```
 
-## Notes for prompt-construction module
+## Notes for dispatch module (v3.0)
 
-The `buildPrompt(context: PromptContext)` function in `packages/core/src/prompt-construction` must:
+The `generateDispatchManifest()` function in `packages/core/src/dispatch` produces a manifest where each action's `prompt` field contains a 9-section envelope:
 
-1. Load the gate.yaml for the current stage to get exit criteria → acceptance_criteria
-2. Load the project profile (from sense) → project_constraint
-3. Load the methodology from knowledge-base based on stage + skill selection → methodology
-4. Load upstream artifact summaries → context.upstream
-5. If retrying, load previous diagnosis → previous_failure
-6. Compose into XML format
-7. Return as string
+1. **Identity** — agent role and model tier
+2. **System Prompt** — loaded from pack/agents/{agentId}-agent.md (domain knowledge)
+3. **Task Context** — stage, session, intent, action, parallel group
+4. **Input Artifacts** — upstream artifacts with id, kind, path, content (READ-ONLY, truncated to 3000 chars)
+5. **Output Specification** — exact path + template + format (MUST)
+6. **File Scope** — read/write/forbid glob arrays (MUST)
+7. **Verification** — lint/test/typecheck commands (MUST)
+8. **Status Report Protocol** — fenced code block JSON format (MUST)
+9. **After Completion** — next_step CLI command
 
-## Agent adapter responsibilities
+The dispatch module:
+1. Loads session state (state.yaml)
+2. Loads composed graph (graph.yaml) for agent bindings
+3. Loads machine-state for artifact tracking
+4. For each action, assembles the 9-section prompt envelope
+5. Returns a DispatchManifest JSON
 
-Each agent adapter (Claude Code, Codex, etc.) must:
+## External coordinator responsibilities
 
-1. Receive the XML prompt
-2. Pass it to the underlying agent (via CLI, SDK, etc.)
-3. Receive the agent's response
-4. Parse the response into a structured `AgentResult`:
-   - artifacts: list of {path, content}
-   - selfCheck: { acceptanceCriteriaMet: boolean, notes: string }
-5. Return the AgentResult to spec-graph for gate evaluation
+External coordinators (Claude Code hooks, CI/CD, custom orchestrators) must:
+
+1. Receive the dispatch manifest JSON
+2. For each action, dispatch a sub-agent with the action.prompt content
+3. Collect sub-agent responses (status-report JSON)
+4. Run `spec-graph advance --result '<json>'` with collected artifacts
+5. spec-graph evaluates the gate and advances state if passed
 
 ## Validation
 
-A prompt is valid if:
-- It has exactly one of each required tag (task, acceptance_criteria, project_constraint, methodology, context, output_spec, self_check)
-- All priority levels are correct (MUST/SHOULD/MAY)
-- previous_failure is present only when retrying
-- All referenced paths (templates, artifacts) exist in the knowledge-base or project
+A 9-section envelope is valid if:
+- All 9 section headers are present (## 1. Identity through ## 9. After Completion)
+- Output Specification includes exact path
+- File Scope includes read, write, forbid arrays
+- Status Report Protocol specifies the JSON format
+- After Completion includes the next_step command

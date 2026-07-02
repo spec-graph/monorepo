@@ -553,38 +553,168 @@ const KNOWN_RULES: Record<
     };
   },
 
-  'lint-passes': () => {
-    return {
-      criterion: { id: 'lint-passes', description: '', verificationMethod: 'rule' },
-      passed: true,
-      reason: 'Lint check deferred to external agent (run lint command)',
-    };
+  'lint-passes': (c, ctx) => {
+    return runCommandCheck(c, ctx, findLintCommand(ctx.projectRoot), 'lint');
   },
 
-  'typecheck-passes': () => {
-    return {
-      criterion: { id: 'typecheck-passes', description: '', verificationMethod: 'rule' },
-      passed: true,
-      reason: 'Type-check deferred to external agent (run tsc)',
-    };
+  'typecheck-passes': (c, ctx) => {
+    return runCommandCheck(c, ctx, findTypecheckCommand(ctx.projectRoot), 'typecheck');
   },
 
-  'build-passes': () => {
-    return {
-      criterion: { id: 'build-passes', description: '', verificationMethod: 'rule' },
-      passed: true,
-      reason: 'Build check deferred to external agent (run build)',
-    };
+  'build-passes': (c, ctx) => {
+    return runCommandCheck(c, ctx, findBuildCommand(ctx.projectRoot), 'build');
   },
 
-  'existing-tests-pass': () => {
+  'existing-tests-pass': (c, ctx) => {
+    return runCommandCheck(c, ctx, findTestCommand(ctx.projectRoot), 'test');
+  },
+
+  'implement-source-exists': (c, ctx) => {
+    // Check that the implement directory contains at least one source file
+    const implementPath = ctx.artifactFiles['implement'];
+    if (!implementPath) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: 'No implement artifact path found in context',
+      };
+    }
+
+    const fullPath = path.isAbsolute(implementPath)
+      ? implementPath
+      : path.join(ctx.projectRoot, implementPath);
+
+    if (!fs.existsSync(fullPath)) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: `Implement directory does not exist: ${implementPath}`,
+      };
+    }
+
+    const stat = fs.statSync(fullPath);
+    if (!stat.isDirectory()) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: `Implement path is not a directory: ${implementPath}`,
+      };
+    }
+
+    const files = fs.readdirSync(fullPath, { recursive: true, withFileTypes: false }) as string[];
+    const sourceFiles = files.filter(f => !f.endsWith('.md') && !f.endsWith('.yaml') && !f.endsWith('.yml') && !f.endsWith('.json'));
+
     return {
-      criterion: { id: 'existing-tests-pass', description: '', verificationMethod: 'rule' },
-      passed: true,
-      reason: 'Test run deferred to external agent (run tests)',
+      criterion: c,
+      passed: sourceFiles.length > 0,
+      reason: sourceFiles.length > 0
+        ? `Found ${sourceFiles.length} source file(s) in implement directory`
+        : 'No source files found in implement directory (only .md/.yaml/.json files)',
     };
   },
 };
+
+/**
+ * Run a shell command and return pass/fail based on exit code.
+ * If no command is provided (null), pass with a note that the check is not configured.
+ */
+function runCommandCheck(
+  c: Criterion,
+  ctx: EvaluationContext,
+  command: string | null,
+  checkName: string
+): EvaluatedCriterion {
+  if (!command) {
+    return {
+      criterion: c,
+      passed: true,
+      reason: `No ${checkName} command configured — skipping ${checkName} check`,
+    };
+  }
+
+  const { execSync } = require('node:child_process') as typeof import('node:child_process');
+  try {
+    execSync(command, {
+      cwd: ctx.projectRoot,
+      stdio: 'pipe',
+      timeout: 60_000, // 60 second timeout
+    });
+    return {
+      criterion: c,
+      passed: true,
+      reason: `${checkName} passed: ${command}`,
+    };
+  } catch (err: unknown) {
+    const error = err as { stdout?: Buffer; stderr?: Buffer; status?: number };
+    const stderr = error.stderr?.toString() || '';
+    const stdout = error.stdout?.toString() || '';
+    const output = (stderr || stdout).slice(0, 2000); // Truncate long output
+    return {
+      criterion: c,
+      passed: false,
+      reason: `${checkName} failed (exit ${error.status || 'unknown'}): ${output}`,
+    };
+  }
+}
+
+/**
+ * Find lint command from package.json scripts
+ */
+function findLintCommand(projectRoot: string): string | null {
+  const pkg = readPackageJson(projectRoot);
+  if (!pkg) return null;
+  if (pkg.scripts?.lint) return 'npm run lint';
+  if (pkg.scripts?.['lint:check']) return 'npm run lint:check';
+  return null;
+}
+
+/**
+ * Find typecheck command from package.json scripts
+ */
+function findTypecheckCommand(projectRoot: string): string | null {
+  const pkg = readPackageJson(projectRoot);
+  if (!pkg) return null;
+  if (pkg.scripts?.typecheck) return 'npm run typecheck';
+  if (pkg.scripts?.['type-check']) return 'npm run type-check';
+  if (pkg.scripts?.tsc) return 'npm run tsc';
+  // Check for tsc binary in node_modules
+  const tscPath = path.join(projectRoot, 'node_modules', '.bin', 'tsc');
+  if (fs.existsSync(tscPath)) return 'npx tsc --noEmit';
+  return null;
+}
+
+/**
+ * Find build command from package.json scripts
+ */
+function findBuildCommand(projectRoot: string): string | null {
+  const pkg = readPackageJson(projectRoot);
+  if (!pkg) return null;
+  if (pkg.scripts?.build) return 'npm run build';
+  return null;
+}
+
+/**
+ * Find test command from package.json scripts
+ */
+function findTestCommand(projectRoot: string): string | null {
+  const pkg = readPackageJson(projectRoot);
+  if (!pkg) return null;
+  if (pkg.scripts?.test) return 'npm test';
+  return null;
+}
+
+/**
+ * Read package.json from project root
+ */
+function readPackageJson(projectRoot: string): { scripts?: Record<string, string> } | null {
+  const pkgPath = path.join(projectRoot, 'package.json');
+  if (!fs.existsSync(pkgPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
 
 function evaluateRuleCriterion(
   c: Criterion,
@@ -775,6 +905,13 @@ function suggestFix(criterion: Criterion): string {
     'tasks-sized-appropriately': 'Keep task descriptions under 200 characters',
     'tasks-verifiable': 'Start task descriptions with action verbs (Implement, Add, Create, etc.)',
     'edge-cases-covered': 'Add test cases for edge cases, errors, and boundary conditions',
+    // Implement stage
+    'implement-source-exists': 'Create source files in the implement/ directory',
+    'lint-passes': 'Run the project linter and fix all errors (npm run lint)',
+    'typecheck-passes': 'Run the type-checker and fix all errors (npm run typecheck or tsc --noEmit)',
+    'build-passes': 'Run the build command and fix all errors (npm run build)',
+    'existing-tests-pass': 'Run existing tests and fix all failures (npm test)',
+    'no-broken-contracts': 'Ensure all existing APIs/interfaces remain compatible or provide migration paths',
   };
   return suggestions[criterion.id] || `Fix the issue with '${criterion.id}'`;
 }

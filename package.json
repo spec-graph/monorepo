@@ -1,8 +1,8 @@
 {
   "name": "spec-graph-monorepo",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "spec-graph v2: strict-gate, prompt-driven, automatic progression development brain. Monorepo with core (engine), cli (human/agent interface), and skills (SKILL.md collection for AI agents).",
+  "description": "spec-graph v3: declaration engine — dispatch manifest generator + gate evaluator. Monorepo with core (engine), cli (human/agent interface), and skills (SKILL.md collection for AI agents).",
   "workspaces": [
     "packages/core",
     "packages/cli",

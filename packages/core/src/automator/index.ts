@@ -1,9 +1,8 @@
 /**
- * Automator — the core automatic progression engine.
+ * Automator — the core state-machine engine.
  *
- * The automator owns the session lifecycle and the main loop that drives
- * spec-graph's 8-stage state machine: specify → design → plan → implement
- * → review → test → accept → integrate.
+ * The automator owns the session lifecycle and the 8-stage state machine:
+ * specify → design → tasks → implement → review → test → accept → integrate.
  *
  * It exposes a TypeScript API consumed by the spec-graph CLI.
  *
@@ -11,8 +10,8 @@
  *
  *   1. startSession(intent)     → creates session + draft plan
  *   2. confirmPlan(id, plan)    → user confirms, automator ready
- *   3. nextPrompt(id)           → generate prompt for current stage
- *      (agent executes prompt externally)
+ *   3. (dispatch --json)        → external coordinator gets manifest
+ *      (agent executes externally via hook or stateless API)
  *   4. submitResult(id, result) → evaluate gate, advance state
  *      loop 3-4 until done
  *   5. intervene(id, action)    → manual intervention if needed
@@ -21,7 +20,7 @@
 import * as os from 'node:os';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { buildPrompt, weaveMethodology, type PromptContext } from '../prompt-construction/index.js';
+import { trackArtifact as msTrackArtifact } from '../machine-state/index.js';
 import {
   evaluateGate,
   diagnoseFailure,
@@ -40,7 +39,7 @@ import { sense } from '../sense/index.js';
 export type Stage =
   | 'specify'
   | 'design'
-  | 'plan'
+  | 'tasks'
   | 'implement'
   | 'review'
   | 'test'
@@ -61,12 +60,6 @@ export interface Plan {
   complexity: 'low' | 'medium' | 'high';
   risks: string[];
   openQuestions: string[];
-}
-
-export interface LayeredPrompt {
-  xml: string;
-  stage: string;
-  sessionId: string;
 }
 
 export interface AgentResult {
@@ -138,14 +131,14 @@ interface TraceEntry {
 // ---------------------------------------------------------------------------
 
 export const STAGES: Stage[] = [
-  'specify', 'design', 'plan', 'implement',
+  'specify', 'design', 'tasks', 'implement',
   'review', 'test', 'accept', 'integrate',
 ];
 
 export const STAGE_OUTPUTS: Record<Stage, { artifact: string; dir: string }> = {
   specify: { artifact: 'proposal.md', dir: 'specify' },
   design: { artifact: 'design.md', dir: 'design' },
-  plan: { artifact: 'tasks.md', dir: 'plan' },
+  tasks: { artifact: 'tasks.md', dir: 'tasks' },
   implement: { artifact: 'code', dir: 'implement' },
   review: { artifact: 'review.md', dir: 'review' },
   test: { artifact: 'test.md', dir: 'test' },
@@ -268,93 +261,6 @@ export function confirmPlan(sessionId: string, plan?: Plan, projectRoot?: string
 }
 
 /**
- * Generate a prompt for the current stage.
- *
- * Weaves methodology from the knowledge-base, embeds acceptance criteria
- * from the stage's gate config, and includes upstream artifact summaries.
- */
-export function nextPrompt(
-  sessionId: string,
-  projectRoot?: string,
-  knowledgeBasePath?: string
-): LayeredPrompt {
-  const data = loadSession(sessionId, projectRoot);
-  if (!data) throw new Error(`Session not found: ${sessionId}`);
-  if (data.state === 'completed') throw new Error(`Session ${sessionId} is completed`);
-  if (data.state === 'paused') throw new Error(`Plan not confirmed. Run confirmPlan() first.`);
-
-  const stage = data.stage;
-  const stageOutput = STAGE_OUTPUTS[stage];
-  const outputPath = path.join(
-    sessionDir(sessionId, projectRoot),
-    stageOutput.dir,
-    stageOutput.artifact
-  );
-
-  // Load gate criteria from knowledge-base
-  const kbp = knowledgeBasePath || path.join(__dirname, '../../knowledge');
-  const gateConfig = loadGateConfig(stage, kbp);
-
-  // Build PromptContext
-  // Methodology selection per stage (BMAD skills integrated)
-  const methodologies = weaveMethodology(
-    stage === 'design'
-      ? ['specs-authoring', 'design-authoring', 'architecture', 'api-design']
-      : stage === 'specify'
-        ? ['brainstorming', 'design-thinking', 'requirement-analysis']
-        : stage === 'plan'
-          ? ['prd', 'task-decomposition']
-          : stage === 'implement'
-            ? ['code-generation', 'story-splitting']
-            : stage === 'review'
-              ? ['code-review', 'security-hardening']
-              : stage === 'test'
-                ? ['test-strategy']
-                : stage === 'accept'
-                  ? ['e2e-verification']
-                  : stage === 'integrate'
-                    ? ['ci-integration', 'retrospective']
-                    : [],
-    kbp
-  );
-
-  const ctx: PromptContext = {
-    sessionId,
-    stage,
-    task: `Complete the ${stage} stage for "${data.intent}".`,
-    acceptanceCriteria: [...gateConfig.entry, ...gateConfig.exit].map(
-      (c) => `${c.id}: ${c.description}`
-    ),
-    projectConstraints: [
-      'Follow the project profile and existing conventions',
-      'Respect the confirmed plan scope',
-      'Output to the specified path',
-    ],
-    methodologies,
-    upstreamArtifacts: data.completedArtifacts.map((a) => ({
-      id: a,
-      path: path.join(sessionDir(sessionId, projectRoot), a),
-      summary: `${a} — completed`,
-    })),
-    projectProfile: buildProfileString(sense(projectRoot)),
-    outputSpec: { outputPath },
-  };
-
-  // Add previous failure if retrying
-  if (data.previousDiagnoses.length > 0) {
-    const lastDiag = data.previousDiagnoses[data.previousDiagnoses.length - 1];
-    ctx.previousFailure = {
-      retryLevel: lastDiag.retryLevel,
-      similarToPrevious: lastDiag.similarToPrevious,
-      failedCriteria: lastDiag.failedCriteria,
-    };
-  }
-
-  const prompt = buildPrompt(ctx);
-  return { xml: prompt.xml, stage, sessionId };
-}
-
-/**
  * Submit a result from the external agent, evaluate the gate, and advance
  * state if all exit criteria pass.
  */
@@ -416,6 +322,15 @@ export function submitResult(
     data.completedArtifacts.push(`${stage}/${STAGE_OUTPUTS[stage].artifact}`);
     data.retryCount = 0;
     data.previousDiagnoses = [];
+
+    // Track in machine-state (best-effort mirror)
+    const artifactPath = `${stage}/${STAGE_OUTPUTS[stage].artifact}`;
+    try {
+      msTrackArtifact(artifactPath, 'completed', {
+        path: artifactPath,
+        producer: 'automator',
+      }, { projectRoot });
+    } catch { /* non-fatal: machine-state is best-effort */ }
 
     if (done) {
       data.stage = 'integrate';
@@ -514,6 +429,17 @@ export function intervene(
   switch (action) {
     case 'force-advance': {
       const currentIdx = STAGES.indexOf(data.stage);
+      // Track the current stage's artifact as forced-completed
+      const currentStage = data.stage;
+      const artifactPath = `${currentStage}/${STAGE_OUTPUTS[currentStage].artifact}`;
+      try {
+        msTrackArtifact(artifactPath, 'completed', {
+          path: artifactPath,
+          producer: 'force-advance',
+        }, { projectRoot });
+      } catch { /* non-fatal */ }
+
+      data.completedArtifacts.push(artifactPath);
       data.stage = STAGES[Math.min(currentIdx + 1, STAGES.length - 1)];
       data.retryCount = 0;
       data.previousDiagnoses = [];
@@ -533,6 +459,9 @@ export function intervene(
       break;
     case 'rollback': {
       const payloadObj = payload as { toStage?: Stage } | undefined;
+      const prevStage = data.stage;
+      const prevArtifactPath = `${prevStage}/${STAGE_OUTPUTS[prevStage].artifact}`;
+
       if (payloadObj?.toStage && STAGES.includes(payloadObj.toStage)) {
         data.stage = payloadObj.toStage;
       } else {
@@ -541,6 +470,18 @@ export function intervene(
       }
       data.retryCount = 0;
       data.previousDiagnoses = [];
+
+      // Remove the rolled-back stage's artifact from completed list
+      data.completedArtifacts = data.completedArtifacts.filter((a) => a !== prevArtifactPath);
+
+      // Track the rolled-back stage's artifact as pending
+      try {
+        msTrackArtifact(prevArtifactPath, 'pending', {
+          path: prevArtifactPath,
+          producer: 'rollback',
+        }, { projectRoot });
+      } catch { /* non-fatal */ }
+
       const entry: TraceEntry = {
         timestamp: new Date().toISOString(),
         fromStage: data.stage,
@@ -583,173 +524,14 @@ export function listSessions(projectRoot?: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-run: fully automatic loop
-// ---------------------------------------------------------------------------
-
-export interface AutoRunOptions {
-  adapterId: string;
-  projectRoot?: string;
-  knowledgeBasePath?: string;
-  /** Max retries per stage before escalating (default: 3) */
-  maxRetriesPerStage?: number;
-  /** Called for each progress update */
-  onProgress?: (event: AutoRunEvent) => void;
-}
-
-export interface AutoRunEvent {
-  type: 'stage-start' | 'agent-called' | 'gate-result' | 'retry' | 'stage-advanced' | 'done' | 'error';
-  stage?: Stage;
-  message: string;
-  data?: unknown;
-}
-
-/**
- * Run the full automated workflow for a session.
- *
- * The loop:
- *   1. nextPrompt → generate XML prompt
- *   2. invokeAgent → delegate to external agent (Claude Code, Codex, etc.)
- *   3. submitResult → evaluate gate, advance state
- *   4. repeat until done or non-recoverable error
- *
- * Returns the final Status of the session.
- */
-export async function autoRun(
-  sessionId: string,
-  options: AutoRunOptions
-): Promise<Status> {
-  const maxRetries = options.maxRetriesPerStage ?? 3;
-
-  while (true) {
-    const s = status(sessionId, options.projectRoot);
-    options.onProgress?.({
-      type: 'stage-start',
-      stage: s.stage || undefined,
-      message: `Starting stage: ${s.stage}`,
-    });
-
-    if (s.state === 'completed') {
-      options.onProgress?.({ type: 'done', message: 'All stages complete!' });
-      return s;
-    }
-    if (s.state === 'paused') {
-      options.onProgress?.({ type: 'error', message: 'Session is paused. Run spec-graph intervene resume first.' });
-      return s;
-    }
-
-    // 1. Generate prompt
-    const prompt = nextPrompt(sessionId, options.projectRoot, options.knowledgeBasePath);
-
-    // 2. Invoke agent with retry loop
-    let retryCount = 0;
-    let advanced = false;
-
-    while (!advanced && retryCount < maxRetries) {
-      options.onProgress?.({
-        type: 'agent-called',
-        stage: prompt.stage as Stage,
-        message: `Invoking agent (attempt ${retryCount + 1}/${maxRetries})...`,
-      });
-
-      const { invokeAgent, createClaudeCodeAdapter, createCodexAdapter } =
-        await import('../external-coordination/index.js');
-
-      // Ensure adapter is registered
-      try { createClaudeCodeAdapter(); } catch {}
-      try { createCodexAdapter(); } catch {}
-
-      const agentResponse = await invokeAgent(prompt.xml, {
-        adapterId: options.adapterId,
-        timeoutMs: 300_000,
-      });
-
-      options.onProgress?.({
-        type: 'agent-called',
-        stage: prompt.stage as Stage,
-        message: `Agent: ${agentResponse.status} (${agentResponse.durationMs}ms)`,
-      });
-
-      // 3. Submit result
-      const result = submitResult(
-        sessionId,
-        {
-          artifacts: agentResponse.artifacts.length > 0
-            ? agentResponse.artifacts
-            : [{ path: `${prompt.stage}-output`, content: agentResponse.raw }],
-          selfCheck: { acceptanceCriteriaMet: agentResponse.status === 'success' },
-        },
-        options.projectRoot,
-        options.knowledgeBasePath
-      );
-
-      options.onProgress?.({
-        type: 'gate-result',
-        stage: prompt.stage as Stage,
-        message: result.advanced
-          ? `Gate passed → ${result.nextStage || 'done'}`
-          : `Gate failed: ${result.diagnosis?.failedCriteria.map(c => c.id).join(', ') || 'unknown'}`,
-        data: result.diagnosis || null,
-      });
-
-      if (result.advanced) {
-        advanced = true;
-        options.onProgress?.({ type: 'stage-advanced', message: `Advanced to ${result.nextStage}` });
-      } else if (result.diagnosis) {
-        retryCount++;
-        if (retryCount < maxRetries) {
-          options.onProgress?.({
-            type: 'retry',
-            stage: prompt.stage as Stage,
-            message: `Retry ${retryCount}/${maxRetries}`,
-            data: result.diagnosis,
-          });
-        } else {
-          options.onProgress?.({
-            type: 'error',
-            message: `Max retries (${maxRetries}) exhausted. Escalating to user.`,
-            data: result.diagnosis,
-          });
-          return status(sessionId, options.projectRoot);
-        }
-      }
-    }
-
-    if (advanced) {
-      const current = status(sessionId, options.projectRoot);
-      if (current.state === 'completed') {
-        options.onProgress?.({ type: 'done', message: 'All stages complete!' });
-        return current;
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function buildProfileString(profile: ReturnType<typeof sense>): string {
-  const parts: string[] = [];
-  if (profile.language) parts.push(`Language: ${profile.language}`);
-  if (profile.framework) parts.push(`Framework: ${profile.framework}`);
-  if (profile.runtime) parts.push(`Runtime: ${profile.runtime}`);
-  if (profile.testFramework) parts.push(`Test framework: ${profile.testFramework}`);
-  if (profile.buildTool) parts.push(`Build tool: ${profile.buildTool}`);
-  if (profile.brownfield) parts.push('Brownfield project — respect existing patterns');
-  if (profile.existingFeatures.length > 0) {
-    parts.push(`Existing features: ${profile.existingFeatures.join(', ')}`);
-  }
-  if (profile.hints.length > 0) {
-    parts.push(`Hints: ${profile.hints.join('; ')}`);
-  }
-  return parts.join('\n');
-}
-
 function buildTraceEdges(data: SessionData): Record<string, string[]> {
   const edges: Record<string, string[]> = {};
-  const stages = ['plan', 'specify', 'design', 'tasks', 'code', 'tests'];
-  for (let i = 0; i < stages.length - 1; i++) {
-    edges[stages[i]] = [stages[i + 1]];
+  // Use the actual STAGES array for consistent edge naming
+  for (let i = 0; i < STAGES.length - 1; i++) {
+    edges[STAGES[i]] = [STAGES[i + 1]];
   }
   return edges;
 }
@@ -757,6 +539,9 @@ function buildTraceEdges(data: SessionData): Record<string, string[]> {
 // ---------------------------------------------------------------------------
 // YAML helpers (minimal writer for our specific session format)
 // ---------------------------------------------------------------------------
+
+// Exported for testing — not part of the public API.
+export const _test = { formatStateYaml, parseStateYaml };
 
 function formatStateYaml(data: SessionData): string {
   const lines: string[] = [
@@ -766,22 +551,54 @@ function formatStateYaml(data: SessionData): string {
     `stage: "${data.stage}"`,
     `state: "${data.state}"`,
     `retryCount: ${data.retryCount}`,
+    `readyForArchive: ${data.readyForArchive ?? false}`,
     ``,
     `# Plan`,
     `plan:`,
     `  sessionId: "${data.plan.sessionId}"`,
     `  intent: "${data.plan.intent}"`,
     `  complexity: "${data.plan.complexity}"`,
+    `  order: [${(data.plan.order || []).map((o) => `"${o}"`).join(', ')}]`,
     `  capabilities:`,
-    ...(data.plan?.capabilities || []).map(
-      (c) => `    - id: "${c.id}"\n      description: "${c.description || ''}"`
-    ),
+    ...(data.plan?.capabilities || []).flatMap((c) => {
+      const capLines = [
+        `    - id: "${c.id}"`,
+        `      description: "${c.description || ''}"`,
+      ];
+      if (c.dependsOn && c.dependsOn.length > 0) {
+        capLines.push(`      dependsOn: [${c.dependsOn.map((d) => `"${d}"`).join(', ')}]`);
+      } else {
+        capLines.push(`      dependsOn: []`);
+      }
+      return capLines;
+    }),
     `  risks:`,
     ...(data.plan?.risks || []).map((r) => `    - "${r}"`),
+    `  openQuestions:`,
+    ...(data.plan?.openQuestions || []).map((q) => `    - "${q}"`),
     ``,
     `# Completed artifacts`,
     `completedArtifacts:`,
-    ...data.completedArtifacts.map((a) => `  - "${a}"`),
+    ...(data.completedArtifacts.length > 0
+      ? data.completedArtifacts.map((a) => `  - "${a}"`)
+      : [`  []`]),
+    ``,
+    `# Previous diagnoses`,
+    `previousDiagnoses:`,
+    ...(data.previousDiagnoses && data.previousDiagnoses.length > 0
+      ? data.previousDiagnoses.flatMap((d) => [
+          `  - retryLevel: ${d.retryLevel}`,
+          `    similarToPrevious: ${d.similarToPrevious}`,
+          `    gateId: "${d.gateId}"`,
+          `    failedCriteria:`,
+          ...(d.failedCriteria.length > 0
+            ? d.failedCriteria.flatMap((fc) => [
+                `      - id: "${fc.id}"`,
+                `        reason: "${fc.reason}"`,
+              ])
+            : [`      []`]),
+        ])
+      : [`  []`]),
     ``,
     `# Trace`,
     `trace:`,
@@ -795,52 +612,226 @@ function formatStateYaml(data: SessionData): string {
 }
 
 function parseStateYaml(yaml: string): Partial<SessionData> {
-  // Minimal YAML parser for reading back session state
   const result: Partial<SessionData> = {} as Partial<SessionData>;
   const trace: TraceEntry[] = [];
-  let inTrace = false;
+  const completedArtifacts: string[] = [];
+  const previousDiagnoses: Diagnosis[] = [];
+  const capabilities: Plan['capabilities'] = [];
+  const risks: string[] = [];
+  const openQuestions: string[] = [];
+  const planOrder: string[] = [];
+
+  let section: 'header' | 'plan' | 'completedArtifacts' | 'previousDiagnoses' | 'trace' = 'header';
+  let planSubSection: 'capabilities' | 'risks' | 'openQuestions' | null = null;
+  let planData: Partial<Plan> = {};
+  let currentDiag: Partial<Diagnosis> | null = null;
+  let currentDiagCriteria: DiagnosedCriterion[] = [];
+  let inFailedCriteria = false;
 
   for (const line of yaml.split('\n')) {
-    const sessionMatch = line.match(/^sessionId:\s*"(.+)"$/);
-    if (sessionMatch) result.sessionId = sessionMatch[1];
-
-    const intentMatch = line.match(/^intent:\s*"(.+)"$/);
-    if (intentMatch) {
-      if (!result.plan) result.plan = {} as Plan;
-      if (!result.intent) result.intent = intentMatch[1];
+    // Section detection
+    if (line.startsWith('# Plan') || line.match(/^plan:$/)) {
+      section = 'plan';
+      continue;
+    }
+    if (line.startsWith('# Completed artifacts') || line.match(/^completedArtifacts:$/)) {
+      section = 'completedArtifacts';
+      continue;
+    }
+    if (line.startsWith('# Previous diagnoses') || line.match(/^previousDiagnoses:$/)) {
+      section = 'previousDiagnoses';
+      continue;
+    }
+    if (line.startsWith('# Trace') || line.match(/^trace:$/)) {
+      section = 'trace';
+      continue;
     }
 
-    const stageMatch = line.match(/^stage:\s*"(.+)"$/);
-    if (stageMatch) result.stage = stageMatch[1] as Stage;
+    switch (section) {
+      case 'header': {
+        const m = line.match(/^(\w+):\s*(.+)$/);
+        if (m) {
+          const key = m[1];
+          const val = m[2].replace(/^"|"$/g, '').trim();
+          switch (key) {
+            case 'sessionId': result.sessionId = val; break;
+            case 'intent': result.intent = val; break;
+            case 'stage': result.stage = val as Stage; break;
+            case 'state': result.state = val as SessionState; break;
+            case 'retryCount': result.retryCount = parseInt(val, 10) || 0; break;
+            case 'readyForArchive': result.readyForArchive = val === 'true'; break;
+          }
+        }
+        break;
+      }
 
-    const stateMatch = line.match(/^state:\s*"(.+)"$/);
-    if (stateMatch) result.state = stateMatch[1] as SessionState;
+      case 'plan': {
+        // Track sub-section within plan
+        if (line.match(/^\s{2}capabilities:$/)) { planSubSection = 'capabilities'; break; }
+        if (line.match(/^\s{2}risks:$/)) { planSubSection = 'risks'; break; }
+        if (line.match(/^\s{2}openQuestions:$/)) { planSubSection = 'openQuestions'; break; }
 
-    if (line.startsWith('trace:')) inTrace = true;
-    if (inTrace && line.match(/^\s{2}-\s+timestamp:/)) {
-      const ts = line.match(/timestamp:\s*"(.+)"/)?.[1] || '';
-      trace.push({ timestamp: ts, toStage: '', trigger: 'user-force' });
+        // plan.order: ["a", "b"]
+        const orderMatch = line.match(/^\s{2}order:\s*\[(.+)\]$/);
+        if (orderMatch) {
+          const inner = orderMatch[1];
+          if (inner.trim()) {
+            const items = inner.match(/"([^"]+)"/g);
+            if (items) {
+              for (const item of items) {
+                planOrder.push(item.replace(/"/g, ''));
+              }
+            }
+          }
+          break;
+        }
+
+        // plan.sessionId / intent / complexity
+        const planField = line.match(/^\s{2}(\w+):\s*"(.+)"$/);
+        if (planField) {
+          const k = planField[1];
+          const v = planField[2];
+          if (k === 'sessionId') planData.sessionId = v;
+          else if (k === 'intent') planData.intent = v;
+          else if (k === 'complexity') planData.complexity = v as Plan['complexity'];
+          break;
+        }
+
+        // capabilities array item header: "    - id: \"...\""
+        const capHeader = line.match(/^\s{4}-\s+id:\s*"(.+)"$/);
+        if (capHeader && planSubSection === 'capabilities') {
+          capabilities.push({ id: capHeader[1], description: '', dependsOn: [] });
+          break;
+        }
+
+        // capability description
+        const capDesc = line.match(/^\s{6}description:\s*"(.+)"$/);
+        if (capDesc && capabilities.length > 0) {
+          capabilities[capabilities.length - 1].description = capDesc[1];
+          break;
+        }
+
+        // capability dependsOn
+        const capDeps = line.match(/^\s{6}dependsOn:\s*\[(.+)\]$/);
+        if (capDeps && capabilities.length > 0) {
+          const inner = capDeps[1];
+          if (inner.trim()) {
+            const items = inner.match(/"([^"]+)"/g);
+            if (items) {
+              capabilities[capabilities.length - 1].dependsOn = items.map((i) => i.replace(/"/g, ''));
+            }
+          }
+          break;
+        }
+
+        // risks / openQuestions array item: "    - \"...\""
+        const arrayItem = line.match(/^\s{4}-\s*"(.+)"$/);
+        if (arrayItem) {
+          if (planSubSection === 'risks') risks.push(arrayItem[1]);
+          else if (planSubSection === 'openQuestions') openQuestions.push(arrayItem[1]);
+          break;
+        }
+        break;
+      }
+
+      case 'completedArtifacts': {
+        const artMatch = line.match(/^\s{2}-\s*"(.+)"$/);
+        if (artMatch) {
+          completedArtifacts.push(artMatch[1]);
+        }
+        break;
+      }
+
+      case 'previousDiagnoses': {
+        // Diagnosis header: "  - retryLevel: N"
+        const diagHeader = line.match(/^\s{2}-\s+retryLevel:\s*(\d+)$/);
+        if (diagHeader) {
+          if (currentDiag) {
+            previousDiagnoses.push({
+              gateId: currentDiag.gateId || '',
+              retryLevel: (currentDiag.retryLevel || 1) as Diagnosis['retryLevel'],
+              similarToPrevious: currentDiag.similarToPrevious || false,
+              failedCriteria: currentDiagCriteria,
+            });
+          }
+          currentDiag = { retryLevel: parseInt(diagHeader[1], 10) as Diagnosis['retryLevel'] };
+          currentDiagCriteria = [];
+          inFailedCriteria = false;
+          break;
+        }
+
+        const diagField = line.match(/^\s{4}(\w+):\s*(.+)$/);
+        if (diagField && currentDiag) {
+          const k = diagField[1];
+          const v = diagField[2].replace(/^"|"$/g, '').trim();
+          if (k === 'similarToPrevious') currentDiag.similarToPrevious = v === 'true';
+          else if (k === 'gateId') currentDiag.gateId = v;
+          else if (k === 'failedCriteria') inFailedCriteria = true;
+          break;
+        }
+
+        // Failed criterion header: "      - id: \"...\""
+        const fcHeader = line.match(/^\s{6}-\s+id:\s*"(.+)"$/);
+        if (fcHeader && currentDiag) {
+          currentDiagCriteria.push({ id: fcHeader[1], reason: '' });
+          break;
+        }
+
+        // Failed criterion reason
+        const fcReason = line.match(/^\s{8}reason:\s*"(.+)"$/);
+        if (fcReason && currentDiagCriteria.length > 0) {
+          currentDiagCriteria[currentDiagCriteria.length - 1].reason = fcReason[1];
+          break;
+        }
+        break;
+      }
+
+      case 'trace': {
+        const tsMatch = line.match(/^\s{2}-\s+timestamp:\s*"(.+)"$/);
+        if (tsMatch) {
+          trace.push({ timestamp: tsMatch[1], toStage: '', trigger: 'user-force' });
+          break;
+        }
+        const toMatch = line.match(/^\s{4}toStage:\s*"(.+)"$/);
+        if (toMatch && trace.length > 0) {
+          trace[trace.length - 1].toStage = toMatch[1];
+          break;
+        }
+        const trigMatch = line.match(/^\s{4}trigger:\s*"(.+)"$/);
+        if (trigMatch && trace.length > 0) {
+          trace[trace.length - 1].trigger = trigMatch[1] as TraceEntry['trigger'];
+          break;
+        }
+        break;
+      }
     }
   }
 
+  // Flush last diagnosis
+  if (currentDiag) {
+    previousDiagnoses.push({
+      gateId: currentDiag.gateId || '',
+      retryLevel: (currentDiag.retryLevel || 1) as Diagnosis['retryLevel'],
+      similarToPrevious: currentDiag.similarToPrevious || false,
+      failedCriteria: currentDiagCriteria,
+    });
+  }
+
+  // Assemble plan
+  const plan: Plan = {
+    sessionId: planData.sessionId || result.sessionId || 'unknown',
+    intent: planData.intent || result.intent || '',
+    capabilities,
+    order: planOrder.length > 0 ? planOrder : capabilities.map((c) => c.id),
+    complexity: planData.complexity || 'medium',
+    risks,
+    openQuestions,
+  };
+  result.plan = plan;
   result.trace = trace;
-  result.completedArtifacts = [];
-  result.previousDiagnoses = [];
-  result.retryCount = 0;
-  // Ensure plan object exists with required fields
-  if (!result.plan) {
-    result.plan = {
-      sessionId: result.sessionId || 'unknown',
-      intent: result.intent || '',
-      capabilities: [],
-      order: [],
-      complexity: 'medium',
-      risks: [],
-      openQuestions: [],
-    };
-  }
-  if (!result.plan.capabilities) result.plan.capabilities = [];
-  if (!result.plan.risks) result.plan.risks = [];
+  result.completedArtifacts = completedArtifacts;
+  result.previousDiagnoses = previousDiagnoses;
+  if (result.retryCount === undefined) result.retryCount = 0;
 
   return result;
 }

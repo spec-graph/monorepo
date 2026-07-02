@@ -1,19 +1,22 @@
 /**
- * @spec-graph/core v2
+ * @spec-graph/core v3
  *
  * The spec-graph engine. A TypeScript library that provides:
  *
- *   - automator: the main state-machine loop (auto / stateless / hook APIs)
- *   - prompt-construction: layered prompt generation with methodology weaving
+ *   - automator: the main state-machine loop
  *   - planning: intent → structured plan (Phase 0)
  *   - gate-enforcement: entry/exit criteria evaluation + progressive retry
- *   - external-coordination: delegate execution to external AI agents
  *   - knowledge-base: built-in library of methodologies
  *   - recovery: diagnosis-driven recovery strategy
+ *   - sense: project feature detection
+ *   - dispatch: manifest generation for sub-agent execution
+ *   - composer: pack composition into graph.yaml
+ *   - machine-state: artifact state tracking
  *
- * spec-graph is a "brain, not hands" — it generates prompts and evaluates
- * outputs, but never executes directly. All execution is delegated to
- * external AI agents via the external-coordination module.
+ * spec-graph is a "brain, not hands" — it generates dispatch manifests
+ * and evaluates outputs, but never executes directly. All execution is
+ * delegated to external coordinators (Claude Code hooks, CI/CD systems,
+ * custom orchestrators).
  *
  * Consumed by:
  *   - packages/cli (the human-facing CLI)
@@ -21,31 +24,27 @@
  */
 
 export * as automator from './automator/index.js';
-export * as promptConstruction from './prompt-construction/index.js';
 export * as planning from './planning/index.js';
 export * as gateEnforcement from './gate-enforcement/index.js';
-export * as externalCoordination from './external-coordination/index.js';
 export * as knowledgeBase from './knowledge-base/index.js';
 export * as recovery from './recovery/index.js';
 export * as sense from './sense/index.js';
+export * as dispatch from './dispatch/index.js';
+export * as composer from './composer/index.js';
+export * as machineState from './machine-state/index.js';
 
 // Re-export key types for convenience
 export type {
   Stage,
   Plan,
-  LayeredPrompt,
   AgentResult,
   AdvanceResult,
   Diagnosis,
   Status,
 } from './automator/index.js';
 
-export type {
-  AgentAdapter,
-  AgentConfig,
-  AgentResponse,
-} from './external-coordination/index.js';
 export type { Skill, KnowledgeBase } from './knowledge-base/index.js';
 export type { RecoveryAction } from './recovery/index.js';
+export type { DispatchAction, DispatchManifest, DispatchMeeting } from './types/index.js';
 
-export const VERSION = '2.0.0-alpha.0';
+export const VERSION = '3.0.0';
