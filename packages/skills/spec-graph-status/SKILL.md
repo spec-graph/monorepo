@@ -12,6 +12,17 @@ Check the status of a spec-graph workflow session.
 
 ---
 
+## Orchestrates
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `spec-graph status --json` | Show unified workflow dashboard |
+| `spec-graph status` | Human-readable status display |
+
+Backed by core modules: `automator`
+
+---
+
 ## Steps
 
 ### 1. Query status

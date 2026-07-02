@@ -10,6 +10,20 @@ metadata:
 
 Diagnose the most recent gate failure.
 
+---
+
+## Orchestrates
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `spec-graph diagnose --session <id>` | Diagnose gate failure with root cause |
+| `spec-graph advance --result '<json>'` | Re-submit after applying fix |
+| `spec-graph intervene --session <id>` | Escalate if unrecoverable |
+
+Backed by core modules: `gate-enforcement`, `recovery`
+
+---
+
 When spec-graph's automator hits a gate that won't pass, it produces a structured diagnosis. This skill helps you read and act on that diagnosis.
 
 ---

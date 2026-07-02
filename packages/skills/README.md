@@ -5,7 +5,17 @@ SKILL.md collection for AI agents to orchestrate the spec-graph CLI.
 Each skill is a `SKILL.md` file that Claude Code (or similar AI agents) reads
 to understand how to use spec-graph for a specific task.
 
-## Skills
+## Skills (7)
+
+### spec-graph-init
+
+Bootstrap a new or existing project for spec-graph.
+
+```
+/spec-graph-init
+```
+
+Runs sense → compose → prime to initialize `.spec-graph/`.
 
 ### spec-graph-plan
 
@@ -15,8 +25,7 @@ Transform user intent into a structured plan.
 /spec-graph-plan "<intent>"
 ```
 
-Creates a session, generates a plan, and asks the user to confirm before
-proceeding.
+Creates a session, generates a plan, and asks the user to confirm before proceeding.
 
 ### spec-graph-auto
 
@@ -26,8 +35,7 @@ Start the full automatic workflow.
 /spec-graph-auto "<intent>"
 ```
 
-Creates a session, confirms the plan, and runs the automatic loop:
-generate prompt → invoke agent → submit result → advance state.
+Runs the automatic loop: generate prompt → agent executes → submit result → advance state.
 
 ### spec-graph-status
 
@@ -37,7 +45,27 @@ Check the current workflow state.
 /spec-graph-status
 ```
 
-Returns: current stage, progress, blockers, recent diagnosis.
+Returns current stage, progress, blockers, recent diagnosis.
+
+### spec-graph-validate
+
+Validate current state against stage gates.
+
+```
+/spec-graph-validate
+```
+
+Evaluates entry/exit criteria and reports pass/fail.
+
+### spec-graph-diagnose
+
+Diagnose a gate failure with root cause and fix suggestions.
+
+```
+/spec-graph-diagnose
+```
+
+Shows which criteria failed, why, and how to fix.
 
 ### spec-graph-intervene
 
@@ -47,28 +75,31 @@ Manual intervention in the workflow.
 /spec-graph-intervene <action>
 ```
 
-Available actions: `force-advance`, `rollback`, `resume`, `modify-plan`.
+Actions: `force-advance`, `rollback`, `resume`, `modify-plan`.
+
+## Architecture
+
+Skills are the **orchestration layer** — they tell AI agents how to compose CLI commands into workflows. One skill covers N CLI commands. Not every CLI command needs a skill.
+
+```
+Skills  (7, orchestration)  →  CLI  (19, atomic ops)  →  Core  (15+ modules, API)
+```
+
+Each skill documents:
+1. **Orchestrates** — which CLI commands it uses and which core modules back them
+2. **Stance** — how the agent should think about this task
+3. **Steps** — which CLI commands to invoke, in what order
+4. **Response handling** — how to interpret CLI output
+5. **Edge cases** — what to do on error
+
+See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) for the full mapping.
 
 ## Installation
 
-Copy the skill directories to your Claude Code skills location:
-
 ```bash
-# Global installation
-cp -r packages/skills/spec-graph-* ~/.claude/skills/
+# Global
+node packages/skills/scripts/install-skills.mjs
 
-# Or project-local
-cp -r packages/skills/spec-graph-* .claude/skills/
+# Project-local
+node packages/skills/scripts/install-skills.mjs --local
 ```
-
-## How Skills Work
-
-Each SKILL.md contains:
-
-1. **Stance** — how the agent should think about this task
-2. **Steps** — which CLI commands to invoke, in what order
-3. **Response handling** — how to interpret CLI output
-4. **Edge cases** — what to do on error
-
-Skills are "编排层" (orchestration layer) — they tell the agent how to use
-the CLI commands in sequence to accomplish a workflow.

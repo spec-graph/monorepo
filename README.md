@@ -71,23 +71,35 @@ npx tsx packages/cli/src/index.ts auto "Add JWT authentication" --adapter claude
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Layer A: Skills (SKILL.md files for AI agents)              │
-│   packages/skills/                                           │
-│   └─ spec-graph-plan / auto / status / intervene             │
+│  Layer 1: Skills (SKILL.md files for AI agents)              │
+│   packages/skills/  (7 entry skills)                         │
+│   └─ init / plan / auto / status / validate / diagnose       │
+│      / intervene                                             │
 │                                                              │
-│  Layer B: CLI (command-line tool, human + agent-orchestrated)│
-│   packages/cli/                                              │
-│   └─ 8 commands: plan, auto, status, next-prompt,            │
-│                 advance, validate, intervene, diagnose        │
+│  Layer 2: CLI (command-line tool, shell commands)            │
+│   packages/cli/  (19 commands)                               │
+│   └─ auto, plan, status, advance, validate, intervene,       │
+│      diagnose, next-prompt, sessions, init, compose,         │
+│      config, install, dispatch, gate, check, machine,        │
+│      analyze, completion                                     │
 │                                                              │
-│  Layer C: core (TypeScript library — the brain)              │
-│   packages/core/                                             │
-│   └─ automator / prompt-construction / planning /            │
-│      gate-enforcement / external-coordination /              │
-│      knowledge-base / recovery                               │
+│  Layer 3: Core (TypeScript library — the engine)             │
+│   packages/core/  (15+ modules)                              │
+│   └─ automator / planning / gate-enforcement /               │
+│      prompt-construction / external-coordination /           │
+│      knowledge-base / recovery / sense /                     │
+│      context-sharing / dependency-analyzer /                 │
+│      file-conflict-analyzer / integration-gate /             │
+│      parallel-recovery / types / utils                       │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+- **Skills** orchestrate CLI commands for AI agents — 1 skill covers N CLI commands
+- **CLI** provides atomic shell commands — each is a thin (20-40 line) wrapper over core API
+- **Core** provides the programmatic API — never contains SKILL.md files or CLI logic
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 
 ### Core Modules
 

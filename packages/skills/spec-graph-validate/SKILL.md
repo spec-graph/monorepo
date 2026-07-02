@@ -10,6 +10,19 @@ metadata:
 
 Validate the current state of a spec-graph workflow.
 
+---
+
+## Orchestrates
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `spec-graph validate --session <id>` | Evaluate current state against gates |
+| `spec-graph gate --stage <stage> --type entry` | Raw gate evaluation |
+
+Backed by core modules: `gate-enforcement`, `automator`
+
+---
+
 Validation runs the current stage's gate criteria against the existing artifacts and reports pass/fail status. This is useful for:
 
 - **Pre-submit check**: Validate before running `advance` to avoid gate failures

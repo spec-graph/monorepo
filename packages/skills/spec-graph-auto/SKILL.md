@@ -14,6 +14,20 @@ spec-graph is the development brain — it generates prompts for you (the agent)
 
 ---
 
+## Orchestrates
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `spec-graph auto <intent>` | Single-command full workflow (Mode A) |
+| `spec-graph next-prompt --json` | Get next prompt with layered XML |
+| `spec-graph advance --result '<json>'` | Submit result and advance state |
+| `spec-graph diagnose --session <id>` | Diagnose gate failure |
+| `spec-graph intervene --session <id>` | Escalate to user intervention |
+
+Backed by core modules: `automator`, `gate-enforcement`, `prompt-construction`, `external-coordination`
+
+---
+
 ## The Stance
 
 - **Follow the prompts.** spec-graph's prompts are carefully layered (MUST / SHOULD / MAY). Respect the priority levels.

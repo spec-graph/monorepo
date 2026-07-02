@@ -16,6 +16,17 @@ This skill walks you through the **planning phase** — the ONLY phase where hum
 
 ---
 
+## Orchestrates
+
+| CLI Command | Purpose |
+|-------------|---------|
+| `spec-graph plan "<intent>" --json` | Transform intent into structured plan |
+| `spec-graph intervene --session <id>` | Modify or force-advance if needed |
+
+Backed by core modules: `planning`, `automator`
+
+---
+
 ## The Stance
 
 - **Plan first, act second.** Never jump into implementation without a confirmed plan.
