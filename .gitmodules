@@ -4,3 +4,12 @@
 [submodule "packages/ui"]
 	path = packages/ui
 	url = git@github.com:spec-graph/ui.git
+[submodule "packages/skills"]
+	path = packages/skills
+	url = git@github.com:spec-graph/skills.git
+[submodule "packages/core"]
+	path = packages/core
+	url = git@github.com:spec-graph/core.git
+[submodule "packages/cli"]
+	path = packages/cli
+	url = git@github.com:spec-graph/cli.git
