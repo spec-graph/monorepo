@@ -1,16 +1,16 @@
 ---
 name: spec-graph-dispatch
-description: Run the spec-graph workflow via dispatch + hook. Each dispatch --json produces a manifest; the dispatch-watcher hook injects a system-reminder; the main agent dispatches sub-agents via Agent tool; advance records results. Loop 8 stages until state = completed. Use when the user wants to run the full spec-graph workflow after confirming a plan.
+description: Run the spec-graph workflow via dispatch + hook. Each dispatch --json produces a manifest; the spec-graph hook dispatch CLI injects a system-reminder; the main agent dispatches sub-agents via Agent tool; submit records results. Loop 9 stages until state = completed. Use when the user wants to run the full spec-graph workflow after confirming a plan.
 license: MIT
-compatibility: Requires spec-graph CLI (v3+) installed and dispatch-watcher hook registered.
+compatibility: Requires spec-graph CLI (v3+) installed and dispatch hook registered (spec-graph init).
 metadata:
   author: spec-graph
-  version: "3.0"
+  version: "3.1"
 ---
 
-Run the spec-graph workflow through 8 stages: specify → design → tasks → implement → review → test → accept → integrate.
+Run the spec-graph workflow through 9 stages: specify → specs → design → tasks → implement → review → test → accept → integrate.
 
-spec-graph is a declaration engine — it generates dispatch manifests but never invokes agents. The dispatch-watcher hook bridges spec-graph and the main agent: each `dispatch --json` triggers a system-reminder that instructs the main agent to dispatch sub-agents via the Agent tool.
+spec-graph is a declaration engine — it generates dispatch manifests but never invokes agents. The PostToolUse hook (`spec-graph hook dispatch`) bridges spec-graph and the main agent: each `dispatch --json` triggers a system-reminder that instructs the main agent to dispatch sub-agents via the Agent tool.
 
 ---
 
@@ -19,7 +19,7 @@ spec-graph is a declaration engine — it generates dispatch manifests but never
 | CLI Command | Purpose |
 |-------------|---------|
 | `spec-graph dispatch --session <id> --json` | Produce DispatchManifest for current stage |
-| `spec-graph advance --session <id> --result '<json>'` | Submit sub-agent results, evaluate gate, advance state |
+| `spec-graph submit --session <id> --result '<json>'` | Submit sub-agent results, evaluate gate, advance state |
 | `spec-graph status --session <id>` | Check current state and stage |
 | `spec-graph diagnose --session <id>` | Inspect gate failure diagnosis |
 | `spec-graph intervene <action>` | Manual intervention (force-advance, rollback, resume) |
@@ -33,13 +33,13 @@ Backed by core modules: `dispatch`, `automator`, `gate-enforcement`, `machine-st
 - spec-graph CLI v3+ installed (`spec-graph --version`)
 - `.spec-graph/` directory exists (`spec-graph init` has run)
 - Current session state = "running" (plan confirmed)
-- dispatch-watcher hook registered in `.claude/settings.json`
+- PostToolUse hook registered in `.claude/settings.json` (`spec-graph init`)
 
 ---
 
 ## The Loop
 
-Repeat the following 4-step cycle for each of the 8 stages:
+Repeat the following 4-step cycle for each of the 9 stages:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -48,7 +48,7 @@ Repeat the following 4-step cycle for each of the 8 stages:
 └─────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────┐
-│  Step B: dispatch-watcher hook auto-triggers            │
+│  Step B: PostToolUse hook auto-triggers                   │
 │  → Injects system-reminder with manifest summary        │
 └─────────────────────────────────────────────────────────┘
                           ↓
@@ -61,7 +61,7 @@ Repeat the following 4-step cycle for each of the 8 stages:
 └─────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────┐
-│  Step D: spec-graph advance --session <id> --result     │
+│  Step D: spec-graph submit --session <id> --result     │
 │  → Gate evaluation (pass/fail)                          │
 │  → State progression (next stage)                       │
 │  → machine-state update                                 │
@@ -71,6 +71,55 @@ Repeat the following 4-step cycle for each of the 8 stages:
 ```
 
 Repeat 8 times total, until `state = "completed"`.
+
+---
+
+## Important: FSM Stages ≠ Graph Actions
+
+**FSM stages 和 graph actions 是两套不同的概念，通过 `dispatch` 模块映射。**
+
+```
+ FSM stages (管道)：               graph actions (能力)：
+ ─────────────────────────         ─────────────────────────
+ 定义"什么时候做什么"               定义"agent 能做什么"
+ 线性顺序，强制依赖                 声明式，不强制顺序
+ gate 绑定在 stage 上              agent 绑定在 action 上
+
+ specify ──── stage ────────▶      propose  ──── action ────▶ pm agent 执行
+                                   specify  ──── action ────▶ pm agent 执行
+
+ design ───── stage ────────▶      design   ──── action ────▶ architect agent 执行
+                                   contract ──── action ────▶ architect agent 执行
+                                   ↑ 没有对应的 stage，但需要这个能力
+
+ tasks ────── stage ────────▶      plan     ──── action ────▶ developer agent 执行
+                                   ↑ stage 叫 tasks，action 叫 plan
+                                   （v3.0 改了 stage 名，action 名保留）
+
+ implement ── stage ────────▶      implement── action ────▶ developer agent 执行
+
+ review ───── stage ────────▶      review   ──── action ────▶ reviewer agent 执行
+
+ test ─────── stage ────────▶      test     ──── action ────▶ qa agent 执行
+
+ accept ───── stage ────────▶      accept   ──── action ────▶ qa agent 执行
+
+ integrate ── stage ────────▶      integrate── action ────▶ developer agent 执行
+                                   release  ──── action ────▶ developer agent 执行
+                                   archive  ──── action ────▶ pm agent 执行
+                                   ↑ 有对应 action，但不在 FSM pipeline 中
+                                   （事后操作，非管道阶段）
+```
+
+**dispatch 映射逻辑：**
+```typescript
+// packages/core/src/dispatch/index.ts
+const stage = status.stage;           // 当前 FSM stage
+const agentId = bindings[stage];      // agent_bindings 查找
+const agent = resolveAgent(agentId);  // AgentDecl 查找
+```
+
+**⚠️ graph 有 12 个 actions，FSM 只有 8 个 stages。这是正确的设计。** 多余 bindings (propose, contract, archive, release, diagnose) 用于非管道场景 — 不要加 stage 让它们对齐，也不要删除它们。
 
 ---
 
@@ -93,9 +142,24 @@ spec-graph dispatch --session <id> --json
 The hook auto-injects a system-reminder with:
 - Number of actions in this wave
 - Agent ID and model tier for each action
+- Meeting availability (if declared in graph): whether a meeting is available and recommended
 - The next_step command to run after sub-agents return
 
-### 3. Dispatch sub-agent(s)
+### 3. [Optional] Initiate a meeting
+
+If the manifest includes `meeting.available: true` and you judge the task needs multi-perspective discussion, you can initiate a meeting instead of single-agent dispatch:
+
+```bash
+spec-graph meeting init <meeting-id> --session <id>
+```
+
+**When to use:** high complexity, many capabilities, open questions, security/brownfield risks, or you detect ambiguity.
+
+**When to skip:** simple tasks with clear requirements — default to single-agent dispatch.
+
+See `coordinator-protocol.md` for the full decision framework and meeting protocol.
+
+### 4. Dispatch sub-agent(s)
 
 Based on the system-reminder:
 
@@ -112,12 +176,12 @@ Agent({
 **Multiple actions (implement with N capabilities):**
 Dispatch N sub-agents simultaneously in a single message (parallel Agent tool calls). Each sub-agent handles one capability.
 
-### 4. Collect results and advance
+### 4. Collect results and submit
 
 After all sub-agents return:
 
 ```bash
-spec-graph advance --session <id> --result '{
+spec-graph submit --session <id> --result '{
   "artifacts": [
     {"path": "<stage>/<file>", "content": "..."},
     ...
@@ -182,7 +246,7 @@ The diagnosis contains:
 - `suggestedFix`: what to fix
 - `retryLevel`: 1-4 progressive retry level
 
-Fix the failing artifact(s) and re-run dispatch + advance. The automator weaves the diagnosis into the next prompt automatically.
+Fix the failing artifact(s) and re-run dispatch + submit. The automator weaves the diagnosis into the next prompt automatically.
 
 ### Sub-agent returns BLOCKED
 
@@ -200,7 +264,7 @@ Report to the user and wait for guidance. May need `spec-graph intervene`.
    ```
 2. Verify the hook script exists:
    ```bash
-   ls $(cat .claude/settings.json | grep dispatch-watcher | sed 's/.*"\(.*\)".*/\1/')
+   cat .claude/settings.json | grep -q 'spec-graph hook dispatch' && echo OK
    ```
 3. Re-register: `spec-graph init` (or `spec-graph install`)
 
@@ -218,7 +282,7 @@ After 4 failed retries per stage, the automator escalates to the user. Use `spec
 
 - **No active sessions**: Run `spec-graph plan "<intent>" --confirm` first
 - **Multiple sessions**: Specify `--session <id>` on every command
-- **Stage already completed**: advance is idempotent for completed stages
+- **Stage already completed**: submit is idempotent for completed stages
 - **Empty manifest**: If current stage has no agent bindings, manifest.actions = []
 
 ---

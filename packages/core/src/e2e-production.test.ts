@@ -41,7 +41,7 @@ function makeFoundationPack(): Record<string, any> {
     applies_when: 'always',
     provides: {
       artifacts: [],
-      actions: ['propose', 'specify', 'design', 'plan', 'implement', 'review', 'test', 'accept', 'integrate'],
+      actions: ['propose', 'specify', 'design', 'tasks', 'implement', 'review', 'test', 'accept', 'integrate'],
       checks: [
         { id: 'lint', kind: 'lint', command: '<lint-command>', layer: 'unit' },
       ],
@@ -50,12 +50,12 @@ function makeFoundationPack(): Record<string, any> {
       agents: [
         { id: 'pm', description: 'PM', prompt_ref: 'pm.md', model_tier: 'capable', input_artifact_kinds: [], output_artifact_kinds: ['requirement/*'], actions: ['propose', 'specify'] },
         { id: 'architect', description: 'Architect', prompt_ref: 'arch.md', model_tier: 'capable', input_artifact_kinds: ['requirement/*'], output_artifact_kinds: ['design/*'], actions: ['design'] },
-        { id: 'developer', description: 'Dev', prompt_ref: 'dev.md', model_tier: 'standard', input_artifact_kinds: ['design/*'], output_artifact_kinds: ['implementation/*'], actions: ['implement', 'plan'] },
+        { id: 'developer', description: 'Dev', prompt_ref: 'dev.md', model_tier: 'standard', input_artifact_kinds: ['design/*'], output_artifact_kinds: ['implementation/*'], actions: ['implement', 'tasks'] },
         { id: 'reviewer', description: 'Reviewer', prompt_ref: 'rev.md', model_tier: 'capable', input_artifact_kinds: ['implementation/*'], output_artifact_kinds: ['verification/*'], actions: ['review'] },
         { id: 'qa', description: 'QA', prompt_ref: 'qa.md', model_tier: 'standard', input_artifact_kinds: ['implementation/*'], output_artifact_kinds: ['verification/*'], actions: ['test', 'accept'] },
       ],
       agent_bindings: {
-        propose: 'pm', specify: 'pm', design: 'architect', plan: 'developer',
+        propose: 'pm', specify: 'pm', design: 'architect', tasks: 'developer',
         implement: 'developer', review: 'reviewer', test: 'qa', accept: 'qa',
       },
       meetings: [],

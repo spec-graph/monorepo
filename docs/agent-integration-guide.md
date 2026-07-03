@@ -31,7 +31,7 @@ spec-graph next-prompt
 # (agent does the work)
 
 # Submit result
-spec-graph advance --result '{"artifacts": [{"path": "...", "content": "..."}]}'
+spec-graph submit --result '{"artifacts": [{"path": "...", "content": "..."}]}'
 
 # Check progress
 spec-graph status --json

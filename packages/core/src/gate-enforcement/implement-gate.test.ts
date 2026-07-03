@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { evaluateGate, type EvaluationContext } from './index';
 
-// Knowledge base path (relative to this test file)
+// Knowledge base path relative to test file
 const knowledgeBasePath = path.resolve(__dirname, '../../knowledge');
 
 describe('implement gate', () => {
@@ -15,11 +15,6 @@ describe('implement gate', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'implement-gate-test-'));
     implementDir = path.join(tmpDir, 'implement');
     fs.mkdirSync(implementDir, { recursive: true });
-    // Create a minimal package.json
-    fs.writeFileSync(
-      path.join(tmpDir, 'package.json'),
-      JSON.stringify({ name: 'test-project', scripts: {} }, null, 2)
-    );
   });
 
   afterEach(() => {
@@ -40,93 +35,116 @@ describe('implement gate', () => {
   describe('implement-source-exists', () => {
     it('fails when implement directory is empty', () => {
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const sourceExists = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
-      expect(sourceExists).toBeDefined();
-      expect(sourceExists!.passed).toBe(false);
-      expect(sourceExists!.reason).toContain('No source files');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
+      expect(criterion).toBeDefined();
+      expect(criterion!.passed).toBe(false);
+      expect(criterion!.reason).toContain('No source files');
     });
 
-    it('fails when implement directory has only .md files', () => {
+    it('fails when only .md/.yaml/.json files exist', () => {
       fs.writeFileSync(path.join(implementDir, 'README.md'), '# readme');
-      fs.writeFileSync(path.join(implementDir, 'notes.md'), '# notes');
+      fs.writeFileSync(path.join(implementDir, 'config.json'), '{}');
 
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const sourceExists = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
-      expect(sourceExists!.passed).toBe(false);
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
+      expect(criterion!.passed).toBe(false);
     });
 
-    it('passes when implement directory has source files', () => {
+    it('passes when source files exist', () => {
       fs.writeFileSync(path.join(implementDir, 'index.ts'), 'export const x = 1;');
 
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const sourceExists = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
-      expect(sourceExists!.passed).toBe(true);
-      expect(sourceExists!.reason).toContain('1 source file');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
+      expect(criterion!.passed).toBe(true);
     });
 
     it('passes with nested source files', () => {
-      const subDir = path.join(implementDir, 'src', 'utils');
-      fs.mkdirSync(subDir, { recursive: true });
-      fs.writeFileSync(path.join(subDir, 'helper.js'), 'module.exports = {};');
+      const src = path.join(implementDir, 'src', 'utils');
+      fs.mkdirSync(src, { recursive: true });
+      fs.writeFileSync(path.join(src, 'helper.py'), 'def foo(): pass');
 
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const sourceExists = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
-      expect(sourceExists!.passed).toBe(true);
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-source-exists');
+      expect(criterion!.passed).toBe(true);
     });
   });
 
-  describe('command-based checks', () => {
-    it('typecheck-passes skips when no typecheck command configured', () => {
+  describe('implement-validation-passed', () => {
+    it('fails when validation-report.json is missing', () => {
+      // Source exists but no validation report
+      fs.writeFileSync(path.join(implementDir, 'index.ts'), 'export {}');
+
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const typecheck = result.evaluatedCriteria.find(c => c.criterion.id === 'typecheck-passes');
-      expect(typecheck).toBeDefined();
-      expect(typecheck!.passed).toBe(true);
-      expect(typecheck!.reason).toContain('No typecheck command configured');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion).toBeDefined();
+      expect(criterion!.passed).toBe(false);
+      expect(criterion!.reason).toContain('not found');
     });
 
-    it('lint-passes skips when no lint command configured', () => {
+    it('fails when validation-report.json is not valid JSON', () => {
+      fs.writeFileSync(path.join(implementDir, 'validation-report.json'), 'not json');
+
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const lint = result.evaluatedCriteria.find(c => c.criterion.id === 'lint-passes');
-      expect(lint!.passed).toBe(true);
-      expect(lint!.reason).toContain('No lint command configured');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion!.passed).toBe(false);
+      expect(criterion!.reason).toContain('not valid JSON');
     });
 
-    it('build-passes skips when no build command configured', () => {
+    it('fails when validation_passed is missing', () => {
+      fs.writeFileSync(path.join(implementDir, 'validation-report.json'),
+        JSON.stringify({ commands_run: ['tsc'] }));
+
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const build = result.evaluatedCriteria.find(c => c.criterion.id === 'build-passes');
-      expect(build!.passed).toBe(true);
-      expect(build!.reason).toContain('No build command configured');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion!.passed).toBe(false);
+      expect(criterion!.reason).toContain('missing validation_passed');
     });
 
-    it('existing-tests-pass skips when no test command configured', () => {
+    it('fails when validation_passed is false', () => {
+      fs.writeFileSync(path.join(implementDir, 'validation-report.json'),
+        JSON.stringify({
+          validation_passed: false,
+          commands_run: ['tsc --noEmit'],
+          output: '12 type errors found',
+          errors: ['TS2304: Cannot find name foo']
+        }));
+
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const tests = result.evaluatedCriteria.find(c => c.criterion.id === 'existing-tests-pass');
-      expect(tests!.passed).toBe(true);
-      expect(tests!.reason).toContain('No test command configured');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion!.passed).toBe(false);
+      expect(criterion!.reason).toContain('TS2304');
     });
 
-    it('test command fails when tests fail', () => {
-      // Configure a failing test command
-      fs.writeFileSync(
-        path.join(tmpDir, 'package.json'),
-        JSON.stringify({ name: 'test', scripts: { test: 'node -e "process.exit(1)"' } }, null, 2)
-      );
+    it('passes when validation_passed is true', () => {
+      fs.writeFileSync(path.join(implementDir, 'validation-report.json'),
+        JSON.stringify({
+          validation_passed: true,
+          commands_run: ['tsc --noEmit', 'vitest run'],
+          output: 'TypeScript: OK. Tests: 15/15 passed.',
+          errors: []
+        }));
 
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const tests = result.evaluatedCriteria.find(c => c.criterion.id === 'existing-tests-pass');
-      expect(tests!.passed).toBe(false);
-      expect(tests!.reason).toContain('test failed');
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion!.passed).toBe(true);
+      expect(criterion!.reason).toContain('Validation passed');
+      expect(criterion!.reason).toContain('tsc');
+      expect(criterion!.reason).toContain('vitest');
     });
 
-    it('test command passes when tests succeed', () => {
-      fs.writeFileSync(
-        path.join(tmpDir, 'package.json'),
-        JSON.stringify({ name: 'test', scripts: { test: 'node -e "process.exit(0)"' } }, null, 2)
-      );
+    it('passes with any validation commands (not Node-specific)', () => {
+      fs.writeFileSync(path.join(implementDir, 'validation-report.json'),
+        JSON.stringify({
+          validation_passed: true,
+          commands_run: ['pytest -v', 'mypy src/', 'black --check .'],
+          output: '42 tests passed. Type check OK. Format OK.',
+          errors: []
+        }));
 
       const result = evaluateGate('implement', 'exit', makeContext(), knowledgeBasePath);
-      const tests = result.evaluatedCriteria.find(c => c.criterion.id === 'existing-tests-pass');
-      expect(tests!.passed).toBe(true);
+      const criterion = result.evaluatedCriteria.find(c => c.criterion.id === 'implement-validation-passed');
+      expect(criterion!.passed).toBe(true);
+      expect(criterion!.reason).toContain('pytest');
     });
   });
 });

@@ -19,7 +19,7 @@ Intervention is a powerful escape hatch. Use it only when the automatic workflow
 | CLI Command | Purpose |
 |-------------|---------|
 | `spec-graph intervene --session <id>` | Modify plan or force-advance state |
-| `spec-graph machine --session <id> --transition advance` | Direct FSM transition |
+| `spec-graph machine --session <id> --transition next` | Direct FSM transition |
 | `spec-graph status --session <id>` | Check current state before intervention |
 
 Backed by core modules: `automator`

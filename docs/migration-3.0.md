@@ -21,7 +21,7 @@ v3: spec-graph dispatch --json     → external coordinator invokes agents
 | `spec-graph next-prompt` | REMOVED | Replaced by `dispatch --json` |
 | `external-coordination` module | REMOVED | Agent invocation delegated to external coordinators |
 | `prompt-construction` module | REMOVED | Replaced by 9-section envelope in dispatch |
-| `autoRun()` function | REMOVED | Use dispatch + advance loop |
+| `autoRun()` function | REMOVED | Use dispatch + submit loop |
 | `spec-graph-auto` SKILL | REMOVED | Use `spec-graph-dispatch` SKILL |
 | FSM stage `plan` | Renamed to `tasks` | Eliminates collision with `spec-graph plan` command |
 | XML prompt format | REMOVED | Use 9-section envelope (in dispatch manifest) |
@@ -34,7 +34,7 @@ v3: spec-graph dispatch --json     → external coordinator invokes agents
 | `spec-graph confirm` | ✅ Confirm plan |
 | `spec-graph compose` | ✅ Compose graph from packs |
 | `spec-graph dispatch` | ✅ Generate manifest (primary API) |
-| `spec-graph advance` | ✅ Submit result + advance state |
+| `spec-graph submit` | ✅ Submit result + advance state |
 | `spec-graph status` | ✅ Check state |
 | `spec-graph intervene` | ✅ Manual intervention |
 | `spec-graph diagnose` | ✅ Gate failure diagnosis |
@@ -90,10 +90,10 @@ Instead of `spec-graph auto`, use the dispatch loop:
 spec-graph dispatch --session <id> --json
 # → hook auto-triggers
 # → dispatch sub-agent(s)
-spec-graph advance --session <id> --result '<json>'
+spec-graph submit --session <id> --result '<json>'
 ```
 
-Or use the `/spec-graph-dispatch` SKILL to automate the loop.
+Or use the `/spec-graph-auto` SKILL to automate the loop.
 
 ## For SKILL Authors
 
@@ -106,7 +106,7 @@ Update your SKILL.md files:
 - Run: spec-graph auto "<intent>"
 + Run: spec-graph dispatch --session <id> --json
 + Then: dispatch sub-agents via Agent tool
-+ Then: spec-graph advance --session <id> --result '<json>'
++ Then: spec-graph submit --session <id> --result '<json>'
 ```
 
 ## For External Orchestrators

@@ -40,6 +40,7 @@ provides:
   actions:
     - propose
     - specify
+    - specs
     - design
     - plan
     - implement # 骨架级;domain pack 贡献具体 track
@@ -232,9 +233,11 @@ provides:
   agent_bindings:
     propose: pm
     specify: pm
+    specs: architect
     design: architect
     contract: architect
     plan: developer
+    tasks: developer # FSM stage name (v3.2: v3.0 renamed 'plan' stage to 'tasks')
     implement: developer
     review: reviewer
     test: qa
@@ -287,6 +290,63 @@ provides:
           phase: converge
           objective: "Align on shared understanding, refine positions based on discussion"
           prompt: "Based on the discussion so far, refine your position. State what you now agree on. Note any remaining disagreements."
+          speakers: []
+
+    # --- Task Decomposition Meeting: tasks 阶段可选 ---
+    # 当任务分解需要多视角讨论时(高复杂度、多 capability、有歧义),
+    # coordinator 可发起此会议。简单明确的场景走 single-agent 路径。
+    - id: task-decomposition-meeting
+      description: "Multi-perspective task decomposition — PM, Architect, Developer, QA discuss how to decompose design into implementable tasks, agree on dependencies and acceptance criteria."
+      purpose: "Through multi-perspective discussion, decompose design into a structured task list with correct dependencies, verifiable acceptance criteria, and accurate effort estimates."
+      on_actions: [plan, tasks]
+      min_rounds: 3
+      max_rounds: 6
+      participants:
+        - agent_id: pm
+          role: core
+          perspective: "user story coverage, acceptance criteria traceability, priority alignment"
+        - agent_id: architect
+          role: core
+          perspective: "dependency correctness, interface contracts, system constraints"
+        - agent_id: developer
+          role: core
+          perspective: "implementation feasibility, task granularity, file scope, effort estimates"
+        - agent_id: qa
+          role: core
+          perspective: "testability, edge case coverage, verification criteria clarity"
+      output_artifacts:
+        - plan/tasks
+      rounds:
+        - number: 1
+          phase: diverge
+          objective: "Each participant shares their task decomposition perspective from their domain"
+          prompt: |
+            Based on the design.md and proposal.md, share your perspective:
+            1. How would you decompose this work into tasks? List them.
+            2. What dependencies do you see between tasks?
+            3. What is your effort estimate for each task?
+            4. What concerns do you have from your domain perspective?
+          speakers: []
+        - number: 2
+          phase: challenge
+          objective: "Question assumptions, identify conflicts, surface gaps across perspectives"
+          prompt: |
+            Review all task decompositions from round 1.
+            1. Which tasks do you disagree with? Why?
+            2. What tasks are missing from other perspectives?
+            3. Which dependency claims are incorrect?
+            4. Which tasks are too large or too small for implementation?
+            5. What testability gaps do you see?
+          speakers: []
+        - number: 3
+          phase: converge
+          objective: "Agree on final task list with dependencies, acceptance criteria, and estimates"
+          prompt: |
+            Based on the discussion so far:
+            1. Propose the final agreed task list
+            2. For each task: specify dependencies, acceptance criteria, estimated effort
+            3. Note any remaining disagreements and why they persist
+            4. Identify tasks that can run in parallel vs. must run sequentially
           speakers: []
 
 context_ref: context.md

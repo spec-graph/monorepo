@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
-spec-graph is a development "brain, not hands." It manages an 8-stage FSM, generates dispatch manifests with 9-section envelopes for sub-agents, and evaluates their outputs through strict quality gates. spec-graph never invokes agents directly — all execution is delegated to external coordinators (Claude Code hooks, CI/CD, custom orchestrators).
+spec-graph is a development "brain, not hands." It manages a 9-stage FSM, generates dispatch manifests with 9-section envelopes for sub-agents, and evaluates their outputs through strict quality gates. spec-graph never invokes agents directly — all execution is delegated to external coordinators (Claude Code skills, CI/CD, custom orchestrators).
 
 ## Philosophy
 
@@ -16,7 +16,7 @@ spec-graph is a development "brain, not hands." It manages an 8-stage FSM, gener
 │                                                               │
 │  ✓ Generates dispatch manifests (9-section envelopes)         │
 │  ✓ Evaluates outputs through strict quality gates             │
-│  ✓ Tracks state via 8-stage FSM                              │
+│  ✓ Tracks state via 9-stage FSM                              │
 │  ✗ Never invokes agents directly                              │
 │  ✗ Never spawns child processes                               │
 │  ✗ Never writes code or documents                             │
@@ -28,12 +28,12 @@ spec-graph is a development "brain, not hands." It manages an 8-stage FSM, gener
 
 ## Features
 
-- **8-Stage FSM**: specify → design → tasks → implement → review → test → accept → integrate
+- **9-Stage FSM**: specify → specs → design → tasks → implement → review → test → accept → integrate
 - **Strict Quality Gates**: Entry/exit criteria evaluated automatically at every transition
 - **Dispatch Manifests**: JSON output with 9-section envelopes for sub-agents
 - **Parallel Execution**: Multiple sub-agents per stage via parallel_group
-- **Hook Integration**: dispatch-watcher.mjs PostToolUse hook auto-injects system-reminder
-- **Methodology Library**: Built-in knowledge-base with 8 stages × multiple skills
+- **Hook Integration**: `spec-graph hook dispatch` PostToolUse hook auto-injects system-reminder
+- **Methodology Library**: Built-in knowledge-base with 9 stages × multiple skills
 - **Progressive Recovery**: 4-level retry strategy with diagnosis-driven re-prompts
 - **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml`
 - **Real Gate Checks**: Implement gate runs tsc, tests, lint if configured
@@ -68,15 +68,15 @@ spec-graph compose
 # 4. Dispatch loop (repeat 8 times)
 spec-graph dispatch --session <id> --json
   → produces DispatchManifest JSON
-  → dispatch-watcher hook auto-triggers
+  → hook auto-triggers
   → main agent dispatches sub-agents via Agent tool
-spec-graph advance --session <id> --result '<json>'
+spec-graph submit --session <id> --result '<json>'
   → gate evaluation
   → state progression
   → repeat until state = "completed"
 ```
 
-Or use the `/spec-graph-dispatch` SKILL for the full loop automation.
+Or use the `/spec-graph-auto` SKILL for the full loop automation.
 
 ## Architecture
 
@@ -89,7 +89,7 @@ Or use the `/spec-graph-dispatch` SKILL for the full loop automation.
 │                                                              │
 │  Layer 2: CLI (command-line tool, shell commands)            │
 │   packages/cli/  (20 commands)                               │
-│   └─ plan, status, advance, validate, intervene,             │
+│   └─ plan, status, submit, validate, intervene,             │
 │      diagnose, sessions, init, compose, config, install,     │
 │      dispatch, gate, check, machine, analyze, completion,    │
 │      artifact-complete, check-run                            │
@@ -160,14 +160,15 @@ Users can override or extend by placing files in `.spec-graph/knowledge/` within
 
 | Command | Description |
 |---------|-------------|
-| `plan <intent> [--confirm]` | Create a session + plan. Use `--confirm` to auto-confirm. |
-| `auto <intent>` | Start + confirm + run the full automatic workflow loop. |
+| `plan <intent> [--confirm] [--fallback]` | Create a session + plan. LLM mode by default, `--fallback` for offline keyword matching. |
+| `dispatch --session <id> --json` | Generate dispatch manifest for external coordinator. |
+| `submit --result <json>` | Submit agent result for gate evaluation. |
 | `status [--json]` | Show current session state (stage, progress, blockers, diagnosis). |
-| `next-prompt` | Get the next XML prompt for the external agent. |
-| `advance --result <json>` | Submit agent result; evaluate gate; advance state if passed. |
 | `validate` | Validate current state. |
 | `intervene <action>` | Manual intervention: `force-advance`, `rollback`, `resume`, `modify-plan`. |
 | `diagnose [--json]` | Show the most recent gate failure diagnosis. |
+
+Auto-loop is driven by the `/spec-graph-auto` SKILL (external coordinator), not by the CLI. See [brain-not-hands principle](#philosophy).
 
 ## AI Agent Integration
 
@@ -184,7 +185,7 @@ cp -r packages/skills/spec-graph-* ~/.claude/skills/
 
 Then in Claude Code:
 - `/spec-graph-plan "<intent>"` — start a planning session
-- `/spec-graph-auto "<intent>"` — start automatic workflow
+- `/spec-graph-auto "<intent>"` — start automatic workflow (skill drives the loop)
 - `/spec-graph-status` — check progress
 - `/spec-graph-intervene <action>` — manual intervention
 
@@ -193,10 +194,11 @@ Then in Claude Code:
 Any agent that can execute shell commands can drive spec-graph:
 
 ```bash
-spec-graph plan "..." --confirm --json
-spec-graph next-prompt                    # returns XML prompt
-# ... agent does the work ...
-spec-graph advance --result '{"artifacts": [...]}'
+spec-graph plan "..." --fallback --confirm
+spec-graph dispatch --session <id> --json
+# ... coordinator dispatches sub-agent, produces artifact ...
+spec-graph submit --session <id> --result '{"artifacts": [...]}'
+# ... loop dispatch → submit until done ...
 ```
 
 ## State Persistence

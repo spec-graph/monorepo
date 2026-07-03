@@ -1050,4 +1050,27 @@ export interface DispatchManifest {
   failed_checks: string[];
   done: boolean;
   actions: DispatchAction[];
+  /** Meeting availability info — informational. Coordinator decides whether to initiate. */
+  meeting?: {
+    available: boolean;
+    recommended: boolean;
+    reason: string;
+    template?: {
+      id: string;
+      purpose: string;
+      participants: Array<{
+        agent_id: string;
+        role: string;
+        perspective: string;
+      }>;
+      min_rounds: number;
+      max_rounds: number;
+    };
+  };
+  /** Specs stage availability info — informational. Coordinator decides whether to invoke. */
+  specs?: {
+    available: boolean;
+    recommended: boolean;
+    reason: string;
+  };
 }

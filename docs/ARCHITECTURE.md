@@ -26,8 +26,8 @@ Three-layer architecture: each layer has a distinct role and audience.
 │  Audience: Shell / AI agents via bash                             │
 │  Role: Atomic operations — thin wrappers over core API            │
 │                                                                    │
-│  plan, auto, advance, next-prompt, status, validate, intervene,   │
-│  diagnose, sessions, init, compose, config, install, dispatch,    │
+│  plan, dispatch, submit, status, validate, intervene,   │
+│  diagnose, sessions, init, compose, config, install,    │
 │  gate, check, machine, analyze                                    │
 │                                                                    │
 │  Principle: 1 CLI command ≈ 1 core API function (+ formatting)     │
@@ -68,7 +68,7 @@ Three-layer architecture: each layer has a distinct role and audience.
 | `plan` | `planning` | `generatePlan()` |
 | `plan` | `automator` | `startSession()` |
 | `auto` | `automator` | `autoRun()` |
-| `advance` | `automator` | `submitResult()` |
+| `submit` | `automator` | `submitResult()` |
 | `next-prompt` | `automator` | `nextPrompt()` |
 | `status` | `automator` | `status()` |
 | `validate` | `gate-enforcement` | `evaluateGate()` |
@@ -93,10 +93,10 @@ All 19 commands are documented in `packages/cli/docs/commands/`.
 |-------------|--------------------------|
 | `spec-graph-init` | `init`, `config`, `compose`, `status` |
 | `spec-graph-plan` | `plan`, `intervene` |
-| `spec-graph-auto` | `auto`, `next-prompt`, `advance`, `diagnose`, `intervene` |
+| `spec-graph-auto` | `dispatch`, `submit`, `diagnose`, `intervene` |
 | `spec-graph-status` | `status` |
 | `spec-graph-validate` | `validate`, `gate` |
-| `spec-graph-diagnose` | `diagnose`, `advance`, `intervene` |
+| `spec-graph-diagnose` | `diagnose`, `submit`, `intervene` |
 | `spec-graph-intervene` | `intervene`, `machine`, `status` |
 
 ## Rules for Adding New Capabilities

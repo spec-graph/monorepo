@@ -1,8 +1,9 @@
 /**
  * Automator — the core state-machine engine.
  *
- * The automator owns the session lifecycle and the 8-stage state machine:
- * specify → design → tasks → implement → review → test → accept → integrate.
+ * The automator owns the session lifecycle and the 9-stage state machine:
+ * specify → specs → design → tasks → implement → review → test
+ * → accept → integrate.
  *
  * It exposes a TypeScript API consumed by the spec-graph CLI.
  *
@@ -20,6 +21,7 @@
 import * as os from 'node:os';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as yaml from 'js-yaml';
 import { trackArtifact as msTrackArtifact } from '../machine-state/index.js';
 import {
   evaluateGate,
@@ -28,6 +30,7 @@ import {
   type EvaluationContext,
   type GateResult,
   type Diagnosis as GateDiagnosis,
+  type GraphGate,
 } from '../gate-enforcement/index.js';
 import { generatePlan } from '../planning/index.js';
 import { sense } from '../sense/index.js';
@@ -38,6 +41,7 @@ import { sense } from '../sense/index.js';
 
 export type Stage =
   | 'specify'
+  | 'specs'
   | 'design'
   | 'tasks'
   | 'implement'
@@ -70,7 +74,7 @@ export interface AgentResult {
   };
 }
 
-export interface AdvanceResult {
+export interface SubmitResult {
   advanced: boolean;
   nextStage: Stage | null;
   diagnosis?: Diagnosis;
@@ -130,13 +134,24 @@ interface TraceEntry {
 // Constants
 // ---------------------------------------------------------------------------
 
+/**
+ * FSM stages — the linear pipeline order.
+ *
+ * ⚠️ These are NOT the same as graph actions (graph.yaml).
+ *    Graph has 12 actions (propose, specify, design, plan, implement,
+ *    review, test, accept, integrate, contract, archive, release).
+ *    FSM has 9 stages. This is by design — see CLAUDE.md §"FSM Stages ≠ Graph Actions".
+ *
+ *    Do NOT add stages just because a graph action exists without one.
+ */
 export const STAGES: Stage[] = [
-  'specify', 'design', 'tasks', 'implement',
+  'specify', 'specs', 'design', 'tasks', 'implement',
   'review', 'test', 'accept', 'integrate',
 ];
 
 export const STAGE_OUTPUTS: Record<Stage, { artifact: string; dir: string }> = {
   specify: { artifact: 'proposal.md', dir: 'specify' },
+  specs: { artifact: 'specs.md', dir: 'specs' },
   design: { artifact: 'design.md', dir: 'design' },
   tasks: { artifact: 'tasks.md', dir: 'tasks' },
   implement: { artifact: 'code', dir: 'implement' },
@@ -166,8 +181,31 @@ function loadSession(sessionId: string, projectRoot?: string): SessionData | nul
   const statePath = path.join(sessionDir(sessionId, projectRoot), 'state.yaml');
   if (fs.existsSync(statePath)) {
     try {
-      const yaml = fs.readFileSync(statePath, 'utf-8');
-      const data = parseStateYaml(yaml) as SessionData;
+      const raw = fs.readFileSync(statePath, 'utf-8');
+      const parsed = yaml.load(raw) as Partial<SessionData>;
+      // Default fields that may be absent from old session files
+      const data: SessionData = {
+        sessionId: parsed.sessionId || 'unknown',
+        intent: parsed.intent || '',
+        stage: parsed.stage || 'specify',
+        state: parsed.state || 'paused',
+        plan: {
+          sessionId: parsed.plan?.sessionId || parsed.sessionId || 'unknown',
+          intent: parsed.plan?.intent || parsed.intent || '',
+          capabilities: parsed.plan?.capabilities || [],
+          order: parsed.plan?.order || [],
+          complexity: parsed.plan?.complexity || 'low',
+          risks: parsed.plan?.risks || [],
+          openQuestions: parsed.plan?.openQuestions || [],
+        },
+        completedArtifacts: parsed.completedArtifacts || [],
+        trace: parsed.trace || [],
+        previousDiagnoses: parsed.previousDiagnoses || [],
+        retryCount: parsed.retryCount || 0,
+        readyForArchive: parsed.readyForArchive || false,
+      };
+      // Normalize legacy stage names (v2 'plan' → v3 'tasks')
+      if ((data.stage as string) === 'plan') data.stage = 'tasks';
       sessions.set(sessionId, data);
       return data;
     } catch {
@@ -181,8 +219,8 @@ function saveSession(data: SessionData, projectRoot?: string): void {
   sessions.set(data.sessionId, data);
   const dir = sessionDir(data.sessionId, projectRoot);
   fs.mkdirSync(dir, { recursive: true });
-  const yaml = formatStateYaml(data);
-  fs.writeFileSync(path.join(dir, 'state.yaml'), yaml, 'utf-8');
+  const content = yaml.dump(data, { lineWidth: 120, noRefs: true });
+  fs.writeFileSync(path.join(dir, 'state.yaml'), content, 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
@@ -269,7 +307,7 @@ export function submitResult(
   result: AgentResult,
   projectRoot?: string,
   knowledgeBasePath?: string
-): AdvanceResult {
+): SubmitResult {
   const data = loadSession(sessionId, projectRoot);
   if (!data) throw new Error(`Session not found: ${sessionId}`);
 
@@ -303,7 +341,11 @@ export function submitResult(
     traceEdges: buildTraceEdges(data),
   };
 
-  const gateResult: GateResult = evaluateGate(stage, 'exit', evalCtx, kbp);
+  // Load graph gates (supplementary) if graph.yaml exists
+  const graphGates = loadGraphGates(evalCtx.projectRoot);
+  const currentTransition = buildCurrentTransition(data);
+
+  const gateResult: GateResult = evaluateGate(stage, 'exit', evalCtx, kbp, graphGates, currentTransition);
 
   if (gateResult.passed) {
     // Advance to next stage
@@ -536,302 +578,47 @@ function buildTraceEdges(data: SessionData): Record<string, string[]> {
   return edges;
 }
 
+/**
+ * Load graph gates from .spec-graph/graph.yaml.
+ * Returns empty array if file doesn't exist or is unreadable.
+ */
+function loadGraphGates(projectRoot: string): GraphGate[] {
+  const graphPath = path.join(projectRoot, '.spec-graph', 'graph.yaml');
+  if (!fs.existsSync(graphPath)) return [];
+
+  try {
+    const raw = fs.readFileSync(graphPath, 'utf-8');
+    const graph = yaml.load(raw) as { gates?: GraphGate[] };
+    return graph?.gates || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Build current transition pair from session data.
+ * Returns [fromStage, toStage] for graph gate matching.
+ */
+function buildCurrentTransition(data: SessionData): [string, string] | undefined {
+  const currentIdx = STAGES.indexOf(data.stage);
+  if (currentIdx < 0) return undefined;
+  const nextIdx = currentIdx + 1;
+  if (nextIdx >= STAGES.length) return undefined;
+  return [data.stage, STAGES[nextIdx]];
+}
+
 // ---------------------------------------------------------------------------
-// YAML helpers (minimal writer for our specific session format)
+// YAML helpers — thin wrappers around js-yaml for the session format.
 // ---------------------------------------------------------------------------
 
 // Exported for testing — not part of the public API.
 export const _test = { formatStateYaml, parseStateYaml };
 
 function formatStateYaml(data: SessionData): string {
-  const lines: string[] = [
-    `# spec-graph session state — ${data.sessionId}`,
-    `sessionId: "${data.sessionId}"`,
-    `intent: "${data.intent}"`,
-    `stage: "${data.stage}"`,
-    `state: "${data.state}"`,
-    `retryCount: ${data.retryCount}`,
-    `readyForArchive: ${data.readyForArchive ?? false}`,
-    ``,
-    `# Plan`,
-    `plan:`,
-    `  sessionId: "${data.plan.sessionId}"`,
-    `  intent: "${data.plan.intent}"`,
-    `  complexity: "${data.plan.complexity}"`,
-    `  order: [${(data.plan.order || []).map((o) => `"${o}"`).join(', ')}]`,
-    `  capabilities:`,
-    ...(data.plan?.capabilities || []).flatMap((c) => {
-      const capLines = [
-        `    - id: "${c.id}"`,
-        `      description: "${c.description || ''}"`,
-      ];
-      if (c.dependsOn && c.dependsOn.length > 0) {
-        capLines.push(`      dependsOn: [${c.dependsOn.map((d) => `"${d}"`).join(', ')}]`);
-      } else {
-        capLines.push(`      dependsOn: []`);
-      }
-      return capLines;
-    }),
-    `  risks:`,
-    ...(data.plan?.risks || []).map((r) => `    - "${r}"`),
-    `  openQuestions:`,
-    ...(data.plan?.openQuestions || []).map((q) => `    - "${q}"`),
-    ``,
-    `# Completed artifacts`,
-    `completedArtifacts:`,
-    ...(data.completedArtifacts.length > 0
-      ? data.completedArtifacts.map((a) => `  - "${a}"`)
-      : [`  []`]),
-    ``,
-    `# Previous diagnoses`,
-    `previousDiagnoses:`,
-    ...(data.previousDiagnoses && data.previousDiagnoses.length > 0
-      ? data.previousDiagnoses.flatMap((d) => [
-          `  - retryLevel: ${d.retryLevel}`,
-          `    similarToPrevious: ${d.similarToPrevious}`,
-          `    gateId: "${d.gateId}"`,
-          `    failedCriteria:`,
-          ...(d.failedCriteria.length > 0
-            ? d.failedCriteria.flatMap((fc) => [
-                `      - id: "${fc.id}"`,
-                `        reason: "${fc.reason}"`,
-              ])
-            : [`      []`]),
-        ])
-      : [`  []`]),
-    ``,
-    `# Trace`,
-    `trace:`,
-    ...data.trace.map(
-      (t) =>
-        `  - timestamp: "${t.timestamp}"\n    toStage: "${t.toStage}"\n    trigger: "${t.trigger}"`
-    ),
-    ``,
-  ];
-  return lines.join('\n');
+  return yaml.dump(data, { lineWidth: 120, noRefs: true });
 }
 
-function parseStateYaml(yaml: string): Partial<SessionData> {
-  const result: Partial<SessionData> = {} as Partial<SessionData>;
-  const trace: TraceEntry[] = [];
-  const completedArtifacts: string[] = [];
-  const previousDiagnoses: Diagnosis[] = [];
-  const capabilities: Plan['capabilities'] = [];
-  const risks: string[] = [];
-  const openQuestions: string[] = [];
-  const planOrder: string[] = [];
-
-  let section: 'header' | 'plan' | 'completedArtifacts' | 'previousDiagnoses' | 'trace' = 'header';
-  let planSubSection: 'capabilities' | 'risks' | 'openQuestions' | null = null;
-  let planData: Partial<Plan> = {};
-  let currentDiag: Partial<Diagnosis> | null = null;
-  let currentDiagCriteria: DiagnosedCriterion[] = [];
-  let inFailedCriteria = false;
-
-  for (const line of yaml.split('\n')) {
-    // Section detection
-    if (line.startsWith('# Plan') || line.match(/^plan:$/)) {
-      section = 'plan';
-      continue;
-    }
-    if (line.startsWith('# Completed artifacts') || line.match(/^completedArtifacts:$/)) {
-      section = 'completedArtifacts';
-      continue;
-    }
-    if (line.startsWith('# Previous diagnoses') || line.match(/^previousDiagnoses:$/)) {
-      section = 'previousDiagnoses';
-      continue;
-    }
-    if (line.startsWith('# Trace') || line.match(/^trace:$/)) {
-      section = 'trace';
-      continue;
-    }
-
-    switch (section) {
-      case 'header': {
-        const m = line.match(/^(\w+):\s*(.+)$/);
-        if (m) {
-          const key = m[1];
-          const val = m[2].replace(/^"|"$/g, '').trim();
-          switch (key) {
-            case 'sessionId': result.sessionId = val; break;
-            case 'intent': result.intent = val; break;
-            case 'stage': result.stage = val as Stage; break;
-            case 'state': result.state = val as SessionState; break;
-            case 'retryCount': result.retryCount = parseInt(val, 10) || 0; break;
-            case 'readyForArchive': result.readyForArchive = val === 'true'; break;
-          }
-        }
-        break;
-      }
-
-      case 'plan': {
-        // Track sub-section within plan
-        if (line.match(/^\s{2}capabilities:$/)) { planSubSection = 'capabilities'; break; }
-        if (line.match(/^\s{2}risks:$/)) { planSubSection = 'risks'; break; }
-        if (line.match(/^\s{2}openQuestions:$/)) { planSubSection = 'openQuestions'; break; }
-
-        // plan.order: ["a", "b"]
-        const orderMatch = line.match(/^\s{2}order:\s*\[(.+)\]$/);
-        if (orderMatch) {
-          const inner = orderMatch[1];
-          if (inner.trim()) {
-            const items = inner.match(/"([^"]+)"/g);
-            if (items) {
-              for (const item of items) {
-                planOrder.push(item.replace(/"/g, ''));
-              }
-            }
-          }
-          break;
-        }
-
-        // plan.sessionId / intent / complexity
-        const planField = line.match(/^\s{2}(\w+):\s*"(.+)"$/);
-        if (planField) {
-          const k = planField[1];
-          const v = planField[2];
-          if (k === 'sessionId') planData.sessionId = v;
-          else if (k === 'intent') planData.intent = v;
-          else if (k === 'complexity') planData.complexity = v as Plan['complexity'];
-          break;
-        }
-
-        // capabilities array item header: "    - id: \"...\""
-        const capHeader = line.match(/^\s{4}-\s+id:\s*"(.+)"$/);
-        if (capHeader && planSubSection === 'capabilities') {
-          capabilities.push({ id: capHeader[1], description: '', dependsOn: [] });
-          break;
-        }
-
-        // capability description
-        const capDesc = line.match(/^\s{6}description:\s*"(.+)"$/);
-        if (capDesc && capabilities.length > 0) {
-          capabilities[capabilities.length - 1].description = capDesc[1];
-          break;
-        }
-
-        // capability dependsOn
-        const capDeps = line.match(/^\s{6}dependsOn:\s*\[(.+)\]$/);
-        if (capDeps && capabilities.length > 0) {
-          const inner = capDeps[1];
-          if (inner.trim()) {
-            const items = inner.match(/"([^"]+)"/g);
-            if (items) {
-              capabilities[capabilities.length - 1].dependsOn = items.map((i) => i.replace(/"/g, ''));
-            }
-          }
-          break;
-        }
-
-        // risks / openQuestions array item: "    - \"...\""
-        const arrayItem = line.match(/^\s{4}-\s*"(.+)"$/);
-        if (arrayItem) {
-          if (planSubSection === 'risks') risks.push(arrayItem[1]);
-          else if (planSubSection === 'openQuestions') openQuestions.push(arrayItem[1]);
-          break;
-        }
-        break;
-      }
-
-      case 'completedArtifacts': {
-        const artMatch = line.match(/^\s{2}-\s*"(.+)"$/);
-        if (artMatch) {
-          completedArtifacts.push(artMatch[1]);
-        }
-        break;
-      }
-
-      case 'previousDiagnoses': {
-        // Diagnosis header: "  - retryLevel: N"
-        const diagHeader = line.match(/^\s{2}-\s+retryLevel:\s*(\d+)$/);
-        if (diagHeader) {
-          if (currentDiag) {
-            previousDiagnoses.push({
-              gateId: currentDiag.gateId || '',
-              retryLevel: (currentDiag.retryLevel || 1) as Diagnosis['retryLevel'],
-              similarToPrevious: currentDiag.similarToPrevious || false,
-              failedCriteria: currentDiagCriteria,
-            });
-          }
-          currentDiag = { retryLevel: parseInt(diagHeader[1], 10) as Diagnosis['retryLevel'] };
-          currentDiagCriteria = [];
-          inFailedCriteria = false;
-          break;
-        }
-
-        const diagField = line.match(/^\s{4}(\w+):\s*(.+)$/);
-        if (diagField && currentDiag) {
-          const k = diagField[1];
-          const v = diagField[2].replace(/^"|"$/g, '').trim();
-          if (k === 'similarToPrevious') currentDiag.similarToPrevious = v === 'true';
-          else if (k === 'gateId') currentDiag.gateId = v;
-          else if (k === 'failedCriteria') inFailedCriteria = true;
-          break;
-        }
-
-        // Failed criterion header: "      - id: \"...\""
-        const fcHeader = line.match(/^\s{6}-\s+id:\s*"(.+)"$/);
-        if (fcHeader && currentDiag) {
-          currentDiagCriteria.push({ id: fcHeader[1], reason: '' });
-          break;
-        }
-
-        // Failed criterion reason
-        const fcReason = line.match(/^\s{8}reason:\s*"(.+)"$/);
-        if (fcReason && currentDiagCriteria.length > 0) {
-          currentDiagCriteria[currentDiagCriteria.length - 1].reason = fcReason[1];
-          break;
-        }
-        break;
-      }
-
-      case 'trace': {
-        const tsMatch = line.match(/^\s{2}-\s+timestamp:\s*"(.+)"$/);
-        if (tsMatch) {
-          trace.push({ timestamp: tsMatch[1], toStage: '', trigger: 'user-force' });
-          break;
-        }
-        const toMatch = line.match(/^\s{4}toStage:\s*"(.+)"$/);
-        if (toMatch && trace.length > 0) {
-          trace[trace.length - 1].toStage = toMatch[1];
-          break;
-        }
-        const trigMatch = line.match(/^\s{4}trigger:\s*"(.+)"$/);
-        if (trigMatch && trace.length > 0) {
-          trace[trace.length - 1].trigger = trigMatch[1] as TraceEntry['trigger'];
-          break;
-        }
-        break;
-      }
-    }
-  }
-
-  // Flush last diagnosis
-  if (currentDiag) {
-    previousDiagnoses.push({
-      gateId: currentDiag.gateId || '',
-      retryLevel: (currentDiag.retryLevel || 1) as Diagnosis['retryLevel'],
-      similarToPrevious: currentDiag.similarToPrevious || false,
-      failedCriteria: currentDiagCriteria,
-    });
-  }
-
-  // Assemble plan
-  const plan: Plan = {
-    sessionId: planData.sessionId || result.sessionId || 'unknown',
-    intent: planData.intent || result.intent || '',
-    capabilities,
-    order: planOrder.length > 0 ? planOrder : capabilities.map((c) => c.id),
-    complexity: planData.complexity || 'medium',
-    risks,
-    openQuestions,
-  };
-  result.plan = plan;
-  result.trace = trace;
-  result.completedArtifacts = completedArtifacts;
-  result.previousDiagnoses = previousDiagnoses;
-  if (result.retryCount === undefined) result.retryCount = 0;
-
-  return result;
+function parseStateYaml(raw: string): Partial<SessionData> {
+  return (yaml.load(raw) || {}) as Partial<SessionData>;
 }
+

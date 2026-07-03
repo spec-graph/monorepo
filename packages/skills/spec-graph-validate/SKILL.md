@@ -25,7 +25,7 @@ Backed by core modules: `gate-enforcement`, `automator`
 
 Validation runs the current stage's gate criteria against the existing artifacts and reports pass/fail status. This is useful for:
 
-- **Pre-submit check**: Validate before running `advance` to avoid gate failures
+- **Pre-submit check**: Validate before running `submit` to avoid gate failures
 - **Debugging**: Understand which criteria need work before submission
 - **Status insight**: Get a detailed view of what's expected at this stage
 
@@ -63,12 +63,12 @@ spec-graph diagnose --json
 
 ### 3. Pre-submit workflow
 
-Before submitting a result with `advance`:
+Before submitting a result with `submit`:
 
 1. **Write the artifact** (proposal.md, design.md, etc.)
 2. **Self-check**: verify the artifact against the criteria listed in the prompt's `<acceptance_criteria>` section
 3. **Validate**: run this skill to confirm gate readiness
-4. **Submit**: `spec-graph advance --result '...'`
+4. **Submit**: `spec-graph submit --result '...'`
 
 If validate shows blockers or a recent diagnosis, fix them BEFORE submitting. This avoids unnecessary retries.
 
@@ -79,10 +79,10 @@ If validate shows blockers or a recent diagnosis, fix them BEFORE submitting. Th
 | Command | Purpose | When to use |
 |---------|---------|-------------|
 | `status` | High-level view: stage, progress, blockers | Any time you want to know where you are |
-| `diagnose` | Detailed failure info for the last gate failure | After a gate failure (advance returned `advanced: false`) |
+| `diagnose` | Detailed failure info for the last gate failure | After a gate failure (submit returned `advanced: false`) |
 | `validate` | Gate readiness check for the current stage | Before submitting a result to avoid failure |
 
-Run all three before each `advance` for maximum reliability.
+Run all three before each `submit` for maximum reliability.
 
 ---
 

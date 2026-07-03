@@ -82,7 +82,7 @@ export function loadKnowledgeBase(
 
   const stageDirs = fs
     .readdirSync(stagesPath, { withFileTypes: true })
-    .filter((d) => d.isDirectory());
+    .filter((d) => d.isDirectory() && d.name !== 'archived');
 
   for (const stageDir of stageDirs) {
     const stageId = stageDir.name;

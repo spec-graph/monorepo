@@ -32,34 +32,57 @@ describe('automator integration', () => {
     const plan = core.automator.startSession('Test advance', projectRoot);
     core.automator.confirmPlan(plan.sessionId, plan, projectRoot);
 
-    // Build a proposal that passes all exit criteria
-    const filler = 'This improves the system by adding security and user trust across the platform. ';
+    // Build a proposal that passes all specify exit criteria
+    const filler = 'This project aims to deliver a robust and scalable solution that meets the needs of our users. ';
     const proposal = [
       '# Proposal: Test Advance',
       '',
       '## Why',
-      'We need this feature.',
-      filler.repeat(30),
+      'We need this feature to improve the system. Users currently lack authentication capabilities, which means sensitive data is exposed without proper access controls. This creates security risks and compliance issues that must be addressed. ' + filler.repeat(10),
       '',
       '## What Changes',
-      '- Add feature X',
+      '- Add an authentication module with JWT-based token management',
+      '- Implement login and registration endpoints',
+      '- Add middleware for protecting authenticated routes',
+      '- Create user model with password hashing',
       '',
       '## User Personas',
-      '### Primary: User',
-      '- Goal: do something',
+      '',
+      '### Primary: Developer',
+      '- Characteristics: Software engineer building APIs, familiar with REST patterns, needs reliable authentication for their applications',
+      '- Goals: Wants to protect API endpoints, needs simple integration with existing systems, values security best practices',
+      '',
+      '### Secondary: End User',
+      '- Characteristics: Uses the application daily, expects seamless login experience, concerned about data privacy',
+      '- Goals: Wants to access their data securely, needs password reset functionality, values fast authentication',
       '',
       '## User Stories',
-      '### US-001: Login',
-      'As a user, I want to log in so that I can access my data.',
+      '',
+      '### US-001: User Registration',
+      'As a new user, I want to create an account with my email and password so that I can access the application securely.',
+      '',
+      '### US-002: User Login',
+      'As a registered user, I want to log in with my credentials so that I can access my protected data.',
       '',
       '## Capabilities',
-      '- `test-cap`: Test capability (US-001)',
+      '- `user-auth`: User authentication system including registration, login, and token management (US-001, US-002)',
+      '- `auth-middleware`: Middleware for protecting routes with JWT verification',
       '',
       '## Impact',
-      'New dependencies',
+      '- Security: Adds authentication layer protecting all existing endpoints',
+      '- Performance: JWT verification adds minimal overhead per request',
+      '- Dependencies: Requires jsonwebtoken and bcrypt packages',
       '',
       '## Out of Scope',
-      'Other things',
+      '- Social login (Google, GitHub OAuth)',
+      '- Multi-factor authentication',
+      '- Role-based access control',
+      '- Passwordless authentication',
+      '',
+      '## Risks',
+      '- Security vulnerability if JWT secret is exposed',
+      '- Performance impact if token verification is not cached',
+      '- Migration complexity for existing users without accounts',
     ].join('\n');
 
     const result = core.automator.submitResult(
@@ -74,9 +97,10 @@ describe('automator integration', () => {
     );
 
     expect(result.advanced).toBe(true);
-    // The next stage depends on STAGES order; after 'specify' comes the next stage
+    // After 'specify' comes 'specs'
     const specifyIndex = core.automator.STAGES.indexOf('specify');
     const expectedNextStage = core.automator.STAGES[specifyIndex + 1];
+    expect(expectedNextStage).toBe('specs');
     expect(result.nextStage).toBe(expectedNextStage);
     expect(result.done).toBe(false);
 

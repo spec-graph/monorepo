@@ -17,7 +17,7 @@ Diagnose the most recent gate failure.
 | CLI Command | Purpose |
 |-------------|---------|
 | `spec-graph diagnose --session <id>` | Diagnose gate failure with root cause |
-| `spec-graph advance --result '<json>'` | Re-submit after applying fix |
+| `spec-graph submit --result '<json>'` | Re-submit after applying fix |
 | `spec-graph intervene --session <id>` | Escalate if unrecoverable |
 
 Backed by core modules: `gate-enforcement`, `recovery`
@@ -84,7 +84,7 @@ For each failed criterion:
 Based on the diagnosis:
 
 - **Fix the artifact** according to the suggested fixes
-- **Re-submit**: `spec-graph advance --result '<corrected artifact JSON>'`
+- **Re-submit**: `spec-graph submit --result '<corrected artifact JSON>'`
 - **Force-advance** (if you accept the risk): `spec-graph intervene force-advance`
 - **Escalate** (if you cannot fix): tell the user what's failing and why
 

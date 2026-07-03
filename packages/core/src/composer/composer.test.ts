@@ -23,7 +23,7 @@ function makeFoundationPack(): Record<string, any> {
     applies_when: 'always',
     provides: {
       artifacts: [],
-      actions: ['propose', 'specify', 'design', 'plan', 'implement', 'review', 'test', 'accept', 'integrate'],
+      actions: ['propose', 'specify', 'design', 'tasks', 'implement', 'review', 'test', 'accept', 'integrate'],
       checks: [
         { id: 'lint', kind: 'lint', command: '<lint-command>', layer: 'unit' },
         { id: 'typecheck', kind: 'lint', command: '<typecheck-command>', layer: 'unit' },
@@ -71,9 +71,9 @@ function makeFoundationPack(): Record<string, any> {
           description: 'Software Developer',
           prompt_ref: 'agents/developer-agent.md',
           model_tier: 'standard',
-          input_artifact_kinds: ['design/*', 'plan/*'],
+          input_artifact_kinds: ['design/*', 'tasks/*'],
           output_artifact_kinds: ['implementation/*'],
-          actions: ['implement', 'plan'],
+          actions: ['implement', 'tasks'],
         },
         {
           id: 'reviewer',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generatePlan } from './index.js';
+import { generatePlan, generatePlanFallback, generatePlanningManifest, validatePlanOutput } from './index.js';
 
 describe('generatePlan', () => {
   describe('intent decomposition', () => {
@@ -143,5 +143,170 @@ describe('generatePlan', () => {
         expect(Array.isArray(cap.dependsOn)).toBe(true);
       }
     });
+  });
+});
+
+describe('generatePlanFallback', () => {
+  it('produces same output as generatePlan', () => {
+    const input = { intent: 'Add JWT authentication' };
+    const a = generatePlan(input);
+    const b = generatePlanFallback(input);
+    expect(a).toEqual(b);
+  });
+
+  it('works offline (no LLM call)', () => {
+    const plan = generatePlanFallback({ intent: 'Build auth system' });
+    expect(plan.capabilities.length).toBeGreaterThan(0);
+    expect(plan.order.length).toBe(plan.capabilities.length);
+  });
+});
+
+describe('generatePlanningManifest', () => {
+  it('returns manifest with required fields', () => {
+    const manifest = generatePlanningManifest({ intent: 'Build auth system' });
+    expect(manifest.version).toBe('1');
+    expect(manifest.type).toBe('planning');
+    expect(manifest.intent).toBe('Build auth system');
+    expect(manifest.agent_config.agent_id).toBe('planner');
+    expect(manifest.agent_config.model_tier).toBe('capable');
+    expect(manifest.schema).toBeDefined();
+    expect(manifest.prompt).toBeDefined();
+    expect(manifest.next_step).toBeDefined();
+  });
+
+  it('prompt contains intent', () => {
+    const manifest = generatePlanningManifest({ intent: 'Build WebSocket service' });
+    expect(manifest.prompt).toContain('Build WebSocket service');
+  });
+
+  it('prompt contains schema', () => {
+    const manifest = generatePlanningManifest({ intent: 'Build auth' });
+    expect(manifest.prompt).toContain('capabilities');
+    expect(manifest.prompt).toContain('complexity');
+  });
+
+  it('prompt contains example', () => {
+    const manifest = generatePlanningManifest({ intent: 'Build auth' });
+    expect(manifest.prompt).toContain('user-model');
+    expect(manifest.prompt).toContain('auth-endpoints');
+  });
+
+  it('next_step references confirm', () => {
+    const manifest = generatePlanningManifest({ intent: 'Build auth system' });
+    expect(manifest.next_step).toContain('spec-graph confirm');
+  });
+});
+
+describe('validatePlanOutput', () => {
+  it('accepts valid plan JSON', () => {
+    const json = {
+      capabilities: [
+        { id: 'user-model', description: 'User data model with email and password', dependsOn: [] },
+        { id: 'auth-endpoints', description: 'Registration and login endpoints', dependsOn: ['user-model'] },
+      ],
+      order: ['user-model', 'auth-endpoints'],
+      complexity: 'medium',
+      risks: ['security risk'],
+      openQuestions: [],
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('rejects non-object input', () => {
+    expect(validatePlanOutput(null).valid).toBe(false);
+    expect(validatePlanOutput('string').valid).toBe(false);
+    expect(validatePlanOutput([]).valid).toBe(false);
+  });
+
+  it('rejects missing required fields', () => {
+    const result = validatePlanOutput({});
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.field === 'capabilities')).toBe(true);
+    expect(result.errors.some((e) => e.field === 'order')).toBe(true);
+    expect(result.errors.some((e) => e.field === 'complexity')).toBe(true);
+  });
+
+  it('rejects invalid capability id format', () => {
+    const json = {
+      capabilities: [{ id: 'UPPERCASE', description: 'A description that is long enough', dependsOn: [] }],
+      order: ['UPPERCASE'],
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.field.includes('id'))).toBe(true);
+  });
+
+  it('rejects duplicate capability ids', () => {
+    const json = {
+      capabilities: [
+        { id: 'auth', description: 'First capability description', dependsOn: [] },
+        { id: 'auth', description: 'Second capability description', dependsOn: [] },
+      ],
+      order: ['auth'],
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes('Duplicate'))).toBe(true);
+  });
+
+  it('rejects short descriptions', () => {
+    const json = {
+      capabilities: [{ id: 'auth', description: 'short', dependsOn: [] }],
+      order: ['auth'],
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.field.includes('description'))).toBe(true);
+  });
+
+  it('rejects dependsOn references to non-existent capabilities', () => {
+    const json = {
+      capabilities: [{ id: 'auth', description: 'Auth capability description', dependsOn: ['nonexistent'] }],
+      order: ['auth'],
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes('nonexistent'))).toBe(true);
+  });
+
+  it('rejects invalid complexity values', () => {
+    const json = {
+      capabilities: [{ id: 'auth', description: 'Auth capability description', dependsOn: [] }],
+      order: ['auth'],
+      complexity: 'extreme',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.field === 'complexity')).toBe(true);
+  });
+
+  it('rejects empty capabilities array', () => {
+    const json = {
+      capabilities: [],
+      order: [],
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects order that is not a permutation', () => {
+    const json = {
+      capabilities: [
+        { id: 'auth', description: 'Auth capability description', dependsOn: [] },
+        { id: 'db', description: 'Database capability description', dependsOn: [] },
+      ],
+      order: ['auth'], // missing 'db'
+      complexity: 'low',
+    };
+    const result = validatePlanOutput(json);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.field === 'order')).toBe(true);
   });
 });

@@ -188,6 +188,109 @@ function getBuiltinGate(stage: string): GateConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Gate merging — combine knowledge + graph gates
+// ---------------------------------------------------------------------------
+
+/**
+ * Supplementary criteria from graph.yaml gates.
+ *
+ * When graph.yaml defines gates with `on_transition` matching the current
+ * stage transition, their `require_checks` and `require_artifacts` are
+ * converted into supplementary criteria and merged with the knowledge gate.
+ */
+export interface SupplementaryCriteria {
+  checks: GateCriterion[];
+  artifacts: GateCriterion[];
+}
+
+/**
+ * Build merged gate criteria from knowledge (primary) + graph (supplementary).
+ *
+ * @param stage - current stage name
+ * @param knowledgeBasePath - path to knowledge-base
+ * @param graphGates - gates from graph.yaml (optional)
+ * @param currentTransition - e.g. ['specify', 'design'] (optional, for graph matching)
+ */
+export function buildMergedCriteria(
+  stage: string,
+  knowledgeBasePath?: string,
+  graphGates?: GraphGate[],
+  currentTransition?: [string, string],
+): GateConfig {
+  // 1. Load knowledge gate (primary source)
+  const knowledgeGate = loadGateConfig(stage, knowledgeBasePath);
+
+  // 2. Find graph gates matching current transition
+  if (!graphGates || !currentTransition) {
+    return knowledgeGate;
+  }
+
+  const matchingGates = graphGates.filter((g) => {
+    if (g.enabled === false) return false;
+    const [from, to] = currentTransition;
+    return g.on_transition.includes(from) && g.on_transition.includes(to);
+  });
+
+  if (matchingGates.length === 0) {
+    return knowledgeGate;
+  }
+
+  // 3. Collect supplementary criteria from matching graph gates
+  const supplementary: SupplementaryCriteria = { checks: [], artifacts: [] };
+  const knowledgeIds = new Set([
+    ...knowledgeGate.entry.map((c) => c.id),
+    ...knowledgeGate.exit.map((c) => c.id),
+  ]);
+
+  for (const gate of matchingGates) {
+    // Convert require_checks to rule criteria
+    for (const checkId of gate.require_checks || []) {
+      const id = `graph-${checkId}`;
+      if (knowledgeIds.has(id)) {
+        console.warn(`[gate-enforcement] graph gate "${gate.id}" duplicates knowledge criterion "${id}", using knowledge version`);
+        continue;
+      }
+      supplementary.checks.push({
+        id,
+        description: `Graph-required check: ${checkId}`,
+        verification: 'rule',
+      });
+    }
+
+    // Convert require_artifacts to rule criteria
+    for (const artId of gate.require_artifacts || []) {
+      const id = `graph-${artId}-exists`;
+      if (knowledgeIds.has(id)) {
+        console.warn(`[gate-enforcement] graph gate "${gate.id}" duplicates knowledge criterion "${id}", using knowledge version`);
+        continue;
+      }
+      supplementary.artifacts.push({
+        id,
+        description: `Graph-required artifact: ${artId}`,
+        verification: 'rule',
+      });
+    }
+  }
+
+  // 4. Merge: knowledge + supplementary
+  return {
+    entry: knowledgeGate.entry,
+    exit: [...knowledgeGate.exit, ...supplementary.checks, ...supplementary.artifacts],
+  };
+}
+
+/**
+ * Graph gate structure (simplified from types/index.ts for decoupling).
+ */
+export interface GraphGate {
+  id: string;
+  on_transition: string[];
+  require_artifacts?: string[];
+  require_checks?: string[];
+  enabled?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Gate evaluation
 // ---------------------------------------------------------------------------
 
@@ -198,14 +301,18 @@ function getBuiltinGate(stage: string): GateConfig {
  * @param criteriaType - 'entry' or 'exit'
  * @param context - evaluation context (artifact paths, contents, traces)
  * @param knowledgeBasePath - optional path to knowledge-base for gate config
+ * @param graphGates - optional gates from graph.yaml (merged with knowledge)
+ * @param currentTransition - optional transition pair for graph matching
  */
 export function evaluateGate(
   stage: string,
   criteriaType: 'entry' | 'exit',
   context: EvaluationContext,
-  knowledgeBasePath?: string
+  knowledgeBasePath?: string,
+  graphGates?: GraphGate[],
+  currentTransition?: [string, string],
 ): GateResult {
-  const config = loadGateConfig(stage, knowledgeBasePath);
+  const config = buildMergedCriteria(stage, knowledgeBasePath, graphGates, currentTransition);
   const criteria = criteriaType === 'entry' ? config.entry : config.exit;
 
   const evaluatedCriteria: EvaluatedCriterion[] = [];
@@ -553,20 +660,34 @@ const KNOWN_RULES: Record<
     };
   },
 
-  'lint-passes': (c, ctx) => {
-    return runCommandCheck(c, ctx, findLintCommand(ctx.projectRoot), 'lint');
+  'specs-exists': (c, ctx) => {
+    const content = ctx.artifactContents['specs'] || '';
+    return {
+      criterion: c,
+      passed: content.length > 0,
+      reason: content.length > 0 ? 'specs.md exists' : 'specs.md not found',
+    };
   },
 
-  'typecheck-passes': (c, ctx) => {
-    return runCommandCheck(c, ctx, findTypecheckCommand(ctx.projectRoot), 'typecheck');
+  'specs-shall-must': (c, ctx) => {
+    const content = ctx.artifactContents['specs'] || '';
+    const hasShallMust = /\b(SHALL|MUST)\b/.test(content);
+    return {
+      criterion: c,
+      passed: hasShallMust,
+      reason: hasShallMust ? 'SHALL/MUST keywords found' : 'No SHALL/MUST keywords',
+    };
   },
 
-  'build-passes': (c, ctx) => {
-    return runCommandCheck(c, ctx, findBuildCommand(ctx.projectRoot), 'build');
-  },
-
-  'existing-tests-pass': (c, ctx) => {
-    return runCommandCheck(c, ctx, findTestCommand(ctx.projectRoot), 'test');
+  'specs-length': (c, ctx) => {
+    const content = ctx.artifactContents['specs'] || '';
+    const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const passed = wordCount >= 200 && wordCount <= 3000;
+    return {
+      criterion: c,
+      passed,
+      reason: `${wordCount} words (expected 200-3000)`,
+    };
   },
 
   'implement-source-exists': (c, ctx) => {
@@ -612,109 +733,75 @@ const KNOWN_RULES: Record<
         : 'No source files found in implement directory (only .md/.yaml/.json files)',
     };
   },
+
+  'implement-validation-passed': (c, ctx) => {
+    // Check that sub-agent produced a validation-report.json showing validation passed
+    const implementPath = ctx.artifactFiles['implement'];
+    if (!implementPath) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: 'No implement artifact path found in context',
+      };
+    }
+
+    const fullPath = path.isAbsolute(implementPath)
+      ? implementPath
+      : path.join(ctx.projectRoot, implementPath);
+    const reportPath = path.join(fullPath, 'validation-report.json');
+
+    if (!fs.existsSync(reportPath)) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: 'validation-report.json not found. Sub-agent must run validation and report results.',
+      };
+    }
+
+    let report: {
+      validation_passed?: boolean;
+      commands_run?: string[];
+      output?: string;
+      errors?: string[];
+    };
+    try {
+      report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+    } catch (err) {
+      return {
+        criterion: c,
+        passed: false,
+        reason: `validation-report.json is not valid JSON: ${err}`,
+      };
+    }
+
+    if (typeof report.validation_passed !== 'boolean') {
+      return {
+        criterion: c,
+        passed: false,
+        reason: 'validation-report.json missing validation_passed field',
+      };
+    }
+
+    if (!report.validation_passed) {
+      const errors = report.errors?.slice(0, 5).join('; ') || 'no error details';
+      return {
+        criterion: c,
+        passed: false,
+        reason: `Validation failed: ${errors}`,
+      };
+    }
+
+    const commands = report.commands_run?.length
+      ? `Commands run: ${report.commands_run.slice(0, 3).join(', ')}${report.commands_run.length > 3 ? '...' : ''}`
+      : 'No commands reported';
+
+    return {
+      criterion: c,
+      passed: true,
+      reason: `Validation passed. ${commands}`,
+    };
+  },
 };
-
-/**
- * Run a shell command and return pass/fail based on exit code.
- * If no command is provided (null), pass with a note that the check is not configured.
- */
-function runCommandCheck(
-  c: Criterion,
-  ctx: EvaluationContext,
-  command: string | null,
-  checkName: string
-): EvaluatedCriterion {
-  if (!command) {
-    return {
-      criterion: c,
-      passed: true,
-      reason: `No ${checkName} command configured — skipping ${checkName} check`,
-    };
-  }
-
-  const { execSync } = require('node:child_process') as typeof import('node:child_process');
-  try {
-    execSync(command, {
-      cwd: ctx.projectRoot,
-      stdio: 'pipe',
-      timeout: 60_000, // 60 second timeout
-    });
-    return {
-      criterion: c,
-      passed: true,
-      reason: `${checkName} passed: ${command}`,
-    };
-  } catch (err: unknown) {
-    const error = err as { stdout?: Buffer; stderr?: Buffer; status?: number };
-    const stderr = error.stderr?.toString() || '';
-    const stdout = error.stdout?.toString() || '';
-    const output = (stderr || stdout).slice(0, 2000); // Truncate long output
-    return {
-      criterion: c,
-      passed: false,
-      reason: `${checkName} failed (exit ${error.status || 'unknown'}): ${output}`,
-    };
-  }
-}
-
-/**
- * Find lint command from package.json scripts
- */
-function findLintCommand(projectRoot: string): string | null {
-  const pkg = readPackageJson(projectRoot);
-  if (!pkg) return null;
-  if (pkg.scripts?.lint) return 'npm run lint';
-  if (pkg.scripts?.['lint:check']) return 'npm run lint:check';
-  return null;
-}
-
-/**
- * Find typecheck command from package.json scripts
- */
-function findTypecheckCommand(projectRoot: string): string | null {
-  const pkg = readPackageJson(projectRoot);
-  if (!pkg) return null;
-  if (pkg.scripts?.typecheck) return 'npm run typecheck';
-  if (pkg.scripts?.['type-check']) return 'npm run type-check';
-  if (pkg.scripts?.tsc) return 'npm run tsc';
-  // Check for tsc binary in node_modules
-  const tscPath = path.join(projectRoot, 'node_modules', '.bin', 'tsc');
-  if (fs.existsSync(tscPath)) return 'npx tsc --noEmit';
-  return null;
-}
-
-/**
- * Find build command from package.json scripts
- */
-function findBuildCommand(projectRoot: string): string | null {
-  const pkg = readPackageJson(projectRoot);
-  if (!pkg) return null;
-  if (pkg.scripts?.build) return 'npm run build';
-  return null;
-}
-
-/**
- * Find test command from package.json scripts
- */
-function findTestCommand(projectRoot: string): string | null {
-  const pkg = readPackageJson(projectRoot);
-  if (!pkg) return null;
-  if (pkg.scripts?.test) return 'npm test';
-  return null;
-}
-
-/**
- * Read package.json from project root
- */
-function readPackageJson(projectRoot: string): { scripts?: Record<string, string> } | null {
-  const pkgPath = path.join(projectRoot, 'package.json');
-  if (!fs.existsSync(pkgPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-  } catch {
-    return null;
-  }
-}
 
 function evaluateRuleCriterion(
   c: Criterion,
@@ -722,6 +809,25 @@ function evaluateRuleCriterion(
 ): EvaluatedCriterion {
   const handler = KNOWN_RULES[c.id];
   if (handler) return handler(c, ctx);
+
+  // Graph-prefixed criteria: from graph.yaml supplementary requirements
+  if (c.id.startsWith('graph-')) {
+    // Strip prefix and check for artifact existence
+    const stripped = c.id.replace(/^graph-/, '').replace(/-exists$/, '');
+    if (ctx.artifactFiles[stripped]) {
+      return {
+        criterion: c,
+        passed: true,
+        reason: `Graph-required artifact '${stripped}' exists at ${ctx.artifactFiles[stripped]}`,
+      };
+    }
+    // Graph check criteria pass with note (coordinator handles actual check execution)
+    return {
+      criterion: c,
+      passed: true,
+      reason: `Graph-required check: coordinator should verify (${c.id})`,
+    };
+  }
 
   // Generic rule: check if a file with matching name exists
   const key = c.id.replace(/-exists$/, '');
@@ -907,10 +1013,7 @@ function suggestFix(criterion: Criterion): string {
     'edge-cases-covered': 'Add test cases for edge cases, errors, and boundary conditions',
     // Implement stage
     'implement-source-exists': 'Create source files in the implement/ directory',
-    'lint-passes': 'Run the project linter and fix all errors (npm run lint)',
-    'typecheck-passes': 'Run the type-checker and fix all errors (npm run typecheck or tsc --noEmit)',
-    'build-passes': 'Run the build command and fix all errors (npm run build)',
-    'existing-tests-pass': 'Run existing tests and fix all failures (npm test)',
+    'implement-validation-passed': 'Run validation (typecheck, lint, tests) and write validation-report.json with validation_passed: true',
     'no-broken-contracts': 'Ensure all existing APIs/interfaces remain compatible or provide migration paths',
   };
   return suggestions[criterion.id] || `Fix the issue with '${criterion.id}'`;

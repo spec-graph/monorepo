@@ -35,7 +35,7 @@ Run the full dispatch workflow (8-stage FSM loop).
 /spec-graph-dispatch
 ```
 
-Loops: dispatch --json → hook → sub-agent → advance. Repeats 8 times until completed.
+Loops: dispatch --json → hook → sub-agent → submit. Repeats until completed.
 
 ### spec-graph-status
 

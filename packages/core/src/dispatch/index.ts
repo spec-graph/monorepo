@@ -36,7 +36,7 @@ interface StageOutput {
   file: string;
   template: string;
   format: string;
-  checks: { lint?: string; test?: string; typecheck?: string };
+  checks: Record<string, string>;
 }
 
 const STAGE_OUTPUT_MAP: Record<string, StageOutput> = {
@@ -45,6 +45,13 @@ const STAGE_OUTPUT_MAP: Record<string, StageOutput> = {
     file: 'proposal.md',
     template: 'templates/proposal.md',
     format: 'Markdown with sections: Why, What Changes, User Personas, User Stories, Capabilities, Impact, Out of Scope',
+    checks: {},
+  },
+  specs: {
+    dir: 'specs',
+    file: 'specs.md',
+    template: 'templates/spec.md',
+    format: 'Markdown with sections: Introduction, Requirement/Scenario (### Requirement: <name>, #### Scenario: <name>), Non-Functional Requirements',
     checks: {},
   },
   design: {
@@ -67,9 +74,7 @@ const STAGE_OUTPUT_MAP: Record<string, StageOutput> = {
     template: 'none',
     format: 'Source code files following project conventions',
     checks: {
-      lint: 'npm run lint 2>/dev/null || npx eslint .',
-      test: 'npm test 2>/dev/null || npx vitest run',
-      typecheck: 'npx tsc --noEmit 2>/dev/null || echo "tsc not configured"',
+      validation_report: 'validation-report.json (see Verification section)',
     },
   },
   review: {
@@ -103,6 +108,20 @@ const STAGE_OUTPUT_MAP: Record<string, StageOutput> = {
 };
 
 // ---------------------------------------------------------------------------
+// Backward compatibility — auto-map old stage names
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a stage string to the current Stage type.
+ * Auto-maps legacy names (e.g. 'plan' → 'tasks') for backward compatibility
+ * with sessions created before the v3.0 rename.
+ */
+function normalizeStage(stage: string): automator.Stage {
+  if (stage === 'plan') return 'tasks';
+  return stage as automator.Stage;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -125,6 +144,11 @@ export function generateDispatchManifest(
 
   // 1. Load session state
   const status = automator.status(sessionId, root);
+
+  // Normalize legacy stage names (v2 'plan' → v3 'tasks')
+  if (status.stage) {
+    status.stage = normalizeStage(status.stage);
+  }
 
   // Handle terminal states
   if (status.state === 'completed') {
@@ -200,7 +224,13 @@ export function generateDispatchManifest(
   // 5. Evaluate gate status
   const gateStatus = evaluateGateStatus(status, root);
 
-  return {
+  // 6. Compute meeting metadata (informational — coordinator decides)
+  const meetingMeta = buildMeetingMetadata(status, root, resolvedGraphPath);
+
+  // 7. Compute specs metadata (informational — coordinator decides)
+  const specsMeta = buildSpecsMetadata(status, root);
+
+  const manifest: DispatchManifest = {
     version: '1',
     session_id: sessionId,
     current_stage: status.stage,
@@ -211,6 +241,10 @@ export function generateDispatchManifest(
     done: false,
     actions,
   };
+  if (meetingMeta) manifest.meeting = meetingMeta;
+  if (specsMeta) manifest.specs = specsMeta;
+
+  return manifest;
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +378,7 @@ function planActions(
               agent_id: agentId,
               parallel_group: waveIdx,
               prompt: '', // filled later
-              next_step: `spec-graph advance --result '{"artifacts": [{"path": ".spec-graph/sessions/${status.sessionId}/implement/${taskId}.md", "content": "..."}]}'`,
+              next_step: `spec-graph submit --result '{"artifacts": [{"path": ".spec-graph/sessions/${status.sessionId}/implement/${taskId}.md", "content": "..."}]}'`,
             });
           }
         }
@@ -364,7 +398,7 @@ function planActions(
       requires_sub_agent: true,
       agent_id: agentId,
       prompt: '', // filled later
-      next_step: `spec-graph advance --result '{"artifacts": []}'`,
+      next_step: `spec-graph submit --result '{"artifacts": []}'`,
     },
   ];
 }
@@ -379,6 +413,127 @@ function loadSessionPlan(sessionId: string, projectRoot: string): automator.Plan
     return (data?.plan as automator.Plan) || null;
   } catch {
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Meeting Metadata (informational — coordinator decides to initiate or not)
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine whether a meeting should be recommended based on plan complexity signals.
+ */
+function shouldRecommendMeeting(plan: automator.Plan | null): { recommended: boolean; reason: string } {
+  if (!plan) return { recommended: false, reason: '' };
+
+  if (plan.complexity === 'high') return { recommended: true, reason: 'High complexity' };
+  if (plan.capabilities?.length > 3) return { recommended: true, reason: 'Many capabilities' };
+  if (plan.openQuestions?.length > 0) return { recommended: true, reason: 'Open questions remain' };
+  if (plan.risks?.some(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('brownfield'))) {
+    return { recommended: true, reason: 'Security or brownfield risks' };
+  }
+
+  return { recommended: false, reason: '' };
+}
+
+/**
+ * Determine whether specs stage should be recommended based on plan complexity signals.
+ */
+function shouldRecommendSpecs(plan: automator.Plan | null): { recommended: boolean; reason: string } {
+  if (!plan) return { recommended: false, reason: '' };
+
+  if (plan.complexity === 'high') return { recommended: true, reason: 'High complexity' };
+  if (plan.capabilities?.length > 3) return { recommended: true, reason: 'Many capabilities' };
+  if (plan.openQuestions?.length > 0) return { recommended: true, reason: 'Open questions need formal resolution' };
+  if (plan.risks?.some(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('brownfield'))) {
+    return { recommended: true, reason: 'Security or brownfield risks require formal requirements' };
+  }
+
+  return { recommended: false, reason: '' };
+}
+
+/**
+ * Build meeting metadata for the dispatch manifest.
+ * Returns null if no meeting declaration matches the current stage.
+ */
+function buildMeetingMetadata(
+  status: automator.Status,
+  projectRoot: string,
+  graphPath: string
+): DispatchManifest['meeting'] | null {
+  const stage = status.stage;
+  if (!stage) return null;
+
+  const meetings = loadMeetingsFromGraph(graphPath);
+  const matchingMeeting = meetings.find(m => m.on_actions.includes(stage as string));
+
+  if (!matchingMeeting) return null;
+
+  const plan = loadSessionPlan(status.sessionId!, projectRoot);
+  const { recommended, reason } = shouldRecommendMeeting(plan);
+
+  return {
+    available: true,
+    recommended,
+    reason,
+    template: {
+      id: matchingMeeting.id,
+      purpose: matchingMeeting.purpose,
+      participants: matchingMeeting.participants.map(p => ({
+        agent_id: p.agent_id || p.expert_role || '',
+        role: p.role,
+        perspective: p.perspective,
+      })),
+      min_rounds: matchingMeeting.min_rounds,
+      max_rounds: matchingMeeting.max_rounds,
+    },
+  };
+}
+
+/**
+ * Build specs metadata for the dispatch manifest.
+ * Returns null if not at specs stage.
+ */
+function buildSpecsMetadata(
+  status: automator.Status,
+  projectRoot: string
+): DispatchManifest['specs'] | null {
+  const stage = status.stage;
+  if (stage !== 'specs') return null;
+
+  const plan = loadSessionPlan(status.sessionId!, projectRoot);
+  const { recommended, reason } = shouldRecommendSpecs(plan);
+
+  return {
+    available: true,
+    recommended,
+    reason,
+  };
+}
+
+interface MeetingSummary {
+  id: string;
+  purpose: string;
+  participants: Array<{
+    agent_id?: string;
+    expert_role?: string;
+    role: string;
+    perspective: string;
+  }>;
+  min_rounds: number;
+  max_rounds: number;
+  on_actions: string[];
+}
+
+function loadMeetingsFromGraph(graphPath: string): MeetingSummary[] {
+  if (!fs.existsSync(graphPath)) return [];
+
+  try {
+    const raw = fs.readFileSync(graphPath, 'utf-8');
+    const graph = yaml.load(raw) as { meetings?: MeetingSummary[] };
+    return graph?.meetings || [];
+  } catch {
+    return [];
   }
 }
 
@@ -529,6 +684,30 @@ function buildPromptEnvelope(
       lines.push(`\`\`\``);
       lines.push('');
     }
+  } else if (status.stage === 'implement') {
+    lines.push('You MUST analyze the project and run appropriate quality validation.');
+    lines.push('');
+    lines.push('Steps:');
+    lines.push('1. Inspect the project structure (language, test framework, build system)');
+    lines.push('2. Determine the correct validation commands (NOT hardcoded guesses)');
+    lines.push('3. Run type-checking (e.g., tsc, mypy, go vet, cargo check)');
+    lines.push('4. Run linting (e.g., eslint, pylint, golangci-lint, clippy)');
+    lines.push('5. Run existing tests (e.g., npm test, pytest, go test, cargo test)');
+    lines.push('6. Run the build (e.g., npm run build, make, go build, cargo build)');
+    lines.push('7. If a command fails, fix the errors and re-run');
+    lines.push('');
+    lines.push('After validation, write `validation-report.json` to the implement directory:');
+    lines.push('');
+    lines.push(`\`\`\`json`);
+    lines.push('{');
+    lines.push('  "validation_passed": true,');
+    lines.push('  "commands_run": ["pytest -v", "mypy src/"],');
+    lines.push('  "output": "All 42 tests passed. Type checking OK.",');
+    lines.push('  "errors": []');
+    lines.push('}');
+    lines.push(`\`\`\``);
+    lines.push('');
+    lines.push('DO NOT skip validation. validation-report.json is REQUIRED by the gate.');
   } else {
     lines.push('- Verify the artifact matches the format specification above');
     lines.push('- Verify all acceptance criteria from the System Prompt are met');
@@ -668,8 +847,9 @@ function evaluateGateStatus(
   const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', status.sessionId!);
   const stageArtifacts: Record<string, string> = {
     specify: 'specify/proposal.md',
+    specs: 'specs/specs.md',
     design: 'design/design.md',
-    plan: 'plan/tasks.md',
+    tasks: 'tasks/tasks.md',
     review: 'review/review.md',
     test: 'test/test.md',
     accept: 'accept/verification.md',

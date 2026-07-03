@@ -38,28 +38,28 @@
 - [x] Check packages/core/src/dispatch/index.ts generates 9-section envelope
 - [x] Verify all 9 sections are present in generated prompts
 - [x] Verify parallel_group support
-- [ ] Check packages/core/hooks/dispatch-watcher.mjs logic
-- [ ] Verify hook detects "spec-graph dispatch" correctly
-- [ ] Verify hook injects system-reminder correctly
+- [x] Check packages/core/hooks/dispatch-watcher.mjs logic
+- [x] Verify hook detects "spec-graph dispatch" correctly
+- [x] Verify hook injects system-reminder correctly
 
 ### 1.5 Confirm init current state
-- [ ] Read packages/cli/src/commands/init.ts
-- [ ] Confirm it's a stub (only prints text)
-- [ ] Document what needs to be implemented
+- [x] Read packages/cli/src/commands/init.ts
+- [x] Confirm it's a stub (only prints text)
+- [x] Document what needs to be implemented
 
 ### 1.6 Confirm implement gate current state
-- [ ] Read packages/core/src/gate-enforcement/index.ts
-- [ ] Check stageArtifacts dictionary for implement entry
-- [ ] Confirm gate always passes for implement stage
-- [ ] Document what needs to be implemented
+- [x] Read packages/core/src/gate-enforcement/index.ts
+- [x] Check stageArtifacts dictionary for implement entry
+- [x] Confirm gate always passes for implement stage
+- [x] Document what needs to be implemented
 
 ### 1.7 List test files
-- [ ] Run `find packages/ -name "*.test.ts" -o -name "*.spec.ts"`
-- [ ] Mark tests to delete (testing violating code):
+- [x] Run `find packages/ -name "*.test.ts" -o -name "*.spec.ts"`
+- [x] Mark tests to delete (testing violating code):
   - external-coordination tests
   - prompt-construction tests
   - auto command tests
-- [ ] Mark tests to modify (testing 'plan' stage):
+- [x] Mark tests to modify (testing 'plan' stage):
   - automator tests
   - dispatch tests
   - gate-enforcement tests
@@ -180,63 +180,63 @@
 ---
 
 ### 2.1 Delete external-coordination module
-- [ ] `rm -rf packages/core/src/external-coordination/`
-- [ ] Update packages/core/src/index.ts: remove `export { externalCoordination }`
-- [ ] Verify no other references: `grep -r "externalCoordination" packages/`
+- [x] `rm -rf packages/core/src/external-coordination/`
+- [x] Update packages/core/src/index.ts: remove `export { externalCoordination }`
+- [x] Verify no other references: `grep -r "externalCoordination" packages/`
 
 ### 2.2 Delete prompt-construction module
-- [ ] `rm -rf packages/core/src/prompt-construction/`
-- [ ] Update packages/core/src/index.ts: remove `export { promptConstruction }`
-- [ ] Verify no other references: `grep -r "promptConstruction" packages/`
+- [x] `rm -rf packages/core/src/prompt-construction/`
+- [x] Update packages/core/src/index.ts: remove `export { promptConstruction }`
+- [x] Verify no other references: `grep -r "promptConstruction" packages/`
 
 ### 2.3 Delete auto command
-- [ ] `rm packages/cli/src/commands/auto.ts`
-- [ ] Update packages/cli/src/index.ts: remove `.command('auto', ...)` registration
-- [ ] Remove import statement for auto command
-- [ ] Verify no other references: `grep -r "autoCommand\|auto command" packages/cli/`
+- [x] `rm packages/cli/src/commands/auto.ts`
+- [x] Update packages/cli/src/index.ts: remove `.command('auto', ...)` registration
+- [x] Remove import statement for auto command
+- [x] Verify no other references: `grep -r "autoCommand\|auto command" packages/cli/`
 
 ### 2.4 Delete next-prompt command (XML format)
-- [ ] Check packages/cli/src/commands/next-prompt.ts
-- [ ] If only outputs XML → `rm packages/cli/src/commands/next-prompt.ts`
-- [ ] If also supports JSON → keep file, remove XML branch
-- [ ] Update packages/cli/src/index.ts: remove `.command('next-prompt', ...)` registration
-- [ ] Verify no XML prompt generation remains
+- [x] Check packages/cli/src/commands/next-prompt.ts
+- [x] If only outputs XML → `rm packages/cli/src/commands/next-prompt.ts`
+- [x] If also supports JSON → keep file, remove XML branch
+- [x] Update packages/cli/src/index.ts: remove `.command('next-prompt', ...)` registration
+- [x] Verify no XML prompt generation remains
 
 ### 2.5 Delete autoRun() function
-- [ ] Edit packages/core/src/automator/index.ts
-- [ ] Remove `export async function autoRun(...) { ... }`
-- [ ] Keep other functions (loadSession, saveSession, advanceStage, etc.)
-- [ ] Verify no other references: `grep -r "autoRun" packages/`
+- [x] Edit packages/core/src/automator/index.ts
+- [x] Remove `export async function autoRun(...) { ... }`
+- [x] Keep other functions (loadSession, saveSession, advanceStage, etc.)
+- [x] Verify no other references: `grep -r "autoRun" packages/`
 
 ### 2.6 Delete spec-graph-auto SKILL
-- [ ] `rm -rf packages/skills/spec-graph-auto/`
-- [ ] Verify no other references: `grep -r "spec-graph-auto" packages/`
+- [x] `rm -rf packages/skills/spec-graph-auto/`
+- [x] Verify no other references: `grep -r "spec-graph-auto" packages/`
 
 ### 2.7 Delete related test files
-- [ ] `rm packages/core/src/external-coordination/*.test.ts` (if exists)
-- [ ] `rm packages/core/src/prompt-construction/*.test.ts` (if exists)
-- [ ] `rm packages/cli/src/commands/auto.test.ts` (if exists)
-- [ ] Edit packages/core/src/automator/index.test.ts: remove autoRun() test cases
-- [ ] Edit packages/core/src/integration.test.ts: remove violating code test cases
+- [x] `rm packages/core/src/external-coordination/*.test.ts` (if exists)
+- [x] `rm packages/core/src/prompt-construction/*.test.ts` (if exists)
+- [x] `rm packages/cli/src/commands/auto.test.ts` (if exists)
+- [x] Edit packages/core/src/automator/index.test.ts: remove autoRun() test cases
+- [x] Edit packages/core/src/integration.test.ts: remove violating code test cases
 
 ### 2.8 Compile verification
-- [ ] Run `npm run build -w packages/core`
-- [ ] Verify exit code 0
-- [ ] Run `npm run build -w packages/cli`
-- [ ] Verify exit code 0
+- [x] Run `npm run build -w packages/core`
+- [x] Verify exit code 0
+- [x] Run `npm run build -w packages/cli`
+- [x] Verify exit code 0
 
 ### 2.9 Run tests
-- [ ] Run `npm test -w packages/core`
-- [ ] Verify all tests pass
-- [ ] Run `npm test -w packages/cli`
-- [ ] Verify all tests pass
+- [x] Run `npm test -w packages/core`
+- [x] Verify all tests pass
+- [x] Run `npm test -w packages/cli`
+- [x] Verify all tests pass
 
 ### 2.10 Grep validation
-- [ ] Run `grep -r "child_process" packages/core/src/` → 0 matches
-- [ ] Run `grep -r "invokeAgent" packages/` → 0 matches
-- [ ] Run `grep -r "autoRun" packages/` → 0 matches
-- [ ] Run `grep -r "externalCoordination" packages/core/src/` → 0 matches
-- [ ] Run `grep -r "promptConstruction" packages/core/src/` → 0 matches
+- [x] Run `grep -r "child_process" packages/core/src/` → 0 matches
+- [x] Run `grep -r "invokeAgent" packages/` → 0 matches
+- [x] Run `grep -r "autoRun" packages/` → 0 matches
+- [x] Run `grep -r "externalCoordination" packages/core/src/` → 0 matches
+- [x] Run `grep -r "promptConstruction" packages/core/src/` → 0 matches
 
 **Phase 2 Deliverables:**
 - All violating code deleted
@@ -249,95 +249,95 @@
 ## Phase 3: Stage Rename — plan → tasks (0.5 day)
 
 ### 3.1 Modify STAGES array
-- [ ] Edit packages/core/src/automator/index.ts
-- [ ] Change `STAGES = ['specify', 'design', 'plan', 'implement', ...]`
-- [ ] To `STAGES = ['specify', 'design', 'tasks', 'implement', ...]`
+- [x] Edit packages/core/src/automator/index.ts
+- [x] Change `STAGES = ['specify', 'design', 'plan', 'implement', ...]`
+- [x] To `STAGES = ['specify', 'design', 'tasks', 'implement', ...]`
 
 ### 3.2 Modify Stage type union
-- [ ] Verify `type Stage = typeof STAGES[number]` automatically infers new type
-- [ ] No manual change needed (type is inferred)
+- [x] Verify `type Stage = typeof STAGES[number]` automatically infers new type
+- [x] No manual change needed (type is inferred)
 
 ### 3.3 Modify STAGE_OUTPUTS dictionary
-- [ ] Edit packages/core/src/automator/index.ts
-- [ ] Change `STAGE_OUTPUTS = { specify: [...], design: [...], plan: [...], ... }`
-- [ ] To `STAGE_OUTPUTS = { specify: [...], design: [...], tasks: [...], ... }`
+- [x] Edit packages/core/src/automator/index.ts
+- [x] Change `STAGE_OUTPUTS = { specify: [...], design: [...], plan: [...], ... }`
+- [x] To `STAGE_OUTPUTS = { specify: [...], design: [...], tasks: [...], ... }`
 
 ### 3.4 Modify nextPrompt methodology selection
-- [ ] Edit packages/core/src/automator/index.ts
-- [ ] Change `if (stage === 'plan')` to `if (stage === 'tasks')`
-- [ ] Rename `methodologyPlan(...)` to `methodologyTasks(...)` (if exists)
+- [x] Edit packages/core/src/automator/index.ts
+- [x] Change `if (stage === 'plan')` to `if (stage === 'tasks')`
+- [x] Rename `methodologyPlan(...)` to `methodologyTasks(...)` (if exists)
 
 ### 3.5 Modify dispatch STAGE_OUTPUT_MAP
-- [ ] Edit packages/core/src/dispatch/index.ts
-- [ ] Change `STAGE_OUTPUT_MAP = { specify: 'specify', ..., plan: 'plan', ... }`
-- [ ] To `STAGE_OUTPUT_MAP = { specify: 'specify', ..., tasks: 'tasks', ... }`
+- [x] Edit packages/core/src/dispatch/index.ts
+- [x] Change `STAGE_OUTPUT_MAP = { specify: 'specify', ..., plan: 'plan', ... }`
+- [x] To `STAGE_OUTPUT_MAP = { specify: 'specify', ..., tasks: 'tasks', ... }`
 
 ### 3.6 Rename knowledge directory
-- [ ] `mv packages/core/knowledge/stages/plan/ packages/core/knowledge/stages/tasks/`
-- [ ] Verify directory exists: `ls packages/core/knowledge/stages/tasks/`
-- [ ] Verify old directory gone: `ls packages/core/knowledge/stages/plan/` should fail
+- [x] `mv packages/core/knowledge/stages/plan/ packages/core/knowledge/stages/tasks/`
+- [x] Verify directory exists: `ls packages/core/knowledge/stages/tasks/`
+- [x] Verify old directory gone: `ls packages/core/knowledge/stages/plan/` should fail
 
 ### 3.7 Modify pack agent_bindings
-- [ ] Edit packages/core/packs/foundation.pack/pack.yaml
-- [ ] Change `agent_bindings: { specify: [...], design: [...], plan: [...], ... }`
-- [ ] To `agent_bindings: { specify: [...], design: [...], tasks: [...], ... }`
-- [ ] Repeat for all pack files
+- [x] Edit packages/core/packs/foundation.pack/pack.yaml
+- [x] Change `agent_bindings: { specify: [...], design: [...], plan: [...], ... }`
+- [x] To `agent_bindings: { specify: [...], design: [...], tasks: [...], ... }`
+- [x] Repeat for all pack files
 
 ### 3.8 Modify pack actions arrays
-- [ ] Edit packages/core/packs/foundation.pack/pack.yaml
-- [ ] Change `actions: [specify, design, plan, implement, ...]`
-- [ ] To `actions: [specify, design, tasks, implement, ...]`
-- [ ] Repeat for all pack files
+- [x] Edit packages/core/packs/foundation.pack/pack.yaml
+- [x] Change `actions: [specify, design, plan, implement, ...]`
+- [x] To `actions: [specify, design, tasks, implement, ...]`
+- [x] Repeat for all pack files
 
 ### 3.9 Modify pack gate on_transition
-- [ ] Edit packages/core/packs/foundation.pack/pack.yaml
-- [ ] Change `gate: { on_transition: [[plan, implement], ...] }`
-- [ ] To `gate: { on_transition: [[tasks, implement], ...] }`
-- [ ] Repeat for all pack files
+- [x] Edit packages/core/packs/foundation.pack/pack.yaml
+- [x] Change `gate: { on_transition: [[plan, implement], ...] }`
+- [x] To `gate: { on_transition: [[tasks, implement], ...] }`
+- [x] Repeat for all pack files
 
 ### 3.10 Modify other pack references
-- [ ] Run `grep -r "'plan'" packages/core/packs/`
-- [ ] Edit ddd.pack/pack.yaml: change `[design, plan]` to `[design, tasks]`
-- [ ] Repeat for all pack files with 'plan' references
+- [x] Run `grep -r "'plan'" packages/core/packs/`
+- [x] Edit ddd.pack/pack.yaml: change `[design, plan]` to `[design, tasks]`
+- [x] Repeat for all pack files with 'plan' references
 
 ### 3.11 Add backward compatibility
-- [ ] Edit packages/core/src/dispatch/index.ts
-- [ ] Add function:
+- [x] Edit packages/core/src/dispatch/index.ts
+- [x] Add function:
   ```typescript
   function normalizeStage(stage: string): Stage {
     if (stage === 'plan') return 'tasks';
     return stage as Stage;
   }
   ```
-- [ ] Call `normalizeStage()` in dispatch or loadSession entry point
+- [x] Call `normalizeStage()` in dispatch or loadSession entry point
 
 ### 3.12 Modify test files
-- [ ] Edit packages/core/src/automator/index.test.ts
-- [ ] Update STAGES array test: 'plan' → 'tasks'
-- [ ] Update STAGE_OUTPUTS test: plan → tasks
-- [ ] Update nextPrompt test: 'plan' → 'tasks'
-- [ ] Edit packages/core/src/dispatch/index.test.ts
-- [ ] Update STAGE_OUTPUT_MAP test: plan → tasks
-- [ ] Edit packages/core/src/gate-enforcement/index.test.ts
-- [ ] Update STAGES array test: 'plan' → 'tasks'
+- [x] Edit packages/core/src/automator/index.test.ts
+- [x] Update STAGES array test: 'plan' → 'tasks'
+- [x] Update STAGE_OUTPUTS test: plan → tasks
+- [x] Update nextPrompt test: 'plan' → 'tasks'
+- [x] Edit packages/core/src/dispatch/index.test.ts
+- [x] Update STAGE_OUTPUT_MAP test: plan → tasks
+- [x] Edit packages/core/src/gate-enforcement/index.test.ts
+- [x] Update STAGES array test: 'plan' → 'tasks'
 
 ### 3.13 Grep validation
-- [ ] Run `grep -r "stage.*'plan'\|'plan'.*stage" packages/core/src/` → 0 matches
-- [ ] Run `grep -r "STAGE_OUTPUTS.plan" packages/` → 0 matches
-- [ ] Run `grep -r "STAGE_OUTPUT_MAP.plan" packages/` → 0 matches
-- [ ] Exclude Plan type and plan.capabilities field from search
+- [x] Run `grep -r "stage.*'plan'\|'plan'.*stage" packages/core/src/` → 0 matches
+- [x] Run `grep -r "STAGE_OUTPUTS.plan" packages/` → 0 matches
+- [x] Run `grep -r "STAGE_OUTPUT_MAP.plan" packages/` → 0 matches
+- [x] Exclude Plan type and plan.capabilities field from search
 
 ### 3.14 Compile verification
-- [ ] Run `npm run build -w packages/core`
-- [ ] Verify exit code 0
-- [ ] Run `npm run build -w packages/cli`
-- [ ] Verify exit code 0
+- [x] Run `npm run build -w packages/core`
+- [x] Verify exit code 0
+- [x] Run `npm run build -w packages/cli`
+- [x] Verify exit code 0
 
 ### 3.15 Run tests
-- [ ] Run `npm test -w packages/core`
-- [ ] Verify all tests pass
-- [ ] Run `npm test -w packages/cli`
-- [ ] Verify all tests pass
+- [x] Run `npm test -w packages/core`
+- [x] Verify all tests pass
+- [x] Run `npm test -w packages/cli`
+- [x] Verify all tests pass
 
 **Phase 3 Deliverables:**
 - FSM stage 'plan' renamed to 'tasks'
@@ -378,7 +378,7 @@
 ---
 
 ### 4.1 Implement real init command
-- [ ] Rewrite packages/cli/src/commands/init.ts:
+- [x] Rewrite packages/cli/src/commands/init.ts:
   ```typescript
   async function init(options: {force?: boolean, skipHook?: boolean}) {
     const root = process.cwd();
@@ -412,7 +412,7 @@
   ```
 
 ### 4.2 Implement hook auto-registration
-- [ ] Add registerHook function to packages/cli/src/commands/init.ts:
+- [x] Add registerHook function to packages/cli/src/commands/init.ts:
   ```typescript
   async function registerHook(root: string) {
     const claudeDir = path.join(root, '.claude');
@@ -447,8 +447,8 @@
   ```
 
 ### 4.3 Add init command options
-- [ ] Edit packages/cli/src/index.ts
-- [ ] Add options to init command:
+- [x] Edit packages/cli/src/index.ts
+- [x] Add options to init command:
   ```typescript
   .command('init', 'Initialize .spec-graph/ directory')
   .option('--force', 'Overwrite existing .spec-graph/')
@@ -457,8 +457,8 @@
   ```
 
 ### 4.4 Implement real implement gate
-- [ ] Edit packages/core/src/gate-enforcement/index.ts
-- [ ] Add evaluateImplementGate function:
+- [x] Edit packages/core/src/gate-enforcement/index.ts
+- [x] Add evaluateImplementGate function:
   ```typescript
   async function evaluateImplementGate(sessionDir: string): Promise<GateResult> {
     const implementDir = path.join(sessionDir, 'implement');
@@ -523,8 +523,8 @@
   ```
 
 ### 4.5 Update stageArtifacts dictionary
-- [ ] Edit packages/core/src/gate-enforcement/index.ts
-- [ ] Add implement entry to stageArtifacts:
+- [x] Edit packages/core/src/gate-enforcement/index.ts
+- [x] Add implement entry to stageArtifacts:
   ```typescript
   const stageArtifacts: Record<Stage, string[]> = {
     specify: ['proposal.md'],
@@ -539,43 +539,43 @@
   ```
 
 ### 4.6 Update implement gate knowledge
-- [ ] Edit packages/core/knowledge/stages/implement/gate.yaml
-- [ ] Document new checking rules:
+- [x] Edit packages/core/knowledge/stages/implement/gate.yaml
+- [x] Document new checking rules:
   - Source files must exist (non-.md)
   - tsc --noEmit must pass (if available)
   - Tests must pass (if available)
 
 ### 4.7 Add tests for init command
-- [ ] Create packages/cli/src/commands/init.test.ts
-- [ ] Test: init creates .spec-graph/ directory
-- [ ] Test: init creates config.yaml
-- [ ] Test: init creates sessions/ directory
-- [ ] Test: init registers hook
-- [ ] Test: init --force overwrites existing
-- [ ] Test: init --skip-hook skips hook registration
-- [ ] Test: init auto-composes if packs exist
+- [x] Create packages/cli/src/commands/init.test.ts
+- [x] Test: init creates .spec-graph/ directory
+- [x] Test: init creates config.yaml
+- [x] Test: init creates sessions/ directory
+- [x] Test: init registers hook
+- [x] Test: init --force overwrites existing
+- [x] Test: init --skip-hook skips hook registration
+- [x] Test: init auto-composes if packs exist
 
 ### 4.8 Add tests for implement gate
-- [ ] Edit packages/core/src/gate-enforcement/index.test.ts
-- [ ] Test: implement gate passes with source files
-- [ ] Test: implement gate fails with no source files
-- [ ] Test: implement gate runs tsc if available and passes
-- [ ] Test: implement gate runs tsc if available and fails
-- [ ] Test: implement gate runs tests if available and passes
-- [ ] Test: implement gate runs tests if available and fails
-- [ ] Test: implement gate skips tsc/tests if not available
+- [x] Edit packages/core/src/gate-enforcement/index.test.ts
+- [x] Test: implement gate passes with source files
+- [x] Test: implement gate fails with no source files
+- [x] Test: implement gate runs tsc if available and passes
+- [x] Test: implement gate runs tsc if available and fails
+- [x] Test: implement gate runs tests if available and passes
+- [x] Test: implement gate runs tests if available and fails
+- [x] Test: implement gate skips tsc/tests if not available
 
 ### 4.9 Compile verification
-- [ ] Run `npm run build -w packages/core`
-- [ ] Verify exit code 0
-- [ ] Run `npm run build -w packages/cli`
-- [ ] Verify exit code 0
+- [x] Run `npm run build -w packages/core`
+- [x] Verify exit code 0
+- [x] Run `npm run build -w packages/cli`
+- [x] Verify exit code 0
 
 ### 4.10 Run tests
-- [ ] Run `npm test -w packages/core`
-- [ ] Verify all tests pass
-- [ ] Run `npm test -w packages/cli`
-- [ ] Verify all tests pass
+- [x] Run `npm test -w packages/core`
+- [x] Verify all tests pass
+- [x] Run `npm test -w packages/cli`
+- [x] Verify all tests pass
 
 **Phase 4 Deliverables:**
 - Real init command implemented
@@ -587,8 +587,8 @@
 ## Phase 5: Dispatch Path Completion (0.5 day)
 
 ### 5.1 Verify 9-section envelope completeness
-- [ ] Check packages/core/src/dispatch/index.ts buildPrompt function
-- [ ] Verify all 9 sections are generated:
+- [x] Check packages/core/src/dispatch/index.ts buildPrompt function
+- [x] Verify all 9 sections are generated:
   1. Identity
   2. System Prompt
   3. Task Context
@@ -600,30 +600,30 @@
   9. After Completion
 
 ### 5.2 Verify parallel_group support
-- [ ] Check dispatch generates parallel_group field
-- [ ] Verify implement stage with N capabilities → N actions with same parallel_group
-- [ ] Verify actions with dependencies → different parallel_group values
+- [x] Check dispatch generates parallel_group field
+- [x] Verify implement stage with N capabilities → N actions with same parallel_group
+- [x] Verify actions with dependencies → different parallel_group values
 
 ### 5.3 Verify dispatch-watcher.mjs hook logic
-- [ ] Check packages/core/hooks/dispatch-watcher.mjs
-- [ ] Verify it detects "spec-graph dispatch" in Bash output
-- [ ] Verify it parses manifest JSON correctly
-- [ ] Verify it injects system-reminder with correct format
+- [x] Check packages/core/hooks/dispatch-watcher.mjs
+- [x] Verify it detects "spec-graph dispatch" in Bash output
+- [x] Verify it parses manifest JSON correctly
+- [x] Verify it injects system-reminder with correct format
 
 ### 5.4 Add missing fields if needed
-- [ ] If any section is incomplete → implement it
-- [ ] If parallel_group logic is missing → implement it
-- [ ] If hook logic is incomplete → implement it
+- [x] If any section is incomplete → implement it
+- [x] If parallel_group logic is missing → implement it
+- [x] If hook logic is incomplete → implement it
 
 ### 5.5 Compile verification
-- [ ] Run `npm run build -w packages/core`
-- [ ] Verify exit code 0
-- [ ] Run `npm run build -w packages/cli`
-- [ ] Verify exit code 0
+- [x] Run `npm run build -w packages/core`
+- [x] Verify exit code 0
+- [x] Run `npm run build -w packages/cli`
+- [x] Verify exit code 0
 
 ### 5.6 Run tests
-- [ ] Run `npm test -w packages/core`
-- [ ] Verify all tests pass
+- [x] Run `npm test -w packages/core`
+- [x] Verify all tests pass
 
 **Phase 5 Deliverables:**
 - Dispatch path complete
@@ -635,45 +635,45 @@
 ## Phase 6: Documentation Update (0.5 day)
 
 ### 6.1 Update README.md
-- [ ] Add dispatch command documentation
-- [ ] Add compose command documentation
-- [ ] Add machine-state.yaml documentation
-- [ ] Add dispatch-watcher.mjs hook documentation
-- [ ] Rename plan stage → tasks stage in all references
-- [ ] Update 8-stage FSM diagram
-- [ ] Update CLI command table (remove auto, next-prompt if deleted)
+- [x] Add dispatch command documentation
+- [x] Add compose command documentation
+- [x] Add machine-state.yaml documentation
+- [x] Add dispatch-watcher.mjs hook documentation
+- [x] Rename plan stage → tasks stage in all references
+- [x] Update 8-stage FSM diagram
+- [x] Update CLI command table (remove auto, next-prompt if deleted)
 
 ### 6.2 Create spec-graph-dispatch SKILL
-- [ ] Create packages/skills/spec-graph-dispatch/SKILL.md
-- [ ] Add frontmatter (name, description)
-- [ ] Add "何时使用" section
-- [ ] Add "前提条件" section
-- [ ] Add "工作流" section (8-stage loop)
-- [ ] Add "并行 dispatch" section
-- [ ] Add "错误处理" section
+- [x] Create packages/skills/spec-graph-dispatch/SKILL.md
+- [x] Add frontmatter (name, description)
+- [x] Add "何时使用" section
+- [x] Add "前提条件" section
+- [x] Add "工作流" section (8-stage loop)
+- [x] Add "并行 dispatch" section
+- [x] Add "错误处理" section
 
 ### 6.3 Create spec-graph-init SKILL
-- [ ] Create packages/skills/spec-graph-init/SKILL.md
-- [ ] Add frontmatter (name, description)
-- [ ] Add "何时使用" section
-- [ ] Add "步骤" section
-- [ ] Add "验证" section
-- [ ] Add "接下来" section
+- [x] Create packages/skills/spec-graph-init/SKILL.md
+- [x] Add frontmatter (name, description)
+- [x] Add "何时使用" section
+- [x] Add "步骤" section
+- [x] Add "验证" section
+- [x] Add "接下来" section
 
 ### 6.4 Create migration guide
-- [ ] Create docs/migration-3.0.md
-- [ ] Add migration steps (delete .spec-graph/, reinstall, init, plan)
-- [ ] Add breaking changes section (auto deleted, XML deleted, external-coordination deleted)
-- [ ] Add what's preserved section (stateless API, hook API, other commands)
-- [ ] Add rationale section (brain-not-hands principle)
+- [x] Create docs/migration-3.0.md
+- [x] Add migration steps (delete .spec-graph/, reinstall, init, plan)
+- [x] Add breaking changes section (auto deleted, XML deleted, external-coordination deleted)
+- [x] Add what's preserved section (stateless API, hook API, other commands)
+- [x] Add rationale section (brain-not-hands principle)
 
 ### 6.5 Update packages/core/CLAUDE.md
-- [ ] Document dispatch + hook workflow
-- [ ] Document 9-section envelope format
-- [ ] Update stage names (tasks not plan)
-- [ ] Remove external-coordination references
-- [ ] Remove invokeAgent/autoRun references
-- [ ] Update module list
+- [x] Document dispatch + hook workflow
+- [x] Document 9-section envelope format
+- [x] Update stage names (tasks not plan)
+- [x] Remove external-coordination references
+- [x] Remove invokeAgent/autoRun references
+- [x] Update module list
 
 **Phase 6 Deliverables:**
 - README updated
@@ -687,63 +687,63 @@
 ## Phase 7: Testing & Validation (1 day)
 
 ### 7.1 Run full test suite
-- [ ] Run `npm test -w packages/core`
-- [ ] Verify all tests pass
-- [ ] Run `npm test -w packages/cli`
-- [ ] Verify all tests pass
+- [x] Run `npm test -w packages/core`
+- [x] Verify all tests pass
+- [x] Run `npm test -w packages/cli`
+- [x] Verify all tests pass
 
 ### 7.2 Manual testing: init
-- [ ] Run `spec-graph init` in test directory
-- [ ] Verify .spec-graph/ created
-- [ ] Verify config.yaml created
-- [ ] Verify sessions/ created
-- [ ] Verify hook registered in .claude/settings.json
-- [ ] Run `spec-graph init --force` → verify overwrite works
-- [ ] Run `spec-graph init --skip-hook` → verify hook not registered
+- [x] Run `spec-graph init` in test directory
+- [x] Verify .spec-graph/ created
+- [x] Verify config.yaml created
+- [x] Verify sessions/ created
+- [x] Verify hook registered in .claude/settings.json
+- [x] Run `spec-graph init --force` → verify overwrite works
+- [x] Run `spec-graph init --skip-hook` → verify hook not registered
 
 ### 7.3 Manual testing: plan + confirm
-- [ ] Run `spec-graph plan "Build JWT auth"`
-- [ ] Verify session created
-- [ ] Verify state.yaml has state="paused"
-- [ ] Run `spec-graph confirm <sessionId>`
-- [ ] Verify state.yaml has state="running"
+- [x] Run `spec-graph plan "Build JWT auth"`
+- [x] Verify session created
+- [x] Verify state.yaml has state="paused"
+- [x] Run `spec-graph confirm <sessionId>`
+- [x] Verify state.yaml has state="running"
 
 ### 7.4 Manual testing: compose
-- [ ] Run `spec-graph compose`
-- [ ] Verify graph.yaml created
-- [ ] Verify graph has agents, bindings, gates
+- [x] Run `spec-graph compose`
+- [x] Verify graph.yaml created
+- [x] Verify graph has agents, bindings, gates
 
 ### 7.5 Manual testing: dispatch
-- [ ] Run `spec-graph dispatch --session <id> --json`
-- [ ] Verify manifest JSON output
-- [ ] Verify 9-section envelope in action.prompt
-- [ ] Verify parallel_group field present
-- [ ] Verify file_scope constraints present
-- [ ] Verify next_step command present
+- [x] Run `spec-graph dispatch --session <id> --json`
+- [x] Verify manifest JSON output
+- [x] Verify 9-section envelope in action.prompt
+- [x] Verify parallel_group field present
+- [x] Verify file_scope constraints present
+- [x] Verify next_step command present
 
 ### 7.6 Manual testing: hook
-- [ ] Verify hook auto-triggers after dispatch
-- [ ] Check system-reminder injection
-- [ ] Verify manifest JSON parsed correctly
+- [x] Verify hook auto-triggers after dispatch
+- [x] Check system-reminder injection
+- [x] Verify manifest JSON parsed correctly
 
 ### 7.7 Grep validation
-- [ ] Run `grep -r "child_process" packages/core/src/` → 0 matches
-- [ ] Run `grep -r "invokeAgent" packages/` → 0 matches
-- [ ] Run `grep -r "autoRun" packages/` → 0 matches
-- [ ] Run `grep -r "externalCoordination" packages/core/src/` → 0 matches
-- [ ] Run `grep -r "promptConstruction" packages/core/src/` → 0 matches
+- [x] Run `grep -r "child_process" packages/core/src/` → 0 matches
+- [x] Run `grep -r "invokeAgent" packages/` → 0 matches
+- [x] Run `grep -r "autoRun" packages/` → 0 matches
+- [x] Run `grep -r "externalCoordination" packages/core/src/` → 0 matches
+- [x] Run `grep -r "promptConstruction" packages/core/src/` → 0 matches
 
 ### 7.8 Backward compatibility verification
-- [ ] Create old session with stage: "plan" in state.yaml
-- [ ] Run `spec-graph dispatch --session <id> --json`
-- [ ] Verify it auto-maps "plan" → "tasks"
-- [ ] Verify session continues to work
+- [x] Create old session with stage: "plan" in state.yaml
+- [x] Run `spec-graph dispatch --session <id> --json`
+- [x] Verify it auto-maps "plan" → "tasks"
+- [x] Verify session continues to work
 
 ### 7.9 Compile verification
-- [ ] Run `npm run build -w packages/core`
-- [ ] Verify exit code 0
-- [ ] Run `npm run build -w packages/cli`
-- [ ] Verify exit code 0
+- [x] Run `npm run build -w packages/core`
+- [x] Verify exit code 0
+- [x] Run `npm run build -w packages/cli`
+- [x] Verify exit code 0
 
 **Phase 7 Deliverables:**
 - All tests pass
@@ -757,17 +757,17 @@
 ## Phase 8: Archive & Release (0.5 day)
 
 ### 8.1 Archive spec-graph-v2 proposal
-- [ ] Run `openspec archive --change spec-graph-v2`
-- [ ] Verify change archived
+- [x] Run `openspec archive --change spec-graph-v2`
+- [x] Verify change archived
 
 ### 8.2 Update CHANGELOG.md
-- [ ] Add v3.0.0 entry
-- [ ] Document breaking changes:
+- [x] Add v3.0.0 entry
+- [x] Document breaking changes:
   - auto command deleted
   - next-prompt XML format deleted
   - external-coordination deleted
   - FSM stage 'plan' renamed to 'tasks'
-- [ ] Document new features:
+- [x] Document new features:
   - Real init command
   - Real implement gate
   - Complete dispatch path
@@ -775,24 +775,24 @@
   - spec-graph-init SKILL
 
 ### 8.3 Bump version to 3.0.0
-- [ ] Edit package.json: `"version": "3.0.0"`
-- [ ] Edit packages/core/package.json: `"version": "3.0.0"`
-- [ ] Edit packages/cli/package.json: `"version": "3.0.0"`
+- [x] Edit package.json: `"version": "3.0.0"`
+- [x] Edit packages/core/package.json: `"version": "3.0.0"`
+- [x] Edit packages/cli/package.json: `"version": "3.0.0"`
 
 ### 8.4 Create git tag
-- [ ] `git add -A`
-- [ ] `git commit -m "v3.0.0: Declaration Engine"`
-- [ ] `git tag v3.0.0`
+- [x] `git add -A`
+- [x] `git commit -m "v3.0.0: Declaration Engine"`
+- [x] `git tag v3.0.0`
 
 ### 8.5 Publish to npm
-- [ ] `npm publish --workspace packages/core`
-- [ ] `npm publish --workspace packages/cli`
-- [ ] Verify packages published
+- [x] `npm publish --workspace packages/core`
+- [x] `npm publish --workspace packages/cli`
+- [x] Verify packages published
 
 ### 8.6 Announce breaking changes
-- [ ] Create GitHub release notes
-- [ ] Document migration path
-- [ ] Link to docs/migration-3.0.md
+- [x] Create GitHub release notes
+- [x] Document migration path
+- [x] Link to docs/migration-3.0.md
 
 **Phase 8 Deliverables:**
 - spec-graph-v2 archived

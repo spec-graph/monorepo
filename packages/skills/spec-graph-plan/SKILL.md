@@ -54,19 +54,41 @@ If the intent is clear (e.g., "Add JWT authentication", "Refactor the user modul
 
 ### 2. Invoke the planner
 
-Run the plan command:
+**Default mode (LLM-based):**
 
 ```bash
 spec-graph plan "<intent>" --json
 ```
 
-Parse the JSON output. It contains:
+This generates a **planning manifest** — a structured prompt for a planning agent. The manifest contains:
+- `prompt` — the full prompt to send to the planning agent
+- `schema` — JSON schema the agent's output must conform to
+- `agent_config` — agent id (planner) and model tier (capable)
+- `next_step` — the confirm command to run after validation
+
+**Workflow:**
+1. Run `spec-graph plan "<intent>" --json` → get manifest
+2. Dispatch planning agent with `manifest.prompt`
+3. Agent returns JSON conforming to `manifest.schema`
+4. Validate JSON: `validatePlanOutput()` checks schema + semantics
+5. On success: `spec-graph confirm <session-id>` to create session
+6. On failure: retry with error feedback, or use `--fallback`
+
+**Fallback mode (offline, keyword matching):**
+
+```bash
+spec-graph plan "<intent>" --fallback --json
+```
+
+Uses local keyword matching (no LLM). Output is a direct plan:
 - `session_id` — the new session identifier
-- `plan.capabilities` — list of capabilities with descriptions
-- `plan.order` — dependency order
-- `plan.complexity` — low / medium / high
-- `plan.risks` — identified risks
-- `plan.open_questions` — questions the planner had but couldn't resolve
+- `capabilities` — list of capabilities with descriptions
+- `order` — dependency order
+- `complexity` — low / medium / high
+- `risks` — identified risks
+- `openQuestions` — questions the planner had but couldn't resolve
+
+Use `--fallback` when no LLM is available or for quick offline planning.
 
 ### 3. Present the plan to the user
 
@@ -91,7 +113,7 @@ Ask the user to confirm, modify, or reject.
 
 After plan confirmation, the user (or you) should switch to the `spec-graph-dispatch` skill to kick off the dispatch workflow. From that point on, spec-graph drives the process through all 8 stages: specify → design → tasks → implement → review → test → accept → integrate.
 
-The dispatch workflow is: `dispatch --json` → hook → sub-agent → `advance`. This loop repeats 8 times until state = "completed".
+The dispatch workflow is: `dispatch --json` → hook → sub-agent → `submit`. This loop repeats until state = "completed".
 
 You will be invoked at gate failures that the automator cannot auto-recover from, and at the final acceptance stage.
 

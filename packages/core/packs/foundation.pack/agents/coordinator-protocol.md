@@ -288,7 +288,38 @@ This updates machine-state, then coordinator loops back to `spec-graph dispatch`
 
 ## Dispatching a Meeting
 
-When `action.meeting` is present, the coordinator runs the meeting protocol.
+**Meetings are an optional tool, not a mandatory pipeline step.** Even when
+`action.meeting` is present in the manifest, the coordinator decides whether
+to initiate a meeting or use single-agent dispatch.
+
+### When to use a meeting (coordinator's judgment)
+
+- `manifest.meeting.recommended === true` AND you sense ambiguity or cross-cutting concerns
+- The design or proposal has unresolved tensions between different perspectives
+- Task decomposition involves trade-offs that benefit from multi-perspective discussion
+- Complex cross-cutting concerns (security × performance × UX all intersect)
+
+### When to skip a meeting (use single-agent instead)
+
+- Simple, well-defined task with no ambiguity
+- Low complexity, 1-2 capabilities, no open questions
+- `manifest.meeting.recommended === false` and you see no reason to discuss
+- The cost of coordinating 4+ agents outweighs the benefit
+
+### How to decide
+
+```
+Read manifest.meeting:
+  recommended === true → Consider convening. Ask yourself:
+    "Would multiple perspectives actually improve this output?
+     Or can one competent agent handle it?"
+  recommended === false → Default to single-agent. Only convene
+    if you detect genuine ambiguity that the manifest didn't capture.
+
+Final decision is YOURS. spec-graph provides information, not orders.
+```
+
+### Meeting workflow (when you decide to convene)
 
 ### Meeting State Machine
 

@@ -272,7 +272,7 @@ External coordinators (Claude Code hooks, CI/CD, custom orchestrators) must:
 1. Receive the dispatch manifest JSON
 2. For each action, dispatch a sub-agent with the action.prompt content
 3. Collect sub-agent responses (status-report JSON)
-4. Run `spec-graph advance --result '<json>'` with collected artifacts
+4. Run `spec-graph submit --result '<json>'` with collected artifacts
 5. spec-graph evaluates the gate and advances state if passed
 
 ## Validation

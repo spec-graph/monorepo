@@ -32,13 +32,15 @@ export * as sense from './sense/index.js';
 export * as dispatch from './dispatch/index.js';
 export * as composer from './composer/index.js';
 export * as machineState from './machine-state/index.js';
+export * as isolation from './isolation/index.js';
+export * as meeting from './meeting/index.js';
 
 // Re-export key types for convenience
 export type {
   Stage,
   Plan,
   AgentResult,
-  AdvanceResult,
+  SubmitResult,
   Diagnosis,
   Status,
 } from './automator/index.js';

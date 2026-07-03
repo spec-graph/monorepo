@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import * as yaml from 'js-yaml';
 import { generateDispatchManifest } from './index.js';
 
 describe('dispatch manifest generator', () => {
@@ -306,11 +307,10 @@ plan:
     expect(action.file_scope?.forbid).toBeDefined();
     expect(action.file_scope?.forbid?.length).toBeGreaterThan(0);
 
-    // verification should have lint, test, typecheck for implement
-    expect(action.verification).toBeDefined();
-    expect(action.verification?.lint).toBeTruthy();
-    expect(action.verification?.test).toBeTruthy();
-    expect(action.verification?.typecheck).toBeTruthy();
+    // verification prompt for implement stage should instruct sub-agent to run validation
+    expect(action.prompt).toContain('quality validation');
+    expect(action.prompt).toContain('validation-report.json');
+    expect(action.prompt).toContain('REQUIRED by the gate');
   });
 
   it('4.6 specify stage has no code checks but has Verification section with format note', () => {
@@ -386,5 +386,390 @@ last_updated: "2026-07-02T00:00:00.000Z"
     // Machine-state says pending → gate should NOT pass (even though file exists)
     expect(manifest.gate_passed).toBe(false);
     expect(manifest.missing_artifacts).toContain('design/design.md');
+  });
+
+  // ─── Meeting metadata ──────────────────────────────────────────────────
+
+  it('no meeting field when no graph.yaml exists', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'no-meeting-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "no-meeting-session"
+intent: "Simple task"
+stage: "tasks"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "no-meeting-session"
+  intent: "Simple task"
+  complexity: "low"
+  capabilities:
+    - id: "cap-1"
+      description: "Single capability"
+  risks: []
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+    // No graph.yaml — expect no meeting metadata
+    const manifest = generateDispatchManifest('no-meeting-session', projectRoot);
+    expect(manifest.meeting).toBeUndefined();
+  });
+
+  it('meeting available + recommended for high complexity', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'high-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "high-session"
+intent: "Complex refactor"
+stage: "tasks"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "high-session"
+  intent: "Complex refactor"
+  complexity: "high"
+  capabilities:
+    - id: "cap-a"
+      description: "Capability A"
+    - id: "cap-b"
+      description: "Capability B"
+  risks:
+    - "Brownfield integration risk"
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+
+    // Write graph.yaml with matching meeting
+    const specDir = path.join(projectRoot, '.spec-graph');
+    const graphYaml = `
+agents: []
+agent_bindings: []
+meetings:
+  - id: task-decomposition-meeting
+    purpose: "Decompose design into tasks"
+    on_actions:
+      - tasks
+    min_rounds: 3
+    max_rounds: 6
+    participants:
+      - agent_id: pm
+        role: core
+        perspective: "user needs"
+      - agent_id: developer
+        role: core
+        perspective: "feasibility"
+`;
+    fs.writeFileSync(path.join(specDir, 'graph.yaml'), graphYaml);
+
+    const manifest = generateDispatchManifest('high-session', projectRoot);
+    expect(manifest.meeting).toBeDefined();
+    expect(manifest.meeting!.available).toBe(true);
+    expect(manifest.meeting!.recommended).toBe(true);
+    expect(manifest.meeting!.reason).toBe('High complexity');
+    expect(manifest.meeting!.template).toBeDefined();
+    expect(manifest.meeting!.template!.id).toBe('task-decomposition-meeting');
+    expect(manifest.meeting!.template!.participants.length).toBe(2);
+  });
+
+  it('meeting available but NOT recommended for low complexity', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'low-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "low-session"
+intent: "Simple thing"
+stage: "tasks"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "low-session"
+  intent: "Simple thing"
+  complexity: "low"
+  capabilities:
+    - id: "cap-x"
+      description: "One small capability"
+  risks: []
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+
+    const specDir = path.join(projectRoot, '.spec-graph');
+    const graphYaml = `
+agents: []
+agent_bindings: []
+meetings:
+  - id: task-decomposition-meeting
+    purpose: "Decompose design into tasks"
+    on_actions:
+      - tasks
+    min_rounds: 3
+    max_rounds: 6
+    participants:
+      - agent_id: developer
+        role: core
+        perspective: "feasibility"
+`;
+    fs.writeFileSync(path.join(specDir, 'graph.yaml'), graphYaml);
+
+    const manifest = generateDispatchManifest('low-session', projectRoot);
+    expect(manifest.meeting).toBeDefined();
+    expect(manifest.meeting!.available).toBe(true);
+    expect(manifest.meeting!.recommended).toBe(false);
+    expect(manifest.meeting!.reason).toBe('');
+  });
+
+  it('meeting recommended for many capabilities', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'many-caps-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "many-caps-session"
+intent: "Big feature"
+stage: "tasks"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "many-caps-session"
+  intent: "Big feature"
+  complexity: "medium"
+  capabilities:
+    - id: "a"
+      description: "Capability A description"
+    - id: "b"
+      description: "Capability B description"
+    - id: "c"
+      description: "Capability C description"
+    - id: "d"
+      description: "Capability D description"
+  risks: []
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+
+    const specDir = path.join(projectRoot, '.spec-graph');
+    const graphYaml = `
+agents: []
+agent_bindings: []
+meetings:
+  - id: task-decomposition-meeting
+    purpose: "Decompose design into tasks"
+    on_actions:
+      - tasks
+    min_rounds: 3
+    max_rounds: 6
+    participants: []
+`;
+    fs.writeFileSync(path.join(specDir, 'graph.yaml'), graphYaml);
+
+    const manifest = generateDispatchManifest('many-caps-session', projectRoot);
+    expect(manifest.meeting!.recommended).toBe(true);
+    expect(manifest.meeting!.reason).toBe('Many capabilities');
+  });
+
+  it('meeting recommended for open questions', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'openq-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "openq-session"
+intent: "Unclear feature"
+stage: "tasks"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "openq-session"
+  intent: "Unclear feature"
+  complexity: "medium"
+  capabilities:
+    - id: "x"
+      description: "Capability X description"
+  risks:
+    - "security risk"
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+    // Manually add openQuestions after state.yaml write (old parser format)
+    // Actually, let me add openQuestions to plan via YAML
+    // The plan should have openQuestions — check if it's supported in session state
+    // Since plan in YAML is hand-parsed, just add it to state.yaml metadata
+    fs.appendFileSync(path.join(sessionDir, 'state.yaml'), '  openQuestions:\n    - "How to handle edge case X?"\n');
+
+    const specDir = path.join(projectRoot, '.spec-graph');
+    const graphYaml = `
+agents: []
+agent_bindings: []
+meetings:
+  - id: task-decomposition-meeting
+    purpose: "Decompose"
+    on_actions:
+      - tasks
+    min_rounds: 3
+    max_rounds: 6
+    participants: []
+`;
+    fs.writeFileSync(path.join(specDir, 'graph.yaml'), graphYaml);
+
+    const manifest = generateDispatchManifest('openq-session', projectRoot);
+    expect(manifest.meeting!.recommended).toBe(true);
+    expect(manifest.meeting!.reason).toBe('Open questions remain');
+  });
+
+  it('meeting not present for stage without matching meeting declarations', () => {
+    const sessionDir = path.join(projectRoot, '.spec-graph', 'sessions', 'design-no-meeting');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const stateYaml = `sessionId: "design-no-meeting"
+intent: "Design stage"
+stage: "design"
+state: "running"
+retryCount: 0
+
+plan:
+  sessionId: "design-no-meeting"
+  intent: "Design stage"
+  complexity: "high"
+  capabilities:
+    - id: "a"
+      description: "Capability A description"
+  risks: []
+`;
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), stateYaml);
+
+    const specDir = path.join(projectRoot, '.spec-graph');
+    // Meeting only for tasks stage, not design
+    const graphYaml = `
+agents: []
+agent_bindings: []
+meetings:
+  - id: task-decomposition-meeting
+    purpose: "Decompose"
+    on_actions:
+      - tasks
+    min_rounds: 3
+    max_rounds: 6
+    participants: []
+`;
+    fs.writeFileSync(path.join(specDir, 'graph.yaml'), graphYaml);
+
+    const manifest = generateDispatchManifest('design-no-meeting', projectRoot);
+    // No meeting should appear for design stage even though complexity is high
+    expect(manifest.meeting).toBeUndefined();
+  });
+});
+
+// --- Meeting metadata integration ---
+
+describe('dispatch manifest generator — meeting metadata', () => {
+  it('includes meeting metadata when graph has matching meeting for current stage', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dispatch-meeting-'));
+    const sessionDir = path.join(tmpDir, '.spec-graph', 'sessions', 'test-session');
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    // Write session state
+    const state = {
+      sessionId: 'test-session',
+      intent: 'Test',
+      stage: 'propose',
+      state: 'running',
+      plan: {
+        sessionId: 'test-session',
+        intent: 'Test',
+        capabilities: [{ id: 'cap-1', description: 'Capability 1', dependsOn: [] }],
+        order: ['cap-1'],
+        complexity: 'low',
+        risks: [],
+        openQuestions: [],
+      },
+      completedArtifacts: [],
+      trace: [],
+      previousDiagnoses: [],
+      retryCount: 0,
+      readyForArchive: false,
+    };
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), yaml.dump(state));
+
+    // Write graph with a meeting that triggers on 'propose' stage
+    const graph = {
+      agents: [
+        {
+          id: 'pm',
+          description: 'PM agent',
+          prompt_ref: 'agents/pm-agent.md',
+          model_tier: 'capable',
+          input_artifact_kinds: [],
+          output_artifact_kinds: ['requirement/*'],
+          actions: ['propose', 'specify'],
+        },
+      ],
+      agent_bindings: [
+        { action: 'propose', agent_id: 'pm', provided_by: 'foundation' },
+      ],
+      meetings: [
+        {
+          id: 'requirements-meeting',
+          purpose: 'Discuss requirements',
+          participants: [
+            { agent_id: 'pm', role: 'core', perspective: 'user needs' },
+            { agent_id: 'architect', role: 'core', perspective: 'feasibility' },
+          ],
+          min_rounds: 2,
+          max_rounds: 10,
+          on_actions: ['propose', 'specify'],
+        },
+      ],
+    };
+    const graphPath = path.join(tmpDir, '.spec-graph', 'graph.yaml');
+    fs.writeFileSync(graphPath, yaml.dump(graph));
+
+    const manifest = generateDispatchManifest('test-session', tmpDir, undefined, graphPath);
+
+    expect(manifest.meeting).toBeDefined();
+    expect(manifest.meeting?.available).toBe(true);
+    expect(manifest.meeting?.template?.id).toBe('requirements-meeting');
+    expect(manifest.meeting?.template?.participants?.length).toBe(2);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('does not include meeting metadata when no meetings match current stage', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dispatch-no-meeting-'));
+    const sessionDir = path.join(tmpDir, '.spec-graph', 'sessions', 'test-session-nomeeting');
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    const state = {
+      sessionId: 'test-session-nomeeting',
+      intent: 'Test',
+      stage: 'implement',
+      state: 'running',
+      plan: {
+        sessionId: 'test-session',
+        intent: 'Test',
+        capabilities: [],
+        order: [],
+        complexity: 'low',
+        risks: [],
+        openQuestions: [],
+      },
+      completedArtifacts: [],
+      trace: [],
+      previousDiagnoses: [],
+      retryCount: 0,
+      readyForArchive: false,
+    };
+    fs.writeFileSync(path.join(sessionDir, 'state.yaml'), yaml.dump(state));
+
+    const graph = {
+      agents: [],
+      agent_bindings: [],
+      meetings: [
+        {
+          id: 'requirements-meeting',
+          purpose: 'Discuss requirements',
+          participants: [],
+          min_rounds: 2,
+          max_rounds: 10,
+          on_actions: ['propose', 'specify'],
+        },
+      ],
+    };
+    const graphPath = path.join(tmpDir, '.spec-graph', 'graph.yaml');
+    fs.writeFileSync(graphPath, yaml.dump(graph));
+
+    const manifest = generateDispatchManifest('test-session-nomeeting', tmpDir, undefined, graphPath);
+
+    expect(manifest.meeting).toBeUndefined();
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });
