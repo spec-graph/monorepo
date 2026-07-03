@@ -41,12 +41,12 @@ spec-graph is a development "brain, not hands." It manages a 9-stage FSM, genera
 ## Installation
 
 ```bash
-# Global install
-npm install -g spec-graph@3
+# Clone with all submodules
+git clone --recurse-submodules git@github.com:spec-graph/monorepo.git
+cd monorepo
 
-# From this monorepo (local development)
-npm install
-npm run build
+# Global install (CLI)
+npm install -g spec-graph
 ```
 
 ## Quick Start
@@ -82,29 +82,36 @@ Or use the `/spec-graph-auto` SKILL for the full loop automation.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Layer 1: Skills (SKILL.md files for AI agents)              │
-│   packages/skills/  (7 entry skills)                         │
-│   └─ init / plan / dispatch / status / validate / diagnose   │
-│      / intervene                                             │
+│  spec-graph/monorepo  (meta-repo with git submodules)        │
 │                                                              │
-│  Layer 2: CLI (command-line tool, shell commands)            │
-│   packages/cli/  (20 commands)                               │
-│   └─ plan, status, submit, validate, intervene,             │
-│      diagnose, sessions, init, compose, config, install,     │
-│      dispatch, gate, check, machine, analyze, completion,    │
-│      artifact-complete, check-run                            │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │  Skills (11 SKILL.md files)                           │    │
+│  │  packages/skills/ — spec-graph/skills.git             │    │
+│  │  init / plan / auto / dispatch / status / validate    │    │
+│  │  / diagnose / intervene / meeting / worktree / e2e   │    │
+│  ├──────────────────────────────────────────────────────┤    │
+│  │  CLI (22 commands)                                    │    │
+│  │  packages/cli/ — spec-graph/cli.git                   │    │
+│  │  plan / dispatch / submit / status / validate         │    │
+│  │  / intervene / diagnose / init / compose / ...        │    │
+│  ├──────────────────────────────────────────────────────┤    │
+│  │  Core (12 modules)                                    │    │
+│  │  packages/core/ — spec-graph/core.git                 │    │
+│  │  automator / planning / gate-enforcement              │    │
+│  │  dispatch / composer / knowledge-base / ...           │    │
+│  ├──────────────────────────────────────────────────────┤    │
+│  │  Server + UI                                          │    │
+│  │  packages/server/ + packages/ui/                      │    │
+│  └──────────────────────────────────────────────────────┘    │
 │                                                              │
-│  Layer 3: Core (TypeScript library — the engine)             │
-│   packages/core/  (9 modules)                                │
-│   └─ automator / planning / gate-enforcement /               │
-│      knowledge-base / recovery / sense /                     │
-│      dispatch / composer / machine-state                     │
-│                                                              │
+│  Clone: git clone --recurse-submodules <url>                 │
 └──────────────────────────────────────────────────────────────┘
 ```
 
+Each package is an independent git repository, linked via submodule.
+
 - **Skills** orchestrate CLI commands for AI agents — 1 skill covers N CLI commands
-- **CLI** provides atomic shell commands — each is a thin wrapper over core API
+- **CLI** provides atomic shell commands — thin wrappers over core API
 - **Core** provides the programmatic API — the declaration engine
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
@@ -113,8 +120,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 
 | Module | Responsibility |
 |--------|----------------|
-| **automator** | Session lifecycle, state machine loop |
-| **planning** | Intent → capabilities decomposition with topological ordering |
+| **automator** | Session lifecycle, 9-stage state machine loop |
+| **planning** | Intent → capabilities decomposition (LLM manifest + keyword fallback) |
 | **gate-enforcement** | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
 | **dispatch** | Generate dispatch manifests with 9-section envelopes |
 | **composer** | Scan packs and compose graph.yaml |
@@ -122,6 +129,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 | **knowledge-base** | Directory tree loader, skill selection, local overrides |
 | **recovery** | 4-level progressive retry strategy with Jaccard similarity |
 | **sense** | Project feature detection (language, framework, runtime) |
+| **meeting** | MeetingManager lifecycle (create/record/advance/complete) |
+| **isolation** | WorktreeManager + ScopeLock + MergeQueue |
 
 ### Knowledge Base
 
