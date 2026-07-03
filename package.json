@@ -1,20 +1,12 @@
 {
-  "name": "spec-graph-monorepo",
+  "name": "spec-graph",
   "version": "3.0.0",
   "private": true,
-  "description": "spec-graph v3: declaration engine — dispatch manifest generator + gate evaluator. Monorepo with core (engine), cli (human/agent interface), and skills (SKILL.md collection for AI agents).",
-  "workspaces": [
-    "packages/core",
-    "packages/cli",
-    "packages/skills"
-  ],
+  "description": "spec-graph v3: declaration engine — dispatch manifest generator + gate evaluator. Meta-repo with packages as git submodules.",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "dev:core": "npm run dev --workspace=packages/core",
-    "dev:cli": "npm run dev --workspace=packages/cli",
-    "lint": "npm run lint --workspaces --if-present",
-    "lint:fix": "npm run lint:fix --workspaces --if-present"
+    "init": "git submodule update --init --recursive",
+    "update": "git submodule update --remote --recursive",
+    "status": "git submodule status"
   },
   "keywords": [
     "specification",
@@ -23,8 +15,7 @@
     "ai-agent",
     "automation",
     "quality-gates",
-    "claude-code",
-    "codex"
+    "claude-code"
   ],
   "author": "spec-graph team",
   "license": "MIT",
