@@ -1,12 +1,18 @@
 {
-  "name": "spec-graph",
+  "name": "spec-graph-monorepo",
   "version": "3.0.0",
   "private": true,
   "description": "spec-graph v3: declaration engine — dispatch manifest generator + gate evaluator. Meta-repo with packages as git submodules.",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "init": "git submodule update --init --recursive",
     "update": "git submodule update --remote --recursive",
-    "status": "git submodule status"
+    "status": "git submodule status",
+    "build": "npm run build -w @spec-graph/core && npm run build -w @spec-graph/cli",
+    "test": "npm run test -w @spec-graph/core && npm run test -w @spec-graph/cli",
+    "link:cli": "cd packages/cli && npm link --force"
   },
   "keywords": [
     "specification",

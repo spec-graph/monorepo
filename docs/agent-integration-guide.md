@@ -125,7 +125,7 @@ spec-graph generates prompts in a layered XML format with three priority levels:
 
   <output_spec level="MUST">
     Write to: .spec-graph/sessions/.../specify/proposal.md
-    Template: knowledge/stages/specify/.../templates/proposal.md
+    Template: packs/foundation.pack/stages/specify/skills/.../templates/proposal.md
   </output_spec>
 
   <self_check level="MUST">
@@ -143,7 +143,7 @@ spec-graph generates prompts in a layered XML format with three priority levels:
 | SHOULD | Should follow | Deviation requires note in self-check |
 | MAY | Can reference | Optional context |
 
-See `knowledge/shared/prompt-schema.md` for the full specification.
+See `packs/foundation.pack/shared/prompt-schema.md` for the full specification.
 
 ## Result Format
 

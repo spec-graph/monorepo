@@ -80,19 +80,17 @@ The dispatch-watcher hook is the engine. Each `dispatch --json` triggers a `Post
 
 ## The 9-Stage FSM
 
-| # | Stage | Agent | Output |
-|---|-------|-------|--------|
-| 1 | specify | pm | proposal.md |
-| 2 | specs | pm | specs.md |
-| 3 | design | architect | design.md |
-| 4 | tasks | developer | tasks.md |
-| 5 | implement | developer | source code |
-| 6 | review | reviewer | review.md |
-| 7 | test | qa | test.md |
-| 8 | accept | qa | verification.md |
-| 9 | integrate | developer | pr.md |
-
-FSM stages ≠ graph actions. This is by design. Graph has 12 actions (propose, specify, design, contract, plan, implement, review, test, accept, integrate, archive, release). The FSM uses only 9 of them. Extra actions (contract, archive, release) are non-pipeline.
+| # | Stage | Agent | Output | Gate checks |
+|---|-------|-------|--------|-------------|
+| 1 | specify | pm | proposal.md | capabilities enumerated, scope defined, user stories present |
+| 2 | specs | pm | specs.md | requirements per capability, acceptance criteria, edge cases |
+| 3 | design | architect | design.md | architecture decisions, trade-offs, component hierarchy |
+| 4 | tasks | developer | tasks.md | tasks cover design, ordered by dependency, estimable |
+| 5 | implement | developer | source code | lint, typecheck, tests pass per capability |
+| 6 | review | reviewer | review.md | code correctness, style, security, performance |
+| 7 | test | qa | test.md | test coverage, edge cases exercised, regression check |
+| 8 | accept | qa | verification.md | acceptance criteria met, manual verification steps |
+| 9 | integrate | developer | pr.md | all gates passed, PR description, migration notes |
 
 ---
 
@@ -116,19 +114,7 @@ Dispatch ALL actions with the same `parallel_group` simultaneously in a single m
 
 ## Meeting Decision
 
-The manifest may include `meeting.available: true` with `recommended: true/false`.
-
-**Initiate a meeting (`spec-graph meeting init <id> --session <id>`) when:**
-- `recommended === true` AND you sense ambiguity or cross-cutting concerns
-- The task involves trade-offs between security, performance, UX
-- Task decomposition requires multi-perspective alignment
-
-**Skip meeting (single-agent dispatch) when:**
-- Simple, well-defined task with no ambiguity
-- `recommended === false` and you see no reason to discuss
-- 1-2 capabilities, low complexity, no open questions
-
-The decision is yours. spec-graph provides information, not orders.
+When `manifest.meeting.recommended === true` AND the task involves trade-offs (security vs perf vs UX) or multi-perspective alignment, initiate: `spec-graph meeting init <id> --session <id>`. Skip meetings for simple, well-defined tasks with no ambiguity.
 
 ---
 
@@ -173,3 +159,14 @@ Workflow is complete when:
 - `state === "completed"`
 - All 9 artifacts produced
 - `readyForArchive === true`
+
+---
+## Navigation
+
+| Need | Skill |
+|------|-------|
+| Start new task | `/spec-graph-plan` |
+| Check progress | `/spec-graph-status` |
+| Debug gate failure | `/spec-graph-diagnose` |
+| Pre-submit validation | `/spec-graph-diagnose` (see Pre-submit Check) |
+| Skip gate / rollback | `/spec-graph-intervene` |

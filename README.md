@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
-spec-graph is a development "brain, not hands." It manages a 9-stage FSM, generates dispatch manifests with 9-section envelopes for sub-agents, and evaluates their outputs through strict quality gates. spec-graph never invokes agents directly — all execution is delegated to external coordinators (Claude Code skills, CI/CD, custom orchestrators).
+spec-graph is a development "brain, not hands." It manages a 9-stage FSM, generates lightweight routing manifests (path-based dispatch pointers) for sub-agents, and evaluates their outputs through strict quality gates. spec-graph never invokes agents directly — all execution is delegated to external coordinators (Claude Code skills, CI/CD, custom orchestrators).
 
 ## Philosophy
 
@@ -14,7 +14,7 @@ spec-graph is a development "brain, not hands." It manages a 9-stage FSM, genera
 ┌──────────────────────────────────────────────────────────────┐
 │  spec-graph is a brain, not hands                             │
 │                                                               │
-│  ✓ Generates dispatch manifests (9-section envelopes)         │
+│  ✓ Generates routing manifests (path-based dispatch)            │
 │  ✓ Evaluates outputs through strict quality gates             │
 │  ✓ Tracks state via 9-stage FSM                              │
 │  ✗ Never invokes agents directly                              │
@@ -30,10 +30,10 @@ spec-graph is a development "brain, not hands." It manages a 9-stage FSM, genera
 
 - **9-Stage FSM**: specify → specs → design → tasks → implement → review → test → accept → integrate
 - **Strict Quality Gates**: Entry/exit criteria evaluated automatically at every transition
-- **Dispatch Manifests**: JSON output with 9-section envelopes for sub-agents
-- **Parallel Execution**: Multiple sub-agents per stage via parallel_group
+- **Dispatch Manifests**: Lightweight JSON routing manifests with absolute paths (agent, skills, upstream, output, checks). Sub-agents read files from manifest paths at runtime.
+- **Parallel Execution**: Multiple sub-agents per stage via parallel_group (implement stage only)
 - **Hook Integration**: `spec-graph hook dispatch` PostToolUse hook auto-injects system-reminder
-- **Methodology Library**: Built-in knowledge-base with 9 stages × multiple skills
+- **Pack Library**: Built-in packs (`packs/`) with stage gate configs, skills, and agent prompts. Composable via priority and gate_patches.
 - **Progressive Recovery**: 4-level retry strategy with diagnosis-driven re-prompts
 - **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml`
 - **Real Gate Checks**: Implement gate runs tsc, tests, lint if configured
@@ -98,7 +98,7 @@ Or use the `/spec-graph-auto` SKILL for the full loop automation.
 │  │  Core (12 modules)                                    │    │
 │  │  packages/core/ — spec-graph/core.git                 │    │
 │  │  automator / planning / gate-enforcement              │    │
-│  │  dispatch / composer / knowledge-base / ...           │    │
+│  │  dispatch / composer / ...                            │    │
 │  ├──────────────────────────────────────────────────────┤    │
 │  │  Server + UI                                          │    │
 │  │  packages/server/ + packages/ui/                      │    │
@@ -123,47 +123,37 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
 | **automator** | Session lifecycle, 9-stage state machine loop |
 | **planning** | Intent → capabilities decomposition (LLM manifest + keyword fallback) |
 | **gate-enforcement** | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
-| **dispatch** | Generate dispatch manifests with 9-section envelopes |
-| **composer** | Scan packs and compose graph.yaml |
+| **dispatch** | Generate lightweight routing manifests (path-based pointers) |
+| **composer** | Scan packs and compose graph.yaml (stages, gates, skills, agents) |
 | **machine-state** | Track artifact status per stage and capability |
-| **knowledge-base** | Directory tree loader, skill selection, local overrides |
-| **recovery** | 4-level progressive retry strategy with Jaccard similarity |
+| **recovery** | 4-level progressive Retry strategy with Jaccard similarity |
 | **sense** | Project feature detection (language, framework, runtime) |
 | **meeting** | MeetingManager lifecycle (create/record/advance/complete) |
 | **isolation** | WorktreeManager + ScopeLock + MergeQueue |
 
-### Knowledge Base
+### Packs
 
-The knowledge-base is a directory tree shipped with spec-graph:
+Packs are composable configuration units shipped in `packs/`:
 
 ```
-knowledge/
-├── stages/
-│   ├── specify/
-│   │   ├── gate.yaml                # Entry/exit criteria
-│   │   └── skills/
-│   │       └── requirement-analysis/
-│   │           ├── instruction.md   # Methodology guidance
-│   │           └── templates/
-│   │               └── proposal.md
-│   ├── design/
-│   │   ├── gate.yaml
-│   │   └── skills/
-│   │       ├── specs-authoring/     # OpenSpec-style specs
-│   │       └── design-authoring/    # OpenSpec-style design
-│   ├── tasks/
-│   ├── implement/
-│   ├── review/
-│   ├── test/
-│   ├── accept/
-│   └── integrate/
-└── shared/
-    ├── prompt-schema.md             # XML prompt format specification
-    ├── project-context.md           # Project profile template
-    └── verification-format.md       # Agent response format
+packs/
+├── foundation.pack/               # Always loaded — core stages + agents
+│   ├── pack.yaml                  # Provides: artifacts, checks, gates, agents, bindings
+│   ├── agents/                    # Agent prompt files (pm-agent.md, developer-agent.md, ...)
+│   ├── shared/                    # Shared documents (prompt-schema.md, verification-format.md)
+│   └── stages/                    # Per-stage gate.yaml + skills/
+│       ├── specify/gate.yaml
+│       ├── design/gate.yaml
+│       ├── implement/gate.yaml
+│       └── ... (9 stages)
+├── requirement-analysis.pack/     # Loaded when planning stage needs requirement analysis
+├── architecture.pack/             # Loaded for architecture design
+├── ddd.pack/                      # Loaded when profile matches DDD conditions
+└── ... (17 packs total)
 ```
 
-Users can override or extend by placing files in `.spec-graph/knowledge/` within their project.
+Compose merges packs by priority. Gates, checks, skills, and agent bindings are combined into `.spec-graph/graph.yaml`.
+Users can extend by adding custom packs or overriding fields via `.spec-graph/pack-overrides.yaml`.
 
 ## CLI Commands
 
@@ -249,4 +239,4 @@ MIT
 
 ## Contributing
 
-Contributions welcome. Please read the architecture in `openspec/changes/spec-graph-v2/` for the full design rationale.
+Contributions welcome. Please read the architecture in `openspec/changes/v3-routing-dispatch/` for the current design rationale.

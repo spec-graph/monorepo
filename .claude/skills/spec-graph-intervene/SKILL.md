@@ -2,10 +2,10 @@
 name: spec-graph-intervene
 description: Intervene in the current spec-graph workflow. Use when the user wants to modify the plan, force-advance past a gate, rollback a stage, or otherwise take manual control of the automatic workflow.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
-  version: "2.0"
+  version: "3.0"
 ---
 
 Intervene in a spec-graph workflow session.
@@ -89,3 +89,13 @@ After intervention, run `spec-graph status` and show the user the new state.
 
 - **No active session**: nothing to intervene on. Suggest starting a new session with `spec-graph-plan`
 - **Invalid action for current state**: spec-graph will reject the intervention with an error. Relay the error to the user
+
+---
+## Navigation
+
+| Need | Skill |
+|------|-------|
+| Run the workflow | `/spec-graph-auto` |
+| Check progress | `/spec-graph-status` |
+| Debug gate failure | `/spec-graph-diagnose` |
+| Start new task | `/spec-graph-plan` |

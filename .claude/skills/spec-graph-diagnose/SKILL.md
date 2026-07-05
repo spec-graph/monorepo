@@ -2,10 +2,10 @@
 name: spec-graph-diagnose
 description: Diagnose the most recent gate failure in a spec-graph workflow. Shows which criteria failed, the root cause, suggested fixes, and retry status. Use when the workflow is stuck or you want to understand why a gate failed.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
-  version: "2.0"
+  version: "3.0"
 ---
 
 Diagnose the most recent gate failure.
@@ -88,8 +88,36 @@ Based on the diagnosis:
 | `tasks-cover-design` failing | Missing coverage | Add tasks for uncovered design components |
 | `all-tasks-implemented` failing | Incomplete tasks | Complete remaining tasks, mark with `- [x]` |
 
+## Pre-submit Check
+
+Before running `spec-graph advance`, verify the artifact is ready:
+
+1. **Self-check**: verify the artifact against the criteria listed in the dispatch prompt's `<acceptance_criteria>` section
+2. **Validate**: `spec-graph validate --json` to confirm gate readiness
+3. **Submit**: only advance when both checks pass
+
+Catching issues before submit avoids unnecessary retries.
+
+## status vs diagnose vs validate
+
+| Command | Purpose | When to use |
+|---------|---------|-------------|
+| `status` | High-level view: stage, progress, blockers | Any time |
+| `diagnose` | Detailed failure info for the last gate failure | After `advance` returns `advanced: false` |
+| `validate` | Gate readiness check for the current stage | Before submitting a result (pre-submit) |
+
 ## Edge cases
 
 - **No session found**: spec-graph may not have a session. Start with `spec-graph plan`.
 - **diagnose returns empty**: The session exists but no gate failure has occurred. This is normal.
 - **Multiple failures**: Focus on the first one. Fixing it often fixes cascading failures.
+
+---
+## Navigation
+
+| Need | Skill |
+|------|-------|
+| Run the workflow | `/spec-graph-auto` |
+| Check progress | `/spec-graph-status` |
+| Skip gate / rollback | `/spec-graph-intervene` |
+| Start new task | `/spec-graph-plan` |

@@ -40,14 +40,16 @@ Three-layer architecture: each layer has a distinct role and audience.
 │  Audience: CLI, programmatic consumers                            │
 │  Role: Business logic engine — no CLI awareness                   │
 │                                                                    │
-│  automator/            session lifecycle + 8-stage FSM            │
+│  automator/            session lifecycle + 9-stage FSM            │
 │  planning/             intent → capability decomposition          │
 │  gate-enforcement/     entry/exit criteria evaluation             │
-│  prompt-construction/  layered XML prompt generation              │
-│  external-coordination/ agent adapter registry                    │
-│  knowledge-base/       methodology library loader                │
+│  dispatch/             lightweight routing manifest generation    │
+│  composer/             pack scanning + graph.yaml composition     │
 │  recovery/             4-level progressive retry                  │
 │  sense/                project profile inference                  │
+│  machine-state/        artifact status tracking                   │
+│  meeting/              MeetingManager lifecycle                   │
+│  isolation/            WorktreeManager + ScopeLock + MergeQueue   │
 │  context-sharing/      parallel context generation                │
 │  dependency-analyzer/  task dependency waves                      │
 │  file-conflict-analyzer/ file conflict detection                  │
@@ -67,18 +69,16 @@ Three-layer architecture: each layer has a distinct role and audience.
 |-------------|-------------|---------------|
 | `plan` | `planning` | `generatePlan()` |
 | `plan` | `automator` | `startSession()` |
-| `auto` | `automator` | `autoRun()` |
 | `submit` | `automator` | `submitResult()` |
-| `next-prompt` | `automator` | `nextPrompt()` |
 | `status` | `automator` | `status()` |
 | `validate` | `gate-enforcement` | `evaluateGate()` |
 | `diagnose` | `gate-enforcement` | `diagnoseFailure()` |
 | `intervene` | `automator` | `intervene()` |
 | `sessions` | `automator` | `listSessions()` |
-| `init` | `knowledge-base`, `sense` | `loadKnowledgeBase()`, `sense()` |
-| `compose` | `knowledge-base` | `loadKnowledgeBase()`, `getSkillsForStage()` |
+| `init` | `sense` | `sense()` |
+| `compose` | `composer` | `composeGraph()` |
 | `config` | `sense` | `sense()` |
-| `dispatch` | `automator` | `nextPrompt()` |
+| `dispatch` | `dispatch` | `generateDispatchManifest()` |
 | `gate` | `gate-enforcement` | `evaluateGate()` |
 | `check` | `gate-enforcement` | `evaluateGate()` |
 | `machine` | `automator` | `status()`, `intervene()` |

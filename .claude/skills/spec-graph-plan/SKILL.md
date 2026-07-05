@@ -2,15 +2,15 @@
 name: spec-graph-plan
 description: Start the spec-graph planning flow. Transforms a user intent into a structured plan (capabilities, dependencies, complexity, risks), presents it to the user for confirmation, and initializes the automatic workflow. Use when the user wants to start a new development task with spec-graph's automatic progression.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed globally or locally.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
-  version: "2.0"
+  version: "3.0"
 ---
 
 Start a planning flow with spec-graph.
 
-spec-graph is a strict-gate, prompt-driven, automatic progression development brain. It does NOT write code or documents — it generates rich prompts for external AI agents and evaluates their outputs, enforcing quality gates at every stage.
+spec-graph is a **declaration engine** — it generates dispatch manifests and evaluates gates. It never invokes agents directly. You (the main agent) are the **coordinator**: you dispatch sub-agents per the manifest, collect results, and advance state.
 
 This skill walks you through the **planning phase** — the ONLY phase where human confirmation is mandatory. After plan confirmation, spec-graph can run automatically.
 
@@ -78,7 +78,7 @@ Ask the user to confirm, modify, or reject.
 
 ## What happens next
 
-After plan confirmation, the user (or you) should switch to the `spec-graph-auto` skill to kick off the automatic workflow. From that point on, spec-graph drives the process through all 8 stages: specify → design → plan → implement → review → test → accept → integrate.
+After plan confirmation, the user (or you) should switch to the `spec-graph-auto` skill to kick off the automatic workflow. From that point on, spec-graph drives the process through all 9 stages: specify → specs → design → tasks → implement → review → test → accept → integrate.
 
 You will be invoked at gate failures that the automator cannot auto-recover from, and at the final acceptance stage.
 
@@ -89,3 +89,13 @@ You will be invoked at gate failures that the automator cannot auto-recover from
 - **No intent provided**: use AskUserQuestion to ask what the user wants to build
 - **Plan command fails**: check that spec-graph is installed (`spec-graph --version`). If not installed, guide the user to install it
 - **Multiple active sessions**: the planner will refuse to start a new session if one is already active. Ask the user whether to resume or abort the existing session
+
+---
+## Navigation
+
+| Need | Skill |
+|------|-------|
+| Run the workflow | `/spec-graph-auto` |
+| Check progress | `/spec-graph-status` |
+| Debug gate failure | `/spec-graph-diagnose` |
+| Skip a gate / rollback | `/spec-graph-intervene` |

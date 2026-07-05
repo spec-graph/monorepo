@@ -2,10 +2,10 @@
 name: spec-graph-status
 description: Inspect the current spec-graph workflow state. Shows the active stage, progress, completed artifacts, blockers, and recent gate failures. Use when the user wants to know where things stand.
 license: MIT
-compatibility: Requires spec-graph CLI (v2+) installed.
+compatibility: Requires spec-graph CLI (v3+) installed.
 metadata:
   author: spec-graph
-  version: "2.0"
+  version: "3.0"
 ---
 
 Check the status of a spec-graph workflow session.
@@ -31,7 +31,7 @@ The JSON output contains:
   "stage": "design",
   "progress": {
     "current_stage_index": 1,
-    "total_stages": 8,
+    "total_stages": 9,
     "completed_artifacts": 3
   },
   "blockers": [],
@@ -42,7 +42,7 @@ The JSON output contains:
 
 Present to the user in a clear format:
 - Current stage (with human-readable name)
-- Progress (X of 8 stages complete)
+- Progress (X of 9 stages complete)
 - Blockers (if any)
 - Most recent diagnosis (if a gate recently failed)
 
@@ -54,4 +54,14 @@ If no session exists, inform the user and suggest starting one with `spec-graph-
 
 ## Edge cases
 
-- **Multiple sessions**: spec-graph v2 supports one active session at a time. If the user has an archived session, point them to `openspec list` (if integrated) or the archive directory
+- **v3** supports one active session at a time. If the user has an archived session, point them to `openspec list` (if integrated) or the archive directory
+
+---
+## Navigation
+
+| Need | Skill |
+|------|-------|
+| Run the workflow | `/spec-graph-auto` |
+| Debug gate failure | `/spec-graph-diagnose` |
+| Skip gate / rollback | `/spec-graph-intervene` |
+| Start new task | `/spec-graph-plan` |
