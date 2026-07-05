@@ -2,7 +2,6 @@
 
 **Declaration engine — dispatch manifest generator + gate evaluator**
 
-[![npm version](https://img.shields.io/npm/v/spec-graph.svg)](https://www.npmjs.com/package/spec-graph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
@@ -17,6 +16,7 @@ spec-graph is a development "brain, not hands." It manages a 9-stage FSM, genera
 │  ✓ Generates routing manifests (path-based dispatch)            │
 │  ✓ Evaluates outputs through strict quality gates             │
 │  ✓ Tracks state via 9-stage FSM                              │
+│  ✓ Manages per-task review gates                             │
 │  ✗ Never invokes agents directly                              │
 │  ✗ Never spawns child processes                               │
 │  ✗ Never writes code or documents                             │
@@ -30,12 +30,15 @@ spec-graph is a development "brain, not hands." It manages a 9-stage FSM, genera
 
 - **9-Stage FSM**: specify → specs → design → tasks → implement → review → test → accept → integrate
 - **Strict Quality Gates**: Entry/exit criteria evaluated automatically at every transition
-- **Dispatch Manifests**: Lightweight JSON routing manifests with absolute paths (agent, skills, upstream, output, checks). Sub-agents read files from manifest paths at runtime.
-- **Parallel Execution**: Multiple sub-agents per stage via parallel_group (implement stage only)
-- **Hook Integration**: `spec-graph hook dispatch` PostToolUse hook auto-injects system-reminder
+- **Task-level Review Gates**: Each task in the implement stage goes through `running → reviewing → completed`. Tasks cannot be marked complete without passing review.
+- **Session CSV Index**: Global `.spec-graph/sessions/sessions.csv` tracks all sessions with task progress columns (`completed_tasks`, `running_tasks`, `reviewing_tasks`, `runnable_tasks`, `pending_tasks`).
+- **Structured Session IDs**: `<task-abbrev>-<YYYYMMDD>-<NNN>` format (e.g. `fs-20260705-001`) — short, chronologically sortable, filesystem-friendly.
+- **Dispatch Manifests**: Lightweight JSON routing manifests with absolute paths (agent, skills, upstream, output, checks). Implement-stage actions include `pre_step`/`post_step`/`complete_step` for task lifecycle automation.
+- **Parallel Execution**: Multiple sub-agents per stage via parallel_group (implement stage only), with task-level tracking.
+- **Hook Integration**: `spec-graph hook dispatch` PostToolUse hook auto-injects system-reminder with task lifecycle steps.
 - **Pack Library**: Built-in packs (`packs/`) with stage gate configs, skills, and agent prompts. Composable via priority and gate_patches.
 - **Progressive Recovery**: 4-level retry strategy with diagnosis-driven re-prompts
-- **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml`
+- **Session Persistence**: File-based state in `.spec-graph/sessions/<id>/state.yaml` + global CSV index. Three files auto-synced on every task transition: `tasks.md`, `state.yaml`, `sessions.csv`.
 - **Real Gate Checks**: Implement gate runs tsc, tests, lint if configured
 
 ## Installation
@@ -54,29 +57,36 @@ npm install -g spec-graph
 ```bash
 # 1. Initialize project
 spec-graph init
-  → creates .spec-graph/ + registers dispatch-watcher hook
+  → creates .spec-graph/ + sessions.csv + registers hook
 
 # 2. Plan the work
 spec-graph plan "Build JWT authentication" --confirm
   → LLM decomposes intent into capabilities
+  → session ID: jwt-auth-20260705-001
   → state = "running"
 
 # 3. Compose graph from packs
 spec-graph compose
   → produces graph.yaml
 
-# 4. Dispatch loop (repeat 8 times)
-spec-graph dispatch --session <id> --json
-  → produces DispatchManifest JSON
-  → hook auto-triggers
-  → main agent dispatches sub-agents via Agent tool
-spec-graph submit --session <id> --result '<json>'
-  → gate evaluation
-  → state progression
-  → repeat until state = "completed"
-```
+# 4. Run/continue session (auto-selects latest running)
+spec-graph run
+  → shows current state, next task, and blockers
 
-Or use the `/spec-graph-auto` SKILL for the full loop automation.
+# 5. Dispatch loop
+spec-graph dispatch --session <id> --json
+  → produces DispatchManifest with task lifecycle steps
+  → hook auto-triggers
+  → pre_step: spec-graph task start <task-id>
+  → main agent dispatches sub-agent
+  → post_step: spec-graph task review <task-id>
+  → complete_step: spec-graph task complete <task-id>
+  → repeat until done
+
+# 6. Check session status
+spec-graph sessions list
+spec-graph sessions info --session <id>
+```
 
 ## Architecture
 
@@ -85,48 +95,39 @@ Or use the `/spec-graph-auto` SKILL for the full loop automation.
 │  spec-graph/monorepo  (meta-repo with git submodules)        │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐    │
-│  │  Skills (11 SKILL.md files)                           │    │
+│  │  Skills (9 SKILL.md files)                            │    │
 │  │  packages/skills/ — spec-graph/skills.git             │    │
 │  │  init / plan / auto / dispatch / status / validate    │    │
-│  │  / diagnose / intervene / meeting / worktree / e2e   │    │
+│  │  / diagnose / intervene / task / run                 │    │
 │  ├──────────────────────────────────────────────────────┤    │
-│  │  CLI (22 commands)                                    │    │
+│  │  CLI (25+ commands)                                   │    │
 │  │  packages/cli/ — spec-graph/cli.git                   │    │
 │  │  plan / dispatch / submit / status / validate         │    │
-│  │  / intervene / diagnose / init / compose / ...        │    │
+│  │  / task / run / sessions / intervene / diagnose       │    │
+│  │  / init / compose / gate / check / ...                │    │
 │  ├──────────────────────────────────────────────────────┤    │
 │  │  Core (12 modules)                                    │    │
 │  │  packages/core/ — spec-graph/core.git                 │    │
 │  │  automator / planning / gate-enforcement              │    │
-│  │  dispatch / composer / ...                            │    │
-│  ├──────────────────────────────────────────────────────┤    │
-│  │  Server + UI                                          │    │
-│  │  packages/server/ + packages/ui/                      │    │
+│  │  dispatch / sessionIndex / composer / ...             │    │
 │  └──────────────────────────────────────────────────────┘    │
 │                                                              │
 │  Clone: git clone --recurse-submodules <url>                 │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Each package is an independent git repository, linked via submodule.
-
-- **Skills** orchestrate CLI commands for AI agents — 1 skill covers N CLI commands
-- **CLI** provides atomic shell commands — thin wrappers over core API
-- **Core** provides the programmatic API — the declaration engine
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module mapping.
-
 ### Core Modules
 
 | Module | Responsibility |
 |--------|----------------|
-| **automator** | Session lifecycle, 9-stage state machine loop |
+| **automator** | Session lifecycle, 9-stage FSM, task tracking (start/review/complete), auto-select |
 | **planning** | Intent → capabilities decomposition (LLM manifest + keyword fallback) |
 | **gate-enforcement** | Load gate.yaml, evaluate entry/exit criteria, produce diagnosis |
-| **dispatch** | Generate lightweight routing manifests (path-based pointers) |
+| **dispatch** | Generate routing manifests with task lifecycle steps (`pre_step`/`post_step`/`complete_step`) |
+| **sessionIndex** | Global session CSV index: read/write, ID allocation, legacy migration, reconcile |
 | **composer** | Scan packs and compose graph.yaml (stages, gates, skills, agents) |
 | **machine-state** | Track artifact status per stage and capability |
-| **recovery** | 4-level progressive Retry strategy with Jaccard similarity |
+| **recovery** | 4-level progressive retry strategy with Jaccard similarity |
 | **sense** | Project feature detection (language, framework, runtime) |
 | **meeting** | MeetingManager lifecycle (create/record/advance/complete) |
 | **isolation** | WorktreeManager + ScopeLock + MergeQueue |
@@ -140,6 +141,7 @@ packs/
 ├── foundation.pack/               # Always loaded — core stages + agents
 │   ├── pack.yaml                  # Provides: artifacts, checks, gates, agents, bindings
 │   ├── agents/                    # Agent prompt files (pm-agent.md, developer-agent.md, ...)
+│   │   └── coordinator-protocol.md  # Session discovery + task lifecycle protocol
 │   ├── shared/                    # Shared documents (prompt-schema.md, verification-format.md)
 │   └── stages/                    # Per-stage gate.yaml + skills/
 │       ├── specify/gate.yaml
@@ -152,69 +154,168 @@ packs/
 └── ... (17 packs total)
 ```
 
-Compose merges packs by priority. Gates, checks, skills, and agent bindings are combined into `.spec-graph/graph.yaml`.
-Users can extend by adding custom packs or overriding fields via `.spec-graph/pack-overrides.yaml`.
-
 ## CLI Commands
+
+### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
-| `plan <intent> [--confirm] [--fallback]` | Create a session + plan. LLM mode by default, `--fallback` for offline keyword matching. |
-| `dispatch --session <id> --json` | Generate dispatch manifest for external coordinator. |
+| `plan <intent> [--confirm] [--abbrev <short>]` | Create a session + plan. `--abbrev` sets the task abbreviation for the session ID. |
+| `dispatch --session <id> --json` | Generate dispatch manifest with task lifecycle steps. |
 | `submit --result <json>` | Submit agent result for gate evaluation. |
 | `status [--json]` | Show current session state (stage, progress, blockers, diagnosis). |
-| `validate` | Validate current state. |
+| `validate` | Validate current state against stage gates. |
 | `intervene <action>` | Manual intervention: `force-advance`, `rollback`, `resume`, `modify-plan`. |
 | `diagnose [--json]` | Show the most recent gate failure diagnosis. |
 
-Auto-loop is driven by the `/spec-graph-auto` SKILL (external coordinator), not by the CLI. See [brain-not-hands principle](#philosophy).
+### Task Management Commands
+
+| Command | Description |
+|---------|-------------|
+| `task list [--session <id>]` | List all tasks with status (completed ✓ / running ▶ / reviewing ◎ / runnable → / pending ○). |
+| `task start <task-id> [--session <id>]` | Mark a task as running. Updates tasks.md, state.yaml, sessions.csv. |
+| `task review <task-id> [--session <id>]` | Review a task (quality checks). Required before completion. |
+| `task complete <task-id> [--session <id>]` | Mark a task as completed. Requires review to pass first. |
+
+### Session Management Commands
+
+| Command | Description |
+|---------|-------------|
+| `run [--session <id>] [--auto-next]` | Auto-select latest running session, show resume info. `--auto-next` starts the next task. |
+| `sessions list` | List all sessions from the CSV index with task progress. |
+| `sessions info --session <id>` | Show detailed session info from CSV + state.yaml. |
+| `sessions delete --session <id>` | Delete session directory and CSV row atomically. |
+| `sessions migrate` | Migrate legacy long-named session directories to structured IDs. |
+| `sessions doctor [--fix]` | Verify CSV-directory consistency, repair orphans. |
+
+### Setup Commands
+
+| Command | Description |
+|---------|-------------|
+| `init [--force] [--skip-hook]` | Initialize .spec-graph/ with config.yaml + empty sessions.csv. |
+| `compose` | Compose graph.yaml from installed packs. |
+| `install` | Install spec-graph skills to .claude/skills/. |
+
+## Task Lifecycle
+
+```
+                    ┌──────────────────┐
+                    │     pending      │  Task exists in plan.order
+                    └────────┬─────────┘
+                             │ task start <id>
+                    ┌────────▼─────────┐
+                    │     running      │  Sub-agent is executing
+                    └────────┬─────────┘
+                             │ task review <id>
+                    ┌────────▼─────────┐
+                    │    reviewing     │  Quality checks running
+                    └────┬────────┬────┘
+                   pass  │        │ fail → fix → re-review
+                    ┌────▼────┐   │
+                    │completed│◄──┘
+                    └─────────┘
+                 task complete <id>
+                 (only if review passed)
+```
+
+Each state transition auto-updates three files:
+1. **tasks.md** — checkbox markers (`[ ]` → `[>]` → `[◎]` → `[x]`)
+2. **state.yaml** — `taskStatus` field per task
+3. **sessions.csv** — task-list columns (`completed_tasks`, `running_tasks`, `reviewing_tasks`, `runnable_tasks`, `pending_tasks`)
+
+## Dispatch Flow with Task Lifecycle
+
+When the coordinator runs `spec-graph dispatch --json` in the **implement** stage, each action includes:
+
+```json
+{
+  "id": "user-model",
+  "pre_step": "spec-graph task start user-model --session <id>",
+  "post_step": "spec-graph task review user-model --session <id>",
+  "complete_step": "spec-graph task complete user-model --session <id>"
+}
+```
+
+The coordinator workflow:
+1. Run `pre_step` → task status = `running`
+2. Dispatch sub-agent via Agent tool
+3. Sub-agent produces output → status-report
+4. Run `post_step` → task status = `reviewing`
+5. If review passes → run `complete_step` → task status = `completed`
+6. Loop back to dispatch for next task/wave
+
+## State Persistence
+
+```
+.spec-graph/
+├── config.yaml                      # Project configuration
+├── graph.yaml                       # Composed workflow graph
+└── sessions/
+    ├── sessions.csv                 # Global session index (11 columns)
+    │   id, state, description, created_at, updated_at, stage,
+    │   completed_tasks, pending_tasks, running_tasks,
+    │   reviewing_tasks, runnable_tasks
+    ├── .migration.log               # Legacy → structured ID mappings
+    ├── .sessions.csv.lock           # Write lock for concurrent access
+    └── <session-id>/                # e.g., fs-20260705-001/
+        ├── state.yaml               # FSM state + taskStatus + taskReviews
+        ├── specify/proposal.md
+        ├── specs/specs.md
+        ├── design/design.md
+        ├── tasks/tasks.md           # Updated on task transitions
+        ├── implement/<task-id>.md   # Per-task output files
+        └── ...
+```
+
+### Session ID Format
+
+```
+<task-abbrev>-<YYYYMMDD>-<NNN>
+
+Examples:
+  fs-20260705-001       → Flash sale system, July 5, first session
+  auth-20260706-002     → Authentication, July 6, second session
+  migration-20260705-001 → Migration project, July 5, first session
+
+- task-abbrev: 1-3 English words, kebab-case, max 24 chars
+- YYYYMMDD: creation date (local timezone)
+- NNN: 3-digit per-day sequence counter
+```
 
 ## AI Agent Integration
 
-spec-graph provides two ways for AI agents to consume it:
-
 ### Via Skills (Claude Code)
 
-Install the SKILL.md files into Claude Code's skills directory:
-
 ```bash
-# Copy skills
-cp -r packages/skills/spec-graph-* ~/.claude/skills/
+spec-graph install  # copies skills to .claude/skills/
 ```
 
 Then in Claude Code:
 - `/spec-graph-plan "<intent>"` — start a planning session
-- `/spec-graph-auto "<intent>"` — start automatic workflow (skill drives the loop)
+- `/spec-graph-auto "<intent>"` — start automatic workflow
+- `/spec-graph-task` — manage tasks (start/review/complete/list)
+- `/spec-graph-run` — auto-select and continue sessions
 - `/spec-graph-status` — check progress
 - `/spec-graph-intervene <action>` — manual intervention
 
 ### Via CLI (any agent)
 
-Any agent that can execute shell commands can drive spec-graph:
-
 ```bash
-spec-graph plan "..." --fallback --confirm
+# Start
+spec-graph plan "..." --confirm
+
+# Continue (auto-select latest running)
+spec-graph run
+
+# Task execution
+spec-graph task start user-model
+# ... dispatch sub-agent, produce artifact ...
+spec-graph task review user-model
+spec-graph task complete user-model
+
+# Or via dispatch (auto-injects task lifecycle)
 spec-graph dispatch --session <id> --json
-# ... coordinator dispatches sub-agent, produces artifact ...
-spec-graph submit --session <id> --result '{"artifacts": [...]}'
-# ... loop dispatch → submit until done ...
-```
-
-## State Persistence
-
-All state is persisted in `.spec-graph/sessions/<session-id>/`:
-
-```
-.spec-graph/
-└── sessions/
-    └── add-jwt-authentication/
-        ├── state.yaml           # Current stage, state, trace log
-        ├── specify/
-        │   └── proposal.md      # Artifact from specify stage
-        ├── design/
-        │   ├── specs.md         # specs from design stage
-        │   └── design.md        # design from design stage
-        └── ...
+# pre_step → dispatch → post_step → complete_step → loop
 ```
 
 ## Development
@@ -223,14 +324,14 @@ All state is persisted in `.spec-graph/sessions/<session-id>/`:
 # Install dependencies
 npm install
 
-# Build core
-npm run build --workspace=packages/core
+# Build all packages
+npm run build
 
-# Run CLI
-npx tsx packages/cli/src/index.ts --help
-
-# Run tests (when available)
+# Run tests
 npm test
+
+# Link CLI globally for local dev
+npm run link:cli
 ```
 
 ## License
@@ -239,4 +340,4 @@ MIT
 
 ## Contributing
 
-Contributions welcome. Please read the architecture in `openspec/changes/v3-routing-dispatch/` for the current design rationale.
+Contributions welcome. See [docs/](docs/) for architecture, migration guides, and integration documentation.

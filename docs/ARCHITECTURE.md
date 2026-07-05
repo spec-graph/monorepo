@@ -15,6 +15,8 @@ Three-layer architecture: each layer has a distinct role and audience.
 │  spec-graph-validate   evaluate current state against gates       │
 │  spec-graph-diagnose   diagnose gate failure                      │
 │  spec-graph-intervene  manual intervention                        │
+│  spec-graph-task       task start/review/complete/list            │
+│  spec-graph-run        auto-select + continue sessions            │
 │                                                                    │
 │  Principle: 1 skill orchestrates N CLI commands                    │
 │             Only user-facing scenarios get a skill                 │
@@ -27,8 +29,8 @@ Three-layer architecture: each layer has a distinct role and audience.
 │  Role: Atomic operations — thin wrappers over core API            │
 │                                                                    │
 │  plan, dispatch, submit, status, validate, intervene,   │
-│  diagnose, sessions, init, compose, config, install,    │
-│  gate, check, machine, analyze                                    │
+│  diagnose, sessions, task, run, init, compose, config,  │
+│  install, gate, check, machine, analyze                           │
 │                                                                    │
 │  Principle: 1 CLI command ≈ 1 core API function (+ formatting)     │
 │             Each command is 20-40 lines of arg parsing + output    │
@@ -40,10 +42,11 @@ Three-layer architecture: each layer has a distinct role and audience.
 │  Audience: CLI, programmatic consumers                            │
 │  Role: Business logic engine — no CLI awareness                   │
 │                                                                    │
-│  automator/            session lifecycle + 9-stage FSM            │
+│  automator/            session lifecycle + task tracking          │
 │  planning/             intent → capability decomposition          │
 │  gate-enforcement/     entry/exit criteria evaluation             │
-│  dispatch/             lightweight routing manifest generation    │
+│  dispatch/             routing manifest + task lifecycle steps    │
+│  session-index/        global CSV index, ID allocation, migration │
 │  composer/             pack scanning + graph.yaml composition     │
 │  recovery/             4-level progressive retry                  │
 │  sense/                project profile inference                  │
@@ -67,25 +70,28 @@ Three-layer architecture: each layer has a distinct role and audience.
 
 | CLI Command | Core Module | Core Function |
 |-------------|-------------|---------------|
-| `plan` | `planning` | `generatePlan()` |
-| `plan` | `automator` | `startSession()` |
+| `plan` | `planning` + `automator` | `generatePlan()` + `startSession()` |
 | `submit` | `automator` | `submitResult()` |
 | `status` | `automator` | `status()` |
 | `validate` | `gate-enforcement` | `evaluateGate()` |
 | `diagnose` | `gate-enforcement` | `diagnoseFailure()` |
 | `intervene` | `automator` | `intervene()` |
-| `sessions` | `automator` | `listSessions()` |
+| `sessions list` | `session-index` | `list()` |
+| `sessions info` | `session-index` + `automator` | `get()` + `status()` |
+| `sessions delete` | `automator` | `deleteSession()` |
+| `sessions migrate` | `session-index` | `migrateAll()` |
+| `sessions doctor` | `session-index` | `reconcile()` |
+| `task start` | `automator` | `startTask()` |
+| `task review` | `automator` | `reviewTask()` |
+| `task complete` | `automator` | `completeTask()` |
+| `task list` | `session-index` + `automator` | `get()` + `getSessionData()` |
+| `run` | `session-index` + `automator` | `getLatestRunningSession()` + `status()` |
 | `init` | `sense` | `sense()` |
 | `compose` | `composer` | `composeGraph()` |
-| `config` | `sense` | `sense()` |
 | `dispatch` | `dispatch` | `generateDispatchManifest()` |
 | `gate` | `gate-enforcement` | `evaluateGate()` |
 | `check` | `gate-enforcement` | `evaluateGate()` |
 | `machine` | `automator` | `status()`, `intervene()` |
-| `analyze` | — | file system scan (standalone) |
-| `completion` | — | shell completion (standalone) |
-
-All 19 commands are documented in `packages/cli/docs/commands/`.
 
 ## Skill → CLI Command Mapping
 
@@ -98,6 +104,58 @@ All 19 commands are documented in `packages/cli/docs/commands/`.
 | `spec-graph-validate` | `validate`, `gate` |
 | `spec-graph-diagnose` | `diagnose`, `submit`, `intervene` |
 | `spec-graph-intervene` | `intervene`, `machine`, `status` |
+| `spec-graph-task` | `task list`, `task start`, `task review`, `task complete` |
+| `spec-graph-run` | `run`, `task list`, `task start`, `dispatch` |
+
+## Task Lifecycle Integration
+
+The task management system integrates across all three layers:
+
+```
+Core:
+  automator.startTask()     → taskStatus[id] = 'running'
+  automator.reviewTask()    → taskStatus[id] = 'reviewing', taskReviews created
+  automator.completeTask()  → taskStatus[id] = 'completed' (requires review pass)
+  automator.getLatestRunningSession() → auto-select from CSV
+  session-index.list()      → returns all sessions with task columns
+
+CLI:
+  spec-graph task start <id>    → wrappers over automator functions
+  spec-graph task review <id>   → runs quality checks before completion
+  spec-graph task complete <id> → requires review pass, returns next task
+  spec-graph run                → auto-selects session, shows resume/next task
+  spec-graph run --auto-next    → auto-starts next runnable task
+
+Dispatch:
+  implement stage actions include:
+    pre_step:      spec-graph task start <task-id>
+    post_step:     spec-graph task review <task-id>
+    complete_step: spec-graph task complete <task-id>
+```
+
+## Session State Files
+
+```
+.spec-graph/sessions/<session-id>/
+├── state.yaml               # FSM state + taskStatus + taskReviews
+│   sessionId: fs-20260705-001
+│   stage: implement
+│   state: running
+│   taskStatus:
+│     user-model: completed
+│     auth-endpoints: reviewing
+│   taskReviews:
+│     user-model:
+│       passed: true
+│       checks: ["✓ output", "⚠ tests manual"]
+│       timestamp: "2026-07-05T10:00:00Z"
+│   ...
+├── tasks/tasks.md           # Updated on task transitions
+│   - [x] 1.1 user-model
+│   - [◎] 1.2 auth-endpoints
+│   - [ ] 1.3 api-docs
+└── implement/<task-id>.md   # Per-task output files
+```
 
 ## Rules for Adding New Capabilities
 
